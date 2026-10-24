@@ -2895,7 +2895,7 @@ const BOOT = null;
     if (tab === 'courses') {
       const all = D.allCourses || [];
       body = all.length ? '<p class="sub" style="margin:-8px 0 22px">The grade distribution of each course. It is the same for every group of the course. The attendance mark is calculated from each student\'s attendance %.</p>' +
-        all.map((c, ci) => '<section class="course cset"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + D.groups.filter(g => g.course === c).length + ' groups</span></div><div id="cs' + ci + '"><p class="note" style="padding:16px 0">Loading</p></div></section>').join('')
+        all.map((c, ci) => '<section class="course cset"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</span></div><div id="cs' + ci + '"><p class="note" style="padding:16px 0">Loading</p></div></section>').join('')
         : '<div class="empty">No courses yet. Upload a course Excel sheet first, then set its grades here.</div>';
     } else if (tab === 'staff') {
       const crsText = (st) => '<p style="margin:0">' + (st.courses.length ? st.courses.map(esc).join('<br>') : 'All courses') + '</p>';
