@@ -202,6 +202,56 @@
   .cell.dirty { border-color: var(--warn); background: var(--warn-bg); }
   .cell.bad { border-color: var(--err); color: var(--err); background: var(--err-bg); }
   th small { display: block; font-weight: 500; opacity: .8; text-transform: none; }
+
+  /* grades page */
+  .gtitle { display: flex; align-items: center; gap: 18px; }
+  .gbadge { min-width: 72px; height: 72px; padding: 0 12px; flex: none; display: grid; place-items: center; border-radius: 18px; background: var(--accent); color: var(--on-accent);
+    font-family: var(--display); font-size: 32px; font-weight: 800; letter-spacing: -.03em; }
+  .gstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 22px; }
+  .gstat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow); }
+  .gstat b { display: block; font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+  .gstat b small { font-size: 16px; color: var(--muted); font-weight: 700; margin-left: 2px; letter-spacing: 0; }
+  .gstat span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .gstat:first-child { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+  .gstat:first-child span { color: var(--on-accent); opacity: .8; }
+  .gtools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .gtools .in { max-width: 320px; }
+  .seg { display: inline-flex; align-items: stretch; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); flex-wrap: wrap; }
+  .seg span { padding: 10px 14px; font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); background: var(--card2); display: flex; align-items: center; }
+  .seg button { background: none; border: 0; border-left: 1px solid var(--line); padding: 10px 14px; font-weight: 600; font-size: 14px; color: var(--text); }
+  .seg button:hover { background: var(--soft); color: var(--ink); }
+  .gtable { max-height: 72vh; overflow: auto; }
+  .gtable thead th { position: sticky; top: 0; z-index: 2; }
+  .gtable td { background: var(--card); }
+  .gtable th, .gtable td { padding: 10px; } .gtable .cell { width: 58px; } .gtable .sn { min-width: 190px; }
+  .gtable tbody tr:hover td { background: var(--card2); }
+  .gtable .sx { position: sticky; left: 0; z-index: 1; width: 48px; min-width: 48px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
+  .gtable .sn { position: sticky; left: 48px; z-index: 1; min-width: 220px; white-space: normal; box-shadow: 1px 0 0 var(--line); }
+  .gtable thead .sx, .gtable thead .sn { z-index: 3; }
+  .stn { font-weight: 600; }
+  .sid { font-family: var(--mono); font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .gtable .num { text-align: center; }
+  .gtable th.tot, .gtable td.tot { background: var(--card2); box-shadow: inset 1px 0 0 var(--line); }
+  .attc, .totc { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 90px; }
+  .totc { align-items: center; }
+  .attline { display: flex; align-items: baseline; gap: 10px; }
+  .attline b { font-size: 16px; } .attline b.hi { color: var(--ok); } .attline b.mid { color: var(--warn); } .attline b.lo { color: var(--err); }
+  .attline span { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .wk { display: grid; grid-template-columns: repeat(14, 11px); gap: 2px; }
+  .wk i, .wklegend i { display: block; height: 12px; border-radius: 3px; background: var(--line); }
+  .wk i:nth-child(7), .wk i:nth-child(14) { box-shadow: inset 0 0 0 1.5px var(--muted); }
+  .wk i.P, .wklegend i.P { background: var(--ok); } .wk i.A, .wklegend i.A { background: var(--err); } .wk i.E, .wklegend i.E { background: var(--warn); }
+  .wk i.P:nth-child(7), .wk i.P:nth-child(14), .wk i.A:nth-child(7), .wk i.A:nth-child(14), .wk i.E:nth-child(7), .wk i.E:nth-child(14) { box-shadow: none; }
+  .wkh { margin-top: 6px; } .wkh i { background: none; height: auto; font-size: 9px; text-align: center; letter-spacing: 0; }
+  .wklegend { margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .wklegend i { display: inline-block; width: 13px; margin-left: 8px; } .wklegend i:first-child { margin-left: 0; }
+  .totc .total { font-size: 17px; }
+  .mbar { display: block; width: 80px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .mbar i { display: block; height: 100%; background: var(--muted); border-radius: 4px; transition: width .2s; }
+  .mbar.hi i { background: var(--ok); } .mbar.mid i { background: var(--warn); } .mbar.lo i { background: var(--err); }
+  .savebar { position: sticky; bottom: 16px; z-index: 5; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 12px 18px; box-shadow: 0 18px 40px -16px rgba(0,0,0,.55); color: var(--muted); font-weight: 600; font-size: 14px; }
+  .savebar.dirty { border-color: var(--warn); color: var(--warn); }
   .total { font-family: var(--mono); font-weight: 800; color: var(--text); }
   .item-row { display: grid; grid-template-columns: 1fr 110px 42px; gap: 10px; align-items: center; }
   .x { background: none; border: 1px solid var(--line); border-radius: 10px; color: var(--err); height: 46px; font-size: 20px; }
@@ -229,7 +279,9 @@
   .loading::after { content: ""; display: block; width: 36px; height: 4px; margin: 14px auto 0; border-radius: 4px; background: var(--accent); animation: pulse 1s infinite; }
   @media (max-width: 1100px) { .live { grid-template-columns: 1fr 1fr; } .live .side { grid-column: 1 / -1; } }
   @media (max-width: 700px) { .live { grid-template-columns: 1fr; } .wrap { padding: 24px 16px 16px; } .panel { padding: 22px; }
-    .letters { grid-template-columns: 1fr; } .toolbar .filters .in { flex: 1 1 100%; }
+    .letters { grid-template-columns: 1fr; } .gtitle { gap: 12px; } .gbadge { min-width: 54px; height: 54px; font-size: 24px; border-radius: 14px; } .gtable .sn { min-width: 160px; }
+    .gtools .in { max-width: none; } .seg { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); } .seg span { grid-column: 1 / -1; padding: 8px 14px; }
+    .seg button { border-left: 0; border-top: 1px solid var(--line); font-size: 13px; padding: 10px 6px; } .seg button + button { border-left: 1px solid var(--line); } .toolbar .filters .in { flex: 1 1 100%; }
     .door { grid-template-columns: 36px 1fr; grid-template-areas: "num title" "num desc"; padding: 24px 4px; } .door-go { display: none; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
@@ -3418,12 +3470,15 @@ const BOOT = null;
     stopTimers();
     let V = null; const dirty = {};
     app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Groups</button>' +
-      '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1><p class="sub">Grades. Type the marks, then press Save.</p></div>' +
-      '<div class="links" style="margin:0"><button class="link" id="items" hidden>Grade items</button><button class="link" id="cpsec">Copy section attendance (W1 to W12)</button><button class="link" id="cpgr">Copy grades</button><button class="link" id="cpall">Copy all</button></div></div>' +
-      '<div class="panel" style="padding:16px 20px;margin-bottom:16px"><div class="row" style="align-items:center"><input class="in" id="sr" type="search" placeholder="Search a name or ID" style="max-width:320px">' +
-      '<button class="btn" id="save" type="button" disabled>Save</button><span class="note" id="st"></span></div></div>' +
-      '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
-      '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and 0 for absent, in the order of the course sheet: weeks 1 to 6 and 8 to 13 become W1 to W12. Paste it on the first student\'s W1 cell.</p></div>';
+      '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks, then press Save. Enter moves to the next student.</p></div></div>' +
+      '<div class="links" style="margin:0"><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
+      '<div class="gstats" id="gst"></div>' +
+      '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID">' +
+      '<div class="seg"><span>Copy</span><button type="button" id="cpsec">Section attendance (W1 to W12)</button><button type="button" id="cpgr">Grades</button><button type="button" id="cpall">Whole table</button></div></div>' +
+      '<div class="table-wrap gtable"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
+      '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and 0 for absent, in the order of the course sheet: weeks 1 to 6 and 8 to 13 become W1 to W12. Paste it on the first student\'s W1 cell.</p>' +
+      '<p class="note wklegend"><i class="P"></i>Present <i class="A"></i>Absent <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
+      '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
     $('bk').onclick = async () => {
       if (unsaved() && !confirm('You have marks that are not saved. Leave anyway?')) return;
@@ -3434,34 +3489,75 @@ const BOOT = null;
       $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; });
     };
     const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
+    const maxTotal = () => (V.attendanceMax || 0) + V.items.reduce((t, it) => t + Number(it.max), 0);
+    /* green from 75%, orange from 50%, red below */
+    const level = (f) => f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
+    const paintBar = (el, part, whole) => { const f = whole > 0 ? Math.max(0, Math.min(1, part / whole)) : 0; el.className = 'mbar ' + level(f); el.firstChild.style.width = Math.round(f * 100) + '%'; };
+    const bar = (part, whole) => { const f = whole > 0 ? Math.max(0, Math.min(1, part / whole)) : 0; return '<span class="mbar ' + level(f) + '"><i style="width:' + Math.round(f * 100) + '%"></i></span>'; };
+    const status = () => {
+      const n = unsaved(), bad = !!$('rows').querySelector('.cell.bad');
+      $('save').disabled = !n || bad;
+      $('sbar').classList.toggle('dirty', n > 0);
+      $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
+    };
+    function stats() {
+      const rows = V.rows, mt = maxTotal(), att = rows.filter(r => r.pct !== '');
+      const avg = (a) => a.length ? a.reduce((t, x) => t + Number(x), 0) / a.length : null;
+      const avgTotal = avg(rows.map(r => r.total)), avgAtt = avg(att.map(r => r.pct));
+      const tile = (big, label) => '<div class="gstat"><b>' + big + '</b><span>' + label + '</span></div>';
+      $('gst').innerHTML = tile(rows.length, 'students') +
+        tile(avgAtt === null ? '&ndash;' : Math.round(avgAtt * 100) + '%', 'average attendance') +
+        (mt ? tile((avgTotal === null ? '&ndash;' : Math.round(avgTotal * 10) / 10) + '<small>/' + mt + '</small>', 'average total') +
+              tile((rows.length ? Math.max(...rows.map(r => Number(r.total))) : '&ndash;') + '<small>/' + mt + '</small>', 'highest total') : '') +
+        tile(V.items.length, V.items.length === 1 ? 'grade item' : 'grade items');
+    }
     function render() {
       $('items').hidden = !V.canEditItems;
+      stats();
       if (!V.items.length && !V.attendanceMax) {
         $('th').innerHTML = '';
-        $('rows').innerHTML = '<tr><td style="padding:22px">' + (V.canEditItems ? 'No grade items yet. Press <b>Grade items</b> to add the quizzes, assignments and midterm of this course.' : 'No grade items yet. The admin adds the quizzes and assignments of this course.') + '</td></tr>';
+        $('rows').innerHTML = '<tr><td style="padding:22px;white-space:normal">' + (V.canEditItems ? 'No grade items yet. Press <b>Grade items</b> to add the quizzes, assignments and midterm of this course.' : 'No grade items yet. The admin adds the quizzes and assignments of this course.') + '</td></tr>';
+        status();
         return;
       }
-      $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th><th>Attendance</th>' + (V.attendanceMax ? '<th>Attendance<small>/' + V.attendanceMax + '</small></th>' : '') +
-        V.items.map(it => '<th>' + esc(it.item) + '<small>/' + it.max + '</small></th>').join('') + '<th>Total</th></tr>';
-      $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td>' +
-        '<td>' + fmtPct(r.pct) + '</td>' + (V.attendanceMax ? '<td>' + (r.attGrade === '' ? '' : r.attGrade) + '</td>' : '') +
+      const mt = maxTotal();
+      const weekName = (n) => 'Week ' + (n + 1) + (n === 6 ? ' (Midterm)' : n === 13 ? ' (Final)' : '');
+      const weekNums = Array.from({ length: 14 }, (x, n) => '<i>' + (n + 1) + '</i>').join('');
+      $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance<div class="wk wkh">' + weekNums + '</div></th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
+        V.items.map(it => '<th class="num">' + esc(it.item) + '<small>out of ' + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
+      $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td class="sx">' + (i + 1) + '</td>' +
+        '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
+        '<td><div class="attc"><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b><span>' + r.p + ' P, ' + r.a + ' A, ' + r.e + ' E</span></div>' +
+          '<div class="wk">' + (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="' + weekName(n) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></div></td>' +
+        (V.attendanceMax ? '<td class="num mono">' + (r.attGrade === '' ? '&ndash;' : r.attGrade) + '</td>' : '') +
         V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
-          return '<td><input class="cell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '"></td>'; }).join('') +
-        '<td class="total" id="tot' + i + '">' + r.total + '</td></tr>').join('');
-      $('rows').querySelectorAll('.cell').forEach(inp => inp.oninput = () => {
-        const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = inp.value.trim().replace(',', '.');
-        const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
-        const n = Number(raw), bad = raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max));
-        inp.classList.toggle('bad', bad);
-        if (raw === orig) delete dirty[k]; else dirty[k] = raw;
-        inp.classList.toggle('dirty', k in dirty);
-        let sum = r.attGrade || 0;
-        V.items.forEach(it => { const kk = r.id + '|' + it.key; const v = kk in dirty ? Number(dirty[kk]) : r.scores[it.key]; if (v !== undefined && v !== '' && !isNaN(v)) sum += Number(v); });
-        $('tot' + inp.dataset.i).textContent = Math.round(sum * 100) / 100;
-        $('save').disabled = !unsaved() || !!$('rows').querySelector('.cell.bad');
-        $('st').textContent = unsaved() ? unsaved() + ' marks not saved' : '';
+          return '<td class="num"><input class="cell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" autocomplete="off" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"></td>'; }).join('') +
+        '<td class="num tot"><div class="totc"><span class="total" id="tot' + i + '">' + r.total + '</span>' + bar(r.total, mt).replace('<span class="mbar', '<span id="totb' + i + '" class="mbar') + '</div></td></tr>').join('');
+      $('rows').querySelectorAll('.cell').forEach(inp => {
+        inp.oninput = () => {
+          const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = inp.value.trim().replace(',', '.');
+          const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
+          const n = Number(raw), bad = raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max));
+          inp.classList.toggle('bad', bad);
+          if (raw === orig) delete dirty[k]; else dirty[k] = raw;
+          inp.classList.toggle('dirty', k in dirty);
+          let sum = r.attGrade || 0;
+          V.items.forEach(it => { const kk = r.id + '|' + it.key; const v = kk in dirty ? Number(dirty[kk]) : r.scores[it.key]; if (v !== undefined && v !== '' && !isNaN(v)) sum += Number(v); });
+          $('tot' + inp.dataset.i).textContent = Math.round(sum * 100) / 100;
+          paintBar($('totb' + inp.dataset.i), sum, mt);
+          status();
+        };
+        /* Enter or the arrow keys move up and down the same column, skipping rows hidden by the search */
+        inp.onkeydown = (e) => {
+          const step = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+          if (!step) return;
+          e.preventDefault();
+          const col = [...$('rows').querySelectorAll('.cell[data-k="' + CSS.escape(inp.dataset.k) + '"]')].filter(x => !x.closest('tr').hidden);
+          const next = col[col.indexOf(inp) + step];
+          if (next) { next.focus(); next.select(); }
+        };
       });
-      $('save').disabled = true; $('st').textContent = '';
+      status();
     }
     async function load() {
       try { V = await api('gradesView', PIN, g.course, g.group); render(); } catch (e) { toast(errMsg(e)); }
