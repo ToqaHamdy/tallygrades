@@ -2474,10 +2474,13 @@ const BOOT = null;
   /* Every action is a database function in Supabase. The page sends named values; the database checks the PIN and the rules. */
   const RPC = {
     studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']],
-    appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_pin']], login: ['login', ['p_pin']],
+    appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_user', 'p_pass']], login: ['login', ['p_user', 'p_pass']],
+    whoami: ['whoami', ['p_pin']], logout: ['logout', ['p_pin']], courseList: ['course_list', []],
+    registerTa: ['register_ta', ['p_name', 'p_user', 'p_pass', 'p_courses']], approveTa: ['approve_ta', ['p_pin', 'p_name', 'p_courses']],
+    rejectTa: ['reject_ta', ['p_pin', 'p_name']], setStaffLogin: ['set_staff_login', ['p_pin', 'p_name', 'p_user', 'p_pass']],
     addGroup: ['add_group', ['p_pin', 'p_course', 'p_group', 'p_ta', 'p_list']], importGroups: ['import_groups', ['p_pin', 'p_course', 'p_groups']],
     claimGroup: ['claim_group', ['p_pin', 'p_course', 'p_group']], assignGroup: ['assign_group', ['p_pin', 'p_course', 'p_group', 'p_ta']],
-    removeGroup: ['remove_group', ['p_pin', 'p_course', 'p_group']], addStaff: ['add_staff', ['p_pin', 'p_name', 'p_new_pin', 'p_courses']],
+    removeGroup: ['remove_group', ['p_pin', 'p_course', 'p_group']], addStaff: ['add_staff', ['p_pin', 'p_name', 'p_user', 'p_pass', 'p_courses']],
     setStaffCourses: ['set_staff_courses', ['p_pin', 'p_name', 'p_courses']], removeStaff: ['remove_staff', ['p_pin', 'p_name']],
     setTermStart: ['set_term_start', ['p_pin', 'p_date']],
     openSession: ['open_session', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_minutes', 'p_strict', 'p_guests']],
@@ -2506,7 +2509,9 @@ const BOOT = null;
       let data = null; try { data = text ? JSON.parse(text) : null; } catch (e) {}
       if (res.ok) return data;
       if (res.status >= 500 || res.status === 429) { await new Promise(r => setTimeout(r, 700 * (tries + 1))); continue; }
-      throw new Error((data && (data.message || data.error)) || 'Something went wrong (' + res.status + ').');
+      const msg = (data && (data.message || data.error)) || 'Something went wrong (' + res.status + ').';
+      if (msg === 'Please log in again.') { try { loggedOut(); } catch (e) {} }
+      throw new Error(msg);
     }
     throw new Error('Could not reach the server. Check your internet.');
   }
@@ -2620,11 +2625,11 @@ const BOOT = null;
   }
 
   /* =============== STAFF =============== */
-  let PIN = store.sget('att_pin') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
+  let PIN = store.get('tg_token') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
   const stopTimers = () => { timers.forEach(t => clearInterval(t)); timers = []; document.body.classList.remove('projector'); };
 
   async function startStaff() {
-    if (PIN) { try { D = await api('login', PIN); return dashboard(); } catch (e) { PIN = ''; store.sset('att_pin', null); } }
+    if (PIN) { try { D = await api('whoami', PIN); return dashboard(); } catch (e) { PIN = ''; store.set('tg_token', ''); } }
     let state = { setup: true };
     try { state = await api('appState'); } catch (e) { app.innerHTML = '<div class="loading">Could not connect. Refresh the page.</div>'; return; }
     state.setup ? landingView() : setupView();
@@ -2634,41 +2639,73 @@ const BOOT = null;
     const card = (pill, title, text, id) => '<div class="card"><span class="pill">' + pill + '</span><h3>' + title + '</h3><p>' + text + '</p><div class="links"><button class="link" id="' + id + '">Continue &rarr;</button></div></div>';
     app.innerHTML = '<div class="wrap"><div class="top"><div><h1>Tally Grades</h1><p class="sub">Attendance and grades. Who are you?</p></div></div><div class="grid">' +
       card('Student', 'I am a student', 'Register your phone once. In the section, scan the QR code on the screen to check in.', 'asStudent') +
-      card('TA', 'I am a TA', 'Log in with your PIN to open check-in, see who attended, and enter grades.', 'asTa') +
-      card('Admin', 'I am the admin', 'Log in with the admin PIN to manage courses, groups and TAs.', 'asAdmin') + '</div></div>';
+      card('TA', 'I am a TA', 'Log in with your username and password, or create an account. The admin confirms new accounts.', 'asTa') +
+      card('Admin', 'I am the admin', 'Log in with the admin account to manage courses, groups and TAs.', 'asAdmin') + '</div></div>';
     $('asStudent').onclick = () => registration(true);
     $('asTa').onclick = () => loginView('TA');
     $('asAdmin').onclick = () => loginView('Admin');
   }
+  function signedIn(r) { D = r.dash; PIN = r.token; store.set('tg_token', PIN); tab = 'mine'; dashboard(); }
+  function loggedOut() { PIN = ''; store.set('tg_token', ''); stopTimers(); document.querySelectorAll('.overlay').forEach(o => o.remove()); landingView(); toast('Please log in again.'); }
+  const loginFields = (pre) => '<label class="f">Username<input class="in" id="us" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(pre || '') + '"></label>' +
+    '<label class="f">Password<input class="in" id="pw" type="password" autocomplete="current-password"></label>';
   function setupView() {
     app.innerHTML = '<div class="wrap"><div class="panel narrow"><span class="pill">First time</span><h1 style="font-size:30px;margin-top:14px">Set up Tally Grades</h1>' +
-      '<p class="sub">You become the admin. You can add the other TAs after this.</p>' +
-      '<form class="form" id="f" style="margin-top:20px"><label class="f">Your name<input class="in" id="nm" placeholder="Toqa Hamdy"></label>' +
-      '<label class="f">Choose a PIN (6 to 10 digits)<input class="in" id="pn" type="password" inputmode="numeric"></label>' +
+      '<p class="sub">You become the admin. TAs can then create their accounts, and you confirm them.</p>' +
+      '<form class="form" id="f" style="margin-top:20px"><label class="f">Your name<input class="in" id="nm" placeholder="Toqa Hamdy"></label>' + loginFields() +
+      '<p class="note">Username: 3 to 30 letters or numbers, no spaces. Password: at least 6 characters.</p>' +
       '<div class="err" id="er"></div><button class="btn" type="submit">Create admin</button></form></div></div>';
     $('f').onsubmit = async (e) => {
       e.preventDefault(); $('er').textContent = '';
-      try { D = await api('setupAdmin', $('nm').value, $('pn').value); PIN = $('pn').value.trim(); store.sset('att_pin', PIN); dashboard(); }
+      try { signedIn(await api('setupAdmin', $('nm').value, $('us').value, $('pw').value)); }
       catch (err) { $('er').textContent = errMsg(err); }
     };
   }
-  function loginView(as) {
+  function loginView(as, pre) {
     app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">' + (as === 'Admin' ? 'Admin' : 'TA') + '</span><h1 style="font-size:30px;margin-top:14px">Log in</h1>' +
-      '<p class="sub">' + (as === 'Admin' ? 'Use the admin PIN.' : 'Use the PIN your admin gave you.') + '</p>' +
-      '<form class="form" id="f" style="margin-top:20px"><label class="f">Your PIN<input class="in big-in" id="pn" type="password" inputmode="numeric"></label>' +
-      '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Log in</button></form></div></div>';
-    $('pn').focus();
+      '<form class="form" id="f" style="margin-top:20px">' + loginFields(pre) +
+      '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Log in</button></form>' +
+      (as === 'Admin' ? '' : '<p class="note" style="margin-top:18px">New TA? <button class="link" id="reg" type="button" style="font-size:15px">Create an account</button></p>') + '</div></div>';
+    (pre ? $('pw') : $('us')).focus();
     $('bk').onclick = landingView;
+    if ($('reg')) $('reg').onclick = registerView;
     $('f').onsubmit = async (e) => {
       e.preventDefault(); $('er').textContent = ''; $('go').disabled = true;
       try {
-        const d = await api('login', $('pn').value);
-        if (as === 'Admin' && d.me.role !== 'Admin') { $('er').textContent = 'This is a TA PIN. Go back and choose "I am a TA".'; $('go').disabled = false; return; }
-        D = d; PIN = $('pn').value.trim(); store.sset('att_pin', PIN); tab = 'mine'; dashboard();
+        const r = await api('login', $('us').value, $('pw').value);
+        if (as === 'Admin' && r.dash.me.role !== 'Admin') { api('logout', r.token).catch(() => {}); $('er').textContent = 'This is a TA account. Go back and choose "I am a TA".'; $('go').disabled = false; return; }
+        signedIn(r);
       } catch (err) { $('er').textContent = errMsg(err); $('go').disabled = false; }
     };
   }
-  function logout() { PIN = ''; store.sset('att_pin', null); stopTimers(); landingView(); }
+  async function registerView() {
+    let courses = [];
+    try { courses = await api('courseList'); } catch (e) {}
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">New TA</span><h1 style="font-size:30px;margin-top:14px">Create an account</h1>' +
+      '<p class="sub">The admin confirms your account, then you can log in.</p>' +
+      '<form class="form" id="f" style="margin-top:20px"><label class="f">Full name<input class="in" id="nm" autocomplete="name"></label>' + loginFields() +
+      '<label class="f">Password again<input class="in" id="pw2" type="password" autocomplete="new-password"></label>' +
+      (courses.length ? '<div class="f" style="font-size:14px;color:var(--muted);font-weight:700">Your courses</div><div class="picks">' +
+        courses.map(c => '<label class="pick"><input type="checkbox" class="crs" value="' + esc(c) + '"><span><b>' + esc(c) + '</b></span></label>').join('') + '</div>' : '') +
+      '<p class="note">Username: 3 to 30 letters or numbers, no spaces. Password: at least 6 characters.</p>' +
+      '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Send request</button></form></div></div>';
+    $('bk').onclick = () => loginView('TA');
+    $('nm').focus();
+    $('f').onsubmit = async (e) => {
+      e.preventDefault(); $('er').textContent = '';
+      if ($('pw').value !== $('pw2').value) { $('er').textContent = 'The two passwords are not the same.'; return; }
+      $('go').disabled = true;
+      try {
+        await api('registerTa', $('nm').value, $('us').value, $('pw').value, [...document.querySelectorAll('.crs:checked')].map(x => x.value));
+        const user = $('us').value.trim();
+        app.innerHTML = '<div class="wrap"><div class="panel narrow"><div class="done"><div class="mark" aria-hidden="true">&#10003;</div><h2>Request sent</h2>' +
+          '<p class="sub">The admin will confirm your account. After that, log in with your username <b>' + esc(user) + '</b>.</p></div>' +
+          '<div class="row" style="margin-top:18px;justify-content:center"><button class="btn" id="tol" type="button">Go to log in</button></div></div></div>';
+        $('tol').onclick = () => loginView('TA', user);
+      } catch (err) { $('er').textContent = errMsg(err); $('go').disabled = false; }
+    };
+  }
+  function logout() { if (PIN) api('logout', PIN).catch(() => {}); PIN = ''; store.set('tg_token', ''); stopTimers(); landingView(); }
 
   /* ----- dashboard ----- */
   function dashboard() {
@@ -2680,13 +2717,20 @@ const BOOT = null;
     if (tab === 'mine' && !mine.length && groups.length) tab = 'all';
     const list = tab === 'mine' ? mine : groups;
     const tabs = [['mine', 'My groups (' + mine.length + ')'], ['all', 'All groups (' + groups.length + ')']];
-    if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin').length + ')']);
+    const waiting = isAdmin ? D.staff.filter(x => x.status === 'pending') : [];
+    if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin' && x.status !== 'pending').length + ')' + (waiting.length ? ', ' + waiting.length + ' waiting' : '')]);
     let body = '';
     if (tab === 'staff') {
-      body = '<div class="grid">' + D.staff.map(st =>
-        '<div class="card"><span class="pill">' + (st.role === 'Admin' ? 'Admin' : 'TA') + '</span><h3>' + esc(st.name) + '</h3><p>' + D.groups.filter(g => g.ta === st.name).length + ' groups</p>' +
-        (st.role === 'Admin' ? '' : '<p style="margin:0">' + (st.courses.length ? st.courses.map(esc).join('<br>') : 'All courses') + '</p>') +
-        (st.name !== D.me.name ? '<div class="links"><button class="link" data-crs="' + esc(st.name) + '">Courses</button><button class="link danger" data-rm="' + esc(st.name) + '">Remove</button></div>' : '') + '</div>').join('') +
+      const crsText = (st) => '<p style="margin:0">' + (st.courses.length ? st.courses.map(esc).join('<br>') : 'All courses') + '</p>';
+      body = (waiting.length ? '<h2 style="font-size:20px;margin:0 0 14px">Waiting for you to confirm</h2><div class="grid" style="margin-bottom:30px">' + waiting.map(st =>
+          '<div class="card" style="border-top-color:var(--warn)"><span class="pill" style="background:var(--warn-bg);color:var(--warn)">New request</span><h3>' + esc(st.name) + '</h3><p>Username: ' + esc(st.username) + '</p>' + crsText(st) +
+          '<div class="links"><button class="link" data-ok="' + esc(st.name) + '">Confirm &rarr;</button><button class="link danger" data-no="' + esc(st.name) + '">Reject</button></div></div>').join('') + '</div>' : '') +
+        '<div class="grid">' + D.staff.filter(st => st.status !== 'pending').map(st =>
+        '<div class="card"><span class="pill">' + (st.role === 'Admin' ? 'Admin' : 'TA') + '</span><h3>' + esc(st.name) + '</h3><p>' + (st.username ? 'Username: ' + esc(st.username) + '<br>' : '') + D.groups.filter(g => g.ta === st.name).length + ' groups</p>' +
+        (st.role === 'Admin' ? '' : crsText(st)) +
+        '<div class="links">' + (st.role === 'Admin' ? '' : '<button class="link" data-crs="' + esc(st.name) + '">Courses</button>') +
+        '<button class="link" data-pw="' + esc(st.name) + '">' + (st.username ? 'Password' : 'Set username') + '</button>' +
+        (st.name !== D.me.name ? '<button class="link danger" data-rm="' + esc(st.name) + '">Remove</button>' : '') + '</div></div>').join('') +
         '<div class="card add"><button type="button" id="addStaff">+ Add a TA</button></div></div>';
     } else {
       const courses = [...new Set(list.map(g => g.course))].sort();
@@ -2709,7 +2753,7 @@ const BOOT = null;
       }).join('') + '<div class="card add"><button type="button" id="upload">+ Upload an Excel sheet</button><button type="button" id="addGroup" style="font-size:16px">or paste one group</button></div></div>';
     }
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
-    const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.'
+    const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
     const top = '<button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
       ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button><button class="link" id="out">Log out</button>'
@@ -2732,6 +2776,12 @@ const BOOT = null;
       try { D = await api('removeGroup', PIN, g.course, g.group); dashboard(); } catch (e) { toast(errMsg(e)); }
     });
     on('[data-crs]', b => coursesDialog(D.staff.find(x => x.name === b.dataset.crs)));
+    on('[data-ok]', b => coursesDialog(D.staff.find(x => x.name === b.dataset.ok), true));
+    on('[data-pw]', b => passwordDialog(D.staff.find(x => x.name === b.dataset.pw)));
+    on('[data-no]', async b => {
+      if (!confirm('Reject the request of ' + b.dataset.no + '?')) return;
+      try { D = await api('rejectTa', PIN, b.dataset.no); dashboard(); toast('Request rejected.'); } catch (e) { toast(errMsg(e)); }
+    });
     on('[data-rm]', async b => {
       if (!confirm('Remove ' + b.dataset.rm + '? Their PIN stops working, and their groups become free.')) return;
       try { D = await api('removeStaff', PIN, b.dataset.rm); dashboard(); } catch (e) { toast(errMsg(e)); }
@@ -2748,6 +2798,7 @@ const BOOT = null;
     applyFilter();
     if ($('addStaff')) $('addStaff').onclick = addStaffDialog;
     $('out').onclick = logout;
+    if ($('seeReq')) $('seeReq').onclick = () => { tab = 'staff'; dashboard(); };
     $('regqr').onclick = registrationQrDialog;
     $('final').onclick = downloadFinal;
     if ($('term')) $('term').onclick = termDialog;
@@ -2826,7 +2877,7 @@ const BOOT = null;
       });
   }
   function changeTaDialog(g) {
-    const names = D.staff.map(x => x.name);
+    const names = D.staff.filter(x => x.status !== 'pending').map(x => x.name);
     dialog('<span class="pill">Group ' + esc(g.group) + '</span><h1 style="font-size:26px;margin-top:12px">Change TA</h1><p class="sub">' + esc(g.course) + '</p>' +
       '<div class="form" style="margin-top:18px"><label class="f">TA<select class="in" id="ta"><option value="">No TA (any TA can take it)</option>' +
       names.map(n => '<option' + (n === g.ta ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select></label>' +
@@ -2869,7 +2920,7 @@ const BOOT = null;
   }
   function addGroupDialog() {
     const isAdmin = D.me.role === 'Admin';
-    const tas = isAdmin ? D.staff.map(x => x.name) : [D.me.name];
+    const tas = isAdmin ? D.staff.filter(x => x.status !== 'pending').map(x => x.name) : [D.me.name];
     const courses = [...new Set(D.groups.map(g => g.course))];
     dialog('<h1 style="font-size:26px;margin:0">Add a group</h1><p class="sub">Copy the Name and ID columns from Excel or the LMS and paste them here.</p>' +
       '<div class="form" style="margin-top:18px"><div class="row"><label class="f">Course<input class="in" id="co" list="cl" placeholder="Electronic Projects"><datalist id="cl">' + courses.map(c => '<option value="' + esc(c) + '">').join('') + '</datalist></label>' +
@@ -3001,27 +3052,41 @@ const BOOT = null;
       '</div><p class="note">The TA sees only these courses. Tick none to show every course.</p>';
   }
   const pickedCourses = (o) => [...o.querySelectorAll('.crs:checked')].map(x => x.value);
-  function coursesDialog(st) {
+  function coursesDialog(st, approve) {
     if (!st) return;
-    dialog('<span class="pill">TA</span><h1 style="font-size:26px;margin-top:12px">' + esc(st.name) + '</h1><p class="sub">Choose the courses this TA works in.</p>' +
+    dialog('<span class="pill">' + (approve ? 'New request' : 'TA') + '</span><h1 style="font-size:26px;margin-top:12px">' + esc(st.name) + '</h1><p class="sub">' + (approve ? 'Check the courses this TA asked for, then confirm the account.' : 'Choose the courses this TA works in.') + '</p>' +
       '<div class="form" style="margin-top:18px">' + courseChecks(st.courses) +
-      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">' + (approve ? 'Confirm account' : 'Save') + '</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
       (o, close) => {
         o.querySelector('#go').onclick = async () => {
-          try { D = await api('setStaffCourses', PIN, st.name, pickedCourses(o)); close(); dashboard(); toast('Saved.'); }
+          try { D = await api(approve ? 'approveTa' : 'setStaffCourses', PIN, st.name, pickedCourses(o)); close(); dashboard(); toast(approve ? st.name + ' can log in now.' : 'Saved.'); }
           catch (e) { o.querySelector('#er').textContent = errMsg(e); }
         };
       });
   }
   function addStaffDialog() {
-    dialog('<h1 style="font-size:26px;margin:0">Add a TA</h1><p class="sub">Give the TA their PIN. They log in with it on this same page.</p>' +
-      '<div class="form" style="margin-top:18px"><label class="f">Name<input class="in" id="nm"></label>' +
-      '<label class="f">PIN (6 to 10 digits)<input class="in" id="pn" inputmode="numeric"></label>' + courseChecks([]) +
+    dialog('<h1 style="font-size:26px;margin:0">Add a TA</h1><p class="sub">The account works right away. Send the TA their username and password.</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Full name<input class="in" id="nm"></label>' + loginFields() + courseChecks([]) +
       '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Add</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
       (o, close) => {
         const q = (s) => o.querySelector(s);
+        q('#pw').type = 'text';
         q('#go').onclick = async () => {
-          try { D = await api('addStaff', PIN, q('#nm').value, q('#pn').value, pickedCourses(o)); close(); tab = 'staff'; dashboard(); toast('TA added.'); }
+          try { D = await api('addStaff', PIN, q('#nm').value, q('#us').value, q('#pw').value, pickedCourses(o)); close(); tab = 'staff'; dashboard(); toast('TA added.'); }
+          catch (e) { q('#er').textContent = errMsg(e); }
+        };
+      });
+  }
+  function passwordDialog(st) {
+    if (!st) return;
+    dialog('<span class="pill">' + esc(st.role) + '</span><h1 style="font-size:26px;margin-top:12px">' + esc(st.name) + '</h1><p class="sub">Set a new username and password. ' + (st.name === D.me.name ? 'Use them the next time you log in.' : 'Send them to the TA.') + '</p>' +
+      '<div class="form" style="margin-top:18px">' + loginFields(st.username) +
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        const q = (s) => o.querySelector(s);
+        q('#pw').type = 'text'; q('#pw').focus();
+        q('#go').onclick = async () => {
+          try { D = await api('setStaffLogin', PIN, st.name, q('#us').value, q('#pw').value); close(); dashboard(); toast('Saved.'); }
           catch (e) { q('#er').textContent = errMsg(e); }
         };
       });
@@ -3050,7 +3115,7 @@ const BOOT = null;
       '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"></tbody></table></div>' +
       '<h2 style="font-size:18px;margin:26px 0 8px">Flags this week</h2><ul id="fl" class="note"></ul></div></div>';
 
-    $('bk').onclick = async () => { stopTimers(); try { D = await api('login', PIN); } catch (e) {} dashboard(); };
+    $('bk').onclick = async () => { stopTimers(); try { D = await api('whoami', PIN); } catch (e) {} dashboard(); };
     $('gr').onclick = () => { stopTimers(); gradesPage(g); };
     $('wk').onchange = () => { week = $('wk').value === 'all' ? 'all' : Number($('wk').value); lastQr = ''; $('livebox').innerHTML = ''; load(); };
     $('sr').oninput = () => { q = $('sr').value.trim().toLowerCase(); renderList(); };
@@ -3234,7 +3299,7 @@ const BOOT = null;
     const unsaved = () => Object.keys(dirty).length;
     $('bk').onclick = async () => {
       if (unsaved() && !confirm('You have marks that are not saved. Leave anyway?')) return;
-      try { D = await api('login', PIN); } catch (e) {} dashboard();
+      try { D = await api('whoami', PIN); } catch (e) {} dashboard();
     };
     $('sr').oninput = () => {
       const q = $('sr').value.trim().toLowerCase();
