@@ -223,6 +223,7 @@
   .gtable { max-height: 72vh; overflow: auto; }
   .gtable thead th { position: sticky; top: 0; z-index: 2; }
   .gtable td { background: var(--card); }
+  .gtable th, .gtable td { padding: 10px; } .gtable .cell { width: 58px; } .gtable .sn { min-width: 190px; }
   .gtable tbody tr:hover td { background: var(--card2); }
   .gtable .sx { position: sticky; left: 0; z-index: 1; width: 48px; min-width: 48px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
   .gtable .sn { position: sticky; left: 48px; z-index: 1; min-width: 220px; white-space: normal; box-shadow: 1px 0 0 var(--line); }
@@ -233,7 +234,17 @@
   .gtable th.tot, .gtable td.tot { background: var(--card2); box-shadow: inset 1px 0 0 var(--line); }
   .attc, .totc { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 90px; }
   .totc { align-items: center; }
-  .attc span:first-child { font-weight: 600; }
+  .attline { display: flex; align-items: baseline; gap: 10px; }
+  .attline b { font-size: 16px; } .attline b.hi { color: var(--ok); } .attline b.mid { color: var(--warn); } .attline b.lo { color: var(--err); }
+  .attline span { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .wk { display: grid; grid-template-columns: repeat(14, 11px); gap: 2px; }
+  .wk i, .wklegend i { display: block; height: 12px; border-radius: 3px; background: var(--line); }
+  .wk i:nth-child(7), .wk i:nth-child(14) { box-shadow: inset 0 0 0 1.5px var(--muted); }
+  .wk i.P, .wklegend i.P { background: var(--ok); } .wk i.A, .wklegend i.A { background: var(--err); } .wk i.E, .wklegend i.E { background: var(--warn); }
+  .wk i.P:nth-child(7), .wk i.P:nth-child(14), .wk i.A:nth-child(7), .wk i.A:nth-child(14), .wk i.E:nth-child(7), .wk i.E:nth-child(14) { box-shadow: none; }
+  .wkh { margin-top: 6px; } .wkh i { background: none; height: auto; font-size: 9px; text-align: center; letter-spacing: 0; }
+  .wklegend { margin-top: 8px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  .wklegend i { display: inline-block; width: 13px; margin-left: 8px; } .wklegend i:first-child { margin-left: 0; }
   .totc .total { font-size: 17px; }
   .mbar { display: block; width: 80px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
   .mbar i { display: block; height: 100%; background: var(--muted); border-radius: 4px; transition: width .2s; }
@@ -3466,6 +3477,7 @@ const BOOT = null;
       '<div class="seg"><span>Copy</span><button type="button" id="cpsec">Section attendance (W1 to W12)</button><button type="button" id="cpgr">Grades</button><button type="button" id="cpall">Whole table</button></div></div>' +
       '<div class="table-wrap gtable"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
       '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and 0 for absent, in the order of the course sheet: weeks 1 to 6 and 8 to 13 become W1 to W12. Paste it on the first student\'s W1 cell.</p>' +
+      '<p class="note wklegend"><i class="P"></i>Present <i class="A"></i>Absent <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
     $('bk').onclick = async () => {
@@ -3509,11 +3521,14 @@ const BOOT = null;
         return;
       }
       const mt = maxTotal();
-      $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance</th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
+      const weekName = (n) => 'Week ' + (n + 1) + (n === 6 ? ' (Midterm)' : n === 13 ? ' (Final)' : '');
+      const weekNums = Array.from({ length: 14 }, (x, n) => '<i>' + (n + 1) + '</i>').join('');
+      $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance<div class="wk wkh">' + weekNums + '</div></th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
         V.items.map(it => '<th class="num">' + esc(it.item) + '<small>out of ' + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
       $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td class="sx">' + (i + 1) + '</td>' +
         '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
-        '<td><div class="attc"><span>' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</span>' + (r.pct === '' ? '' : bar(r.pct, 1)) + '</div></td>' +
+        '<td><div class="attc"><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b><span>' + r.p + ' P, ' + r.a + ' A, ' + r.e + ' E</span></div>' +
+          '<div class="wk">' + (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="' + weekName(n) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></div></td>' +
         (V.attendanceMax ? '<td class="num mono">' + (r.attGrade === '' ? '&ndash;' : r.attGrade) + '</td>' : '') +
         V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
           return '<td class="num"><input class="cell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" autocomplete="off" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"></td>'; }).join('') +
