@@ -103,18 +103,25 @@
   .course-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 16px; flex-wrap: wrap; border-bottom: 2px solid var(--text); padding-bottom: 10px; }
   .course-head h2 { margin: 0; font-size: 28px; font-weight: 800; }
   .course-head span { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-  .grow { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 6px 24px; align-items: center; padding: 18px 8px; border-bottom: 1px solid var(--line); transition: background .15s; }
-  .grow:hover { background: linear-gradient(90deg, var(--soft), transparent 75%); }
-  .gcode { font-family: var(--display); font-size: 44px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
+  .letters { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; margin-top: 18px; }
+  .letter { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 6px 18px 8px; box-shadow: var(--shadow); align-self: start; }
+  .letter-head { display: flex; align-items: center; gap: 14px; padding: 12px 0 14px; border-bottom: 2px solid var(--accent); }
+  .letter-big { width: 54px; height: 54px; flex: none; display: grid; place-items: center; border-radius: 14px; background: var(--accent); color: var(--on-accent);
+    font-family: var(--display); font-size: 32px; font-weight: 800; letter-spacing: -.03em; }
+  .letter-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); line-height: 1.6; }
+  .grow { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 14px 4px; border-bottom: 1px solid var(--line); }
+  .grow:last-child { border-bottom: 0; }
+  .gcode { font-family: var(--display); font-size: 28px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
   .grow.is-live .gcode { color: var(--ink); }
-  .gta { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .gta { font-weight: 700; font-size: 15.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .gta.none { color: var(--muted); font-weight: 600; }
   .gta .pill.green { margin: 0; }
-  .gmeta { color: var(--muted); font-size: 14px; margin-top: 4px; }
-  .gbar { height: 4px; max-width: 260px; border-radius: 4px; background: var(--line); margin-top: 10px; overflow: hidden; }
-  .gbar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
-  .grow .links { margin: 0; justify-content: flex-end; }
-  .grow .owner { color: var(--muted); font-size: 14px; }
+  .gmeta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .gbar { height: 3px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
+  .gbar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .grow .links, .grow .owner { grid-column: 2; margin: 6px 0 0; gap: 4px 12px; }
+  .grow .link { font-size: 13px; white-space: nowrap; }
+  .grow .owner { color: var(--muted); font-size: 13px; }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -222,7 +229,7 @@
   .loading::after { content: ""; display: block; width: 36px; height: 4px; margin: 14px auto 0; border-radius: 4px; background: var(--accent); animation: pulse 1s infinite; }
   @media (max-width: 1100px) { .live { grid-template-columns: 1fr 1fr; } .live .side { grid-column: 1 / -1; } }
   @media (max-width: 700px) { .live { grid-template-columns: 1fr; } .wrap { padding: 24px 16px 16px; } .panel { padding: 22px; }
-    .grow { grid-template-columns: 72px minmax(0, 1fr); } .gcode { font-size: 34px; } .grow .links, .grow .owner { grid-column: 1 / -1; justify-content: flex-start; } .toolbar .filters .in { flex: 1 1 100%; }
+    .letters { grid-template-columns: 1fr; } .toolbar .filters .in { flex: 1 1 100%; }
     .door { grid-template-columns: 36px 1fr; grid-template-areas: "num title" "num desc"; padding: 24px 4px; } .door-go { display: none; } }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
@@ -2836,15 +2843,7 @@ const BOOT = null;
     } else {
       const courses = [...new Set(list.map(g => g.course))].sort();
       if (courseFilter && courses.indexOf(courseFilter) < 0) courseFilter = '';
-      const sections = [];
-      list.forEach((g, i) => { let sec = sections.find(x => x.course === g.course); if (!sec) { sec = { course: g.course, rows: [] }; sections.push(sec); } sec.rows.push([g, i]); });
-      body = '<div class="toolbar">' + (list.length > 4 ? '<div class="filters"><select class="in" id="fc"><option value="">All courses</option>' +
-        courses.map(c => '<option' + (c === courseFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' +
-        '<input class="in" id="fq" type="search" placeholder="Search a group or TA" value="' + esc(groupQuery) + '"></div>' : '<div></div>') +
-        '<div class="acts"><button class="btn" type="button" id="upload">+ Upload an Excel sheet</button><button class="btn ghost" type="button" id="addGroup">Paste one group</button></div></div>' +
-        (list.length ? '' : '<div class="empty">No groups yet. Upload the course Excel sheet, or paste one group.</div>') +
-        sections.map(sec => '<section class="course" data-course="' + esc(sec.course) + '"><div class="course-head"><h2>' + esc(sec.course) + '</h2><span>' + sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') +
-          sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students</span></div>' + sec.rows.map(([g, i]) => {
+      const groupRow = (g, i) => {
         const can = isAdmin || g.ta === D.me.name;
         let links = '';
         if (can) {
@@ -2856,9 +2855,28 @@ const BOOT = null;
         const pct = g.count ? Math.round(100 * (g.registered || 0) / g.count) : 0;
         return '<div class="grow' + (g.live ? ' is-live' : '') + '" data-c="' + esc(g.course) + '" data-q="' + esc((g.group + ' ' + g.ta + ' ' + g.course).toLowerCase()) + '"><div class="gcode">' + esc(g.group) + '</div>' +
           '<div><div class="gta' + (g.ta ? '' : ' none') + '">' + (g.ta ? esc(g.ta) : 'No TA yet') + (g.live ? '<span class="pill green">Live now</span>' : '') + '</div>' +
-          '<div class="gmeta">' + g.count + ' students, ' + (g.registered || 0) + ' phones registered</div><div class="gbar" title="' + pct + '% of phones registered"><i style="width:' + pct + '%"></i></div></div>' +
+          '<div class="gmeta">' + g.count + ' students, ' + (g.registered || 0) + ' phones</div><div class="gbar" title="' + pct + '% of phones registered"><i style="width:' + pct + '%"></i></div></div>' +
           (links ? '<div class="links">' + links + '</div>' : '<div class="owner">Belongs to ' + esc(g.ta) + '</div>') + '</div>';
-      }).join('') + '</section>').join('');
+      };
+      const sections = [];
+      list.forEach((g, i) => { let sec = sections.find(x => x.course === g.course); if (!sec) { sec = { course: g.course, rows: [] }; sections.push(sec); } sec.rows.push([g, i]); });
+      body = '<div class="toolbar">' + (list.length > 4 ? '<div class="filters"><select class="in" id="fc"><option value="">All courses</option>' +
+        courses.map(c => '<option' + (c === courseFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' +
+        '<input class="in" id="fq" type="search" placeholder="Search a group or TA" value="' + esc(groupQuery) + '"></div>' : '<div></div>') +
+        '<div class="acts"><button class="btn" type="button" id="upload">+ Upload an Excel sheet</button><button class="btn ghost" type="button" id="addGroup">Paste one group</button></div></div>' +
+        (list.length ? '' : '<div class="empty">No groups yet. Upload the course Excel sheet, or paste one group.</div>') +
+        sections.map(sec => {
+          const letters = [];
+          sec.rows.forEach(([g, i]) => {
+            const L = (String(g.group).match(/^[A-Za-z]+/) || [''])[0].toUpperCase() || '#';
+            let b = letters.find(x => x.L === L); if (!b) { b = { L: L, rows: [] }; letters.push(b); } b.rows.push([g, i]);
+          });
+          return '<section class="course" data-course="' + esc(sec.course) + '"><div class="course-head"><h2>' + esc(sec.course) + '</h2><span>' + sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') +
+            sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students</span></div><div class="letters">' +
+            letters.map(b => '<div class="letter"><div class="letter-head"><span class="letter-big">' + esc(b.L) + '</span><span class="letter-meta">Group ' + esc(b.L) + '<br>' +
+              b.rows.length + (b.rows.length > 1 ? ' groups, ' : ' group, ') + b.rows.reduce((t, [g]) => t + g.count, 0) + ' students</span></div>' + b.rows.map(([g, i]) => groupRow(g, i)).join('') + '</div>').join('') +
+            '</div></section>';
+        }).join('');
     }
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
@@ -2900,6 +2918,7 @@ const BOOT = null;
       app.querySelectorAll('.grow[data-c]').forEach(c => {
         c.hidden = (courseFilter && c.dataset.c !== courseFilter) || (groupQuery && c.dataset.q.indexOf(groupQuery.toLowerCase()) < 0);
       });
+      app.querySelectorAll('.letter').forEach(b => { b.hidden = !b.querySelector('.grow:not([hidden])'); });
       app.querySelectorAll('.course').forEach(sec => { sec.hidden = !sec.querySelector('.grow:not([hidden])'); });
     };
     if ($('fc')) $('fc').onchange = () => { courseFilter = $('fc').value; applyFilter(); };
