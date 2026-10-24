@@ -122,6 +122,17 @@
   .grow .links, .grow .owner { grid-column: 2; margin: 6px 0 0; gap: 4px 12px; }
   .grow .link { font-size: 13px; white-space: nowrap; }
   .grow .owner { color: var(--muted); font-size: 13px; }
+  .cset .dbar { display: flex; gap: 3px; height: 10px; margin: 18px 0 14px; border-radius: 6px; overflow: hidden; }
+  .cset .dbar i { display: block; min-width: 6px; }
+  .d0 { background: var(--accent); } .d1 { background: var(--warn); } .d2 { background: var(--ok); } .d3 { background: var(--muted); }
+  .dist { display: flex; flex-wrap: wrap; gap: 10px; }
+  .dchip { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; min-width: 150px; }
+  .dchip .dot { width: 10px; height: 10px; border-radius: 3px; grid-row: span 2; }
+  .dchip b { font-family: var(--display); font-size: 28px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+  .dchip span:last-child { color: var(--muted); font-weight: 600; font-size: 14px; }
+  .dchip small { display: block; font-size: 12px; font-weight: 500; }
+  .dist-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-weight: 600; }
+  .dist-foot b { font-family: var(--display); font-size: 24px; color: var(--text); margin-left: 6px; }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2873,14 +2884,20 @@ const BOOT = null;
     const isAdmin = D.me.role === 'Admin';
     const groups = D.groups.slice().sort((a, b) => numeric(a.course + a.group, b.course + b.group));
     const mine = groups.filter(g => g.ta === D.me.name);
-    if (tab === 'staff' && !isAdmin) tab = 'mine';
+    if ((tab === 'staff' || tab === 'courses') && !isAdmin) tab = 'mine';
     if (tab === 'mine' && !mine.length && groups.length) tab = 'all';
     const list = tab === 'mine' ? mine : groups;
     const tabs = [['mine', 'My groups (' + mine.length + ')'], ['all', 'All groups (' + groups.length + ')']];
     const waiting = isAdmin ? D.staff.filter(x => x.status === 'pending') : [];
     if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin' && x.status !== 'pending').length + ')' + (waiting.length ? ', ' + waiting.length + ' waiting' : '')]);
+    if (isAdmin) tabs.push(['courses', 'Courses (' + (D.allCourses || []).length + ')']);
     let body = '';
-    if (tab === 'staff') {
+    if (tab === 'courses') {
+      const all = D.allCourses || [];
+      body = all.length ? '<p class="sub" style="margin:-8px 0 22px">The grade distribution of each course. It is the same for every group of the course. The attendance mark is calculated from each student\'s attendance %.</p>' +
+        all.map((c, ci) => '<section class="course cset"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + D.groups.filter(g => g.course === c).length + ' groups</span></div><div id="cs' + ci + '"><p class="note" style="padding:16px 0">Loading</p></div></section>').join('')
+        : '<div class="empty">No courses yet. Upload a course Excel sheet first, then set its grades here.</div>';
+    } else if (tab === 'staff') {
       const crsText = (st) => '<p style="margin:0">' + (st.courses.length ? st.courses.map(esc).join('<br>') : 'All courses') + '</p>';
       body = (waiting.length ? '<h2 style="font-size:20px;margin:0 0 14px">Waiting for you to confirm</h2><div class="grid" style="margin-bottom:30px">' + waiting.map(st =>
           '<div class="card" style="border-top-color:var(--warn)"><span class="pill" style="background:var(--warn-bg);color:var(--warn)">New request</span><h3>' + esc(st.name) + '</h3><p>Username: ' + esc(st.username) + '</p>' + crsText(st) +
@@ -2971,7 +2988,7 @@ const BOOT = null;
         c.hidden = (courseFilter && c.dataset.c !== courseFilter) || (groupQuery && c.dataset.q.indexOf(groupQuery.toLowerCase()) < 0);
       });
       app.querySelectorAll('.letter').forEach(b => { b.hidden = !b.querySelector('.grow:not([hidden])'); });
-      app.querySelectorAll('.course').forEach(sec => { sec.hidden = !sec.querySelector('.grow:not([hidden])'); });
+      app.querySelectorAll('.course[data-course]').forEach(sec => { sec.hidden = !sec.querySelector('.grow:not([hidden])'); });
     };
     if ($('fc')) $('fc').onchange = () => { courseFilter = $('fc').value; applyFilter(); };
     if ($('fq')) $('fq').oninput = () => { groupQuery = $('fq').value.trim(); applyFilter(); };
@@ -2983,6 +3000,23 @@ const BOOT = null;
     $('final').onclick = downloadFinal;
     if ($('term')) $('term').onclick = termDialog;
     if ($('backup')) $('backup').onclick = downloadBackup;
+    if (tab === 'courses') (D.allCourses || []).forEach((c, ci) => courseSettings(c, ci));
+  }
+  /** Admin, Courses tab: one course's grade distribution, with an Edit button that opens the Grade items dialog. */
+  async function courseSettings(course, ci) {
+    const box = $('cs' + ci);
+    if (!box) return;
+    let V;
+    try { V = await api('gradesView', PIN, course, ''); } catch (e) { box.innerHTML = '<p class="err" style="padding:16px 0">' + esc(errMsg(e)) + '</p>'; return; }
+    if (!$('cs' + ci)) return;
+    const parts = (V.attendanceMax ? [{ item: 'Attendance', max: Number(V.attendanceMax), auto: true }] : []).concat(V.items.map(it => ({ item: it.item, max: Number(it.max) })));
+    const total = parts.reduce((t, x) => t + x.max, 0);
+    box.innerHTML = (parts.length
+      ? '<div class="dbar">' + parts.map((x, i) => '<i class="d' + (i % 4) + '" style="flex:' + x.max + '" title="' + esc(x.item) + ': ' + x.max + '"></i>').join('') + '</div>' +
+        '<div class="dist">' + parts.map((x, i) => '<div class="dchip"><span class="dot d' + (i % 4) + '"></span><b>' + x.max + '</b><span>' + esc(x.item) + (x.auto ? '<small>from attendance %</small>' : '') + '</span></div>').join('') + '</div>'
+      : '<p class="note" style="padding:16px 0 4px">No grades set for this course yet.</p>') +
+      '<div class="dist-foot"><span>Total <b>' + total + '</b></span><button class="btn" type="button" id="ce' + ci + '">' + (parts.length ? 'Edit grades' : 'Set grades') + '</button></div>';
+    $('ce' + ci).onclick = () => itemsDialog(course, V, () => courseSettings(course, ci));
   }
   /** End of term: one Excel file, one tab per course, one row per student with every week, attendance %, every grade and the total. */
   async function downloadFinal() {
