@@ -1,0 +1,3328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Tally Grades</title>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0D0E1A; --card: #181A2E; --card2: #20223B; --line: #2D3052; --text: #EEEDFF; --muted: #A4A3C4;
+    --purple: #8B5CF6; --purple2: #B39DFF; --pill: rgba(139,92,246,.17);
+    --ok: #34D399; --ok-bg: rgba(52,211,153,.14); --warn: #FBBF24; --warn-bg: rgba(251,191,36,.14); --err: #F87171; --err-bg: rgba(248,113,113,.14);
+    --font: "Nunito", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, "Roboto Mono", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    font-family: var(--font); color: var(--text); font-size: 16px;
+    background:
+      radial-gradient(900px 520px at 8% -8%, rgba(139,92,246,.22), transparent 70%),
+      radial-gradient(800px 480px at 100% 0%, rgba(56,189,248,.10), transparent 70%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  button:disabled { opacity: .55; cursor: wait; }
+  :focus-visible { outline: 3px solid var(--purple2); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  a { color: var(--purple2); }
+
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 36px 24px 24px; }
+  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+  h1 { font-size: clamp(30px, 4vw, 44px); font-weight: 900; margin: 0; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 6px 0 0; font-size: 17px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+  .tab { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 8px 18px; font-weight: 700; }
+  .tab[aria-selected="true"] { background: var(--pill); color: var(--purple2); border-color: transparent; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
+  .card { background: var(--card); border-radius: 22px; border-top: 5px solid var(--purple); padding: 24px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.6); }
+  .card h3 { font-size: 22px; font-weight: 800; margin: 14px 0 6px; }
+  .card p { color: var(--muted); margin: 0 0 14px; font-size: 17px; line-height: 1.45; }
+  .pill { display: inline-block; background: var(--pill); color: var(--purple2); font-weight: 800; border-radius: 999px; padding: 4px 14px; font-size: 15px; }
+  .pill.green { background: var(--ok-bg); color: var(--ok); margin-left: 6px; }
+  .links { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px; }
+  .link { background: none; border: 0; padding: 0; color: var(--purple2); font-weight: 800; font-size: 17px; text-decoration: none; }
+  .link:hover { text-decoration: underline; }
+  .link.danger { color: var(--err); }
+  .card.add { border: 2px dashed var(--line); border-top: 2px dashed var(--line); background: transparent; display: grid; place-items: center; min-height: 200px; box-shadow: none; }
+  .card.add button { background: none; border: 0; color: var(--purple2); font-weight: 800; font-size: 19px; }
+
+  .panel { background: var(--card); border-radius: 22px; border-top: 5px solid var(--purple); padding: 26px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.6); }
+  .narrow { max-width: 460px; margin: 6vh auto 0; }
+  .form { display: grid; gap: 14px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .row > label { flex: 1 1 160px; }
+  label.f { display: grid; gap: 6px; font-size: 14px; color: var(--muted); font-weight: 700; }
+  input.in, select.in, textarea.in { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; width: 100%; }
+  textarea.in { min-height: 170px; font-family: var(--mono); font-size: 13px; }
+  .check { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700; }
+  .btn { background: var(--purple); color: #fff; border: 0; border-radius: 12px; padding: 12px 20px; font-weight: 800; }
+  .btn.ghost { background: transparent; color: var(--purple2); border: 1px solid var(--line); }
+  .btn.danger { background: transparent; color: var(--err); border: 1px solid rgba(248,113,113,.4); }
+  .note { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.5; }
+  .err { color: var(--err); min-height: 20px; font-size: 15px; }
+  .back { background: none; border: 0; color: var(--muted); font-weight: 700; padding: 0; margin-bottom: 14px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(5,6,14,.7); display: grid; place-items: center; padding: 16px; z-index: 20; }
+  .overlay .panel { width: min(560px, 100%); max-height: 92vh; overflow: auto; }
+  .overlay .panel.wide { width: min(860px, 100%); }
+  .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; max-height: 42vh; overflow: auto; padding: 2px; }
+  .pick { display: flex; gap: 10px; align-items: flex-start; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 14px; color: var(--muted); }
+  .pick b { color: var(--text); font-size: 16px; }
+  .pick input { margin-top: 4px; }
+  .filters { display: flex; gap: 12px; flex-wrap: wrap; margin: -6px 0 22px; }
+  .filters .in { width: auto; min-width: 220px; }
+  .card.add { gap: 10px; align-content: center; }
+
+  /* live */
+  .live { display: grid; grid-template-columns: minmax(260px, 420px) minmax(280px, 1fr) 280px; gap: 24px; align-items: start; }
+  .qr { background: #fff; border-radius: 22px; padding: 18px; }
+  .qr svg { width: 100%; height: auto; display: block; }
+  .qr p { color: #1A1B2E; text-align: center; font-weight: 800; font-size: 20px; margin: 8px 0 0; }
+  .codebox { background: var(--card2); border-radius: 16px; padding: 16px 18px; }
+  .codebox .lbl { display: flex; justify-content: space-between; color: var(--muted); font-weight: 700; font-size: 15px; }
+  .digits { font-family: var(--mono); font-weight: 800; font-size: clamp(64px, 9vw, 130px); letter-spacing: .14em; color: var(--purple2); text-shadow: 0 0 24px rgba(139,92,246,.55); line-height: 1.1; margin-top: 6px; }
+  .tally { display: flex; align-items: baseline; gap: 10px; font-size: 22px; margin-top: 20px; color: var(--muted); font-weight: 700; }
+  .tally b { font-size: clamp(52px, 6vw, 84px); color: var(--text); font-weight: 900; line-height: 1; }
+  .left { color: var(--muted); margin-top: 8px; font-weight: 700; }
+  .side h2 { font-size: 16px; color: var(--muted); margin: 0 0 8px; }
+  .side ol, .side ul { list-style: none; margin: 0 0 20px; padding: 0; }
+  .side li { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .flags li { color: var(--warn); font-size: 14px; }
+  .random .item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; font-weight: 800; font-size: 18px; }
+  body.projector .hide-proj { display: none !important; }
+
+  /* week table */
+  .stats { display: flex; gap: 26px; flex-wrap: wrap; margin: 18px 0 14px; color: var(--muted); font-weight: 700; }
+  .stats b { color: var(--text); font-size: 26px; margin-right: 6px; }
+  .table-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-size: 13px; font-weight: 800; background: var(--card2); }
+  td.mono { font-family: var(--mono); color: var(--muted); }
+  .chip { min-width: 112px; border-radius: 999px; padding: 6px 12px; font-weight: 800; border: 0; background: var(--card2); color: var(--muted); }
+  .chip.P { background: var(--ok-bg); color: var(--ok); }
+  .chip.A { background: var(--err-bg); color: var(--err); }
+  .chip.E { background: var(--warn-bg); color: var(--warn); }
+  .cell { width: 74px; background: var(--card2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; text-align: center; font-family: var(--mono); }
+  .cell.dirty { border-color: var(--purple2); }
+  .cell.bad { border-color: var(--err); color: var(--err); }
+  th small { display: block; font-weight: 700; opacity: .8; }
+  .total { font-weight: 900; color: var(--text); }
+  .item-row { display: grid; grid-template-columns: 1fr 110px 40px; gap: 10px; align-items: center; }
+  .x { background: none; border: 1px solid var(--line); border-radius: 10px; color: var(--err); height: 42px; }
+
+  /* student */
+  .stu { max-width: 460px; margin: 4vh auto 0; }
+  .big-in { font-family: var(--mono); font-size: 34px; font-weight: 800; letter-spacing: .06em; text-align: center; }
+  .done { text-align: center; padding: 10px 0 4px; }
+  .done .mark { width: 92px; height: 92px; border-radius: 50%; margin: 6px auto 14px; display: grid; place-items: center; background: var(--ok-bg); color: var(--ok); font-size: 50px; font-weight: 900; }
+  .done h2 { font-size: 30px; margin: 0; font-weight: 900; }
+  .done .name { font-size: 21px; font-weight: 800; margin-top: 10px; }
+  .msg { margin-top: 14px; border-radius: 14px; padding: 12px 16px; font-weight: 700; }
+  .msg.err { background: var(--err-bg); color: var(--err); }
+  .msg.warn { background: var(--warn-bg); color: var(--warn); }
+  .msg small { display: block; font-weight: 600; margin-top: 4px; color: var(--text); opacity: .85; }
+
+  .foot { text-align: center; color: var(--muted); padding: 40px 16px 30px; font-size: 16px; line-height: 1.8; }
+  .foot .by { font-weight: 800; color: var(--text); opacity: .85; }
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--card2); border: 1px solid var(--line); color: var(--text); padding: 12px 20px; border-radius: 14px; z-index: 40; max-width: 92vw; font-weight: 700; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  .loading { text-align: center; color: var(--muted); padding: 18vh 0; font-weight: 700; font-size: 18px; }
+  @media (max-width: 1100px) { .live { grid-template-columns: 1fr 1fr; } .live .side { grid-column: 1 / -1; } }
+  @media (max-width: 700px) { .live { grid-template-columns: 1fr; } .wrap { padding-top: 22px; } }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Loading</div></div>
+<footer class="foot"><div>Tally Grades &middot; Attendance and grades &middot; 2026-2027</div><div class="by">Made By: Toqa Hamdy</div></footer>
+<div class="toast" id="toast" hidden></div>
+<script>//---------------------------------------------------------------------
+//
+// QR Code Generator for JavaScript
+//
+// Copyright (c) 2009 Kazuhiko Arase
+//
+// URL: http://www.d-project.com/
+//
+// Licensed under the MIT license:
+//  http://www.opensource.org/licenses/mit-license.php
+//
+// The word 'QR Code' is registered trademark of
+// DENSO WAVE INCORPORATED
+//  http://www.denso-wave.com/qrcode/faqpatent-e.html
+//
+//---------------------------------------------------------------------
+
+var qrcode = function() {
+
+  //---------------------------------------------------------------------
+  // qrcode
+  //---------------------------------------------------------------------
+
+  /**
+   * qrcode
+   * @param typeNumber 1 to 40
+   * @param errorCorrectionLevel 'L','M','Q','H'
+   */
+  var qrcode = function(typeNumber, errorCorrectionLevel) {
+
+    var PAD0 = 0xEC;
+    var PAD1 = 0x11;
+
+    var _typeNumber = typeNumber;
+    var _errorCorrectionLevel = QRErrorCorrectionLevel[errorCorrectionLevel];
+    var _modules = null;
+    var _moduleCount = 0;
+    var _dataCache = null;
+    var _dataList = [];
+
+    var _this = {};
+
+    var makeImpl = function(test, maskPattern) {
+
+      _moduleCount = _typeNumber * 4 + 17;
+      _modules = function(moduleCount) {
+        var modules = new Array(moduleCount);
+        for (var row = 0; row < moduleCount; row += 1) {
+          modules[row] = new Array(moduleCount);
+          for (var col = 0; col < moduleCount; col += 1) {
+            modules[row][col] = null;
+          }
+        }
+        return modules;
+      }(_moduleCount);
+
+      setupPositionProbePattern(0, 0);
+      setupPositionProbePattern(_moduleCount - 7, 0);
+      setupPositionProbePattern(0, _moduleCount - 7);
+      setupPositionAdjustPattern();
+      setupTimingPattern();
+      setupTypeInfo(test, maskPattern);
+
+      if (_typeNumber >= 7) {
+        setupTypeNumber(test);
+      }
+
+      if (_dataCache == null) {
+        _dataCache = createData(_typeNumber, _errorCorrectionLevel, _dataList);
+      }
+
+      mapData(_dataCache, maskPattern);
+    };
+
+    var setupPositionProbePattern = function(row, col) {
+
+      for (var r = -1; r <= 7; r += 1) {
+
+        if (row + r <= -1 || _moduleCount <= row + r) continue;
+
+        for (var c = -1; c <= 7; c += 1) {
+
+          if (col + c <= -1 || _moduleCount <= col + c) continue;
+
+          if ( (0 <= r && r <= 6 && (c == 0 || c == 6) )
+              || (0 <= c && c <= 6 && (r == 0 || r == 6) )
+              || (2 <= r && r <= 4 && 2 <= c && c <= 4) ) {
+            _modules[row + r][col + c] = true;
+          } else {
+            _modules[row + r][col + c] = false;
+          }
+        }
+      }
+    };
+
+    var getBestMaskPattern = function() {
+
+      var minLostPoint = 0;
+      var pattern = 0;
+
+      for (var i = 0; i < 8; i += 1) {
+
+        makeImpl(true, i);
+
+        var lostPoint = QRUtil.getLostPoint(_this);
+
+        if (i == 0 || minLostPoint > lostPoint) {
+          minLostPoint = lostPoint;
+          pattern = i;
+        }
+      }
+
+      return pattern;
+    };
+
+    var setupTimingPattern = function() {
+
+      for (var r = 8; r < _moduleCount - 8; r += 1) {
+        if (_modules[r][6] != null) {
+          continue;
+        }
+        _modules[r][6] = (r % 2 == 0);
+      }
+
+      for (var c = 8; c < _moduleCount - 8; c += 1) {
+        if (_modules[6][c] != null) {
+          continue;
+        }
+        _modules[6][c] = (c % 2 == 0);
+      }
+    };
+
+    var setupPositionAdjustPattern = function() {
+
+      var pos = QRUtil.getPatternPosition(_typeNumber);
+
+      for (var i = 0; i < pos.length; i += 1) {
+
+        for (var j = 0; j < pos.length; j += 1) {
+
+          var row = pos[i];
+          var col = pos[j];
+
+          if (_modules[row][col] != null) {
+            continue;
+          }
+
+          for (var r = -2; r <= 2; r += 1) {
+
+            for (var c = -2; c <= 2; c += 1) {
+
+              if (r == -2 || r == 2 || c == -2 || c == 2
+                  || (r == 0 && c == 0) ) {
+                _modules[row + r][col + c] = true;
+              } else {
+                _modules[row + r][col + c] = false;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    var setupTypeNumber = function(test) {
+
+      var bits = QRUtil.getBCHTypeNumber(_typeNumber);
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[Math.floor(i / 3)][i % 3 + _moduleCount - 8 - 3] = mod;
+      }
+
+      for (var i = 0; i < 18; i += 1) {
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+        _modules[i % 3 + _moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+      }
+    };
+
+    var setupTypeInfo = function(test, maskPattern) {
+
+      var data = (_errorCorrectionLevel << 3) | maskPattern;
+      var bits = QRUtil.getBCHTypeInfo(data);
+
+      // vertical
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 6) {
+          _modules[i][8] = mod;
+        } else if (i < 8) {
+          _modules[i + 1][8] = mod;
+        } else {
+          _modules[_moduleCount - 15 + i][8] = mod;
+        }
+      }
+
+      // horizontal
+      for (var i = 0; i < 15; i += 1) {
+
+        var mod = (!test && ( (bits >> i) & 1) == 1);
+
+        if (i < 8) {
+          _modules[8][_moduleCount - i - 1] = mod;
+        } else if (i < 9) {
+          _modules[8][15 - i - 1 + 1] = mod;
+        } else {
+          _modules[8][15 - i - 1] = mod;
+        }
+      }
+
+      // fixed module
+      _modules[_moduleCount - 8][8] = (!test);
+    };
+
+    var mapData = function(data, maskPattern) {
+
+      var inc = -1;
+      var row = _moduleCount - 1;
+      var bitIndex = 7;
+      var byteIndex = 0;
+      var maskFunc = QRUtil.getMaskFunction(maskPattern);
+
+      for (var col = _moduleCount - 1; col > 0; col -= 2) {
+
+        if (col == 6) col -= 1;
+
+        while (true) {
+
+          for (var c = 0; c < 2; c += 1) {
+
+            if (_modules[row][col - c] == null) {
+
+              var dark = false;
+
+              if (byteIndex < data.length) {
+                dark = ( ( (data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              var mask = maskFunc(row, col - c);
+
+              if (mask) {
+                dark = !dark;
+              }
+
+              _modules[row][col - c] = dark;
+              bitIndex -= 1;
+
+              if (bitIndex == -1) {
+                byteIndex += 1;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || _moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    };
+
+    var createBytes = function(buffer, rsBlocks) {
+
+      var offset = 0;
+
+      var maxDcCount = 0;
+      var maxEcCount = 0;
+
+      var dcdata = new Array(rsBlocks.length);
+      var ecdata = new Array(rsBlocks.length);
+
+      for (var r = 0; r < rsBlocks.length; r += 1) {
+
+        var dcCount = rsBlocks[r].dataCount;
+        var ecCount = rsBlocks[r].totalCount - dcCount;
+
+        maxDcCount = Math.max(maxDcCount, dcCount);
+        maxEcCount = Math.max(maxEcCount, ecCount);
+
+        dcdata[r] = new Array(dcCount);
+
+        for (var i = 0; i < dcdata[r].length; i += 1) {
+          dcdata[r][i] = 0xff & buffer.getBuffer()[i + offset];
+        }
+        offset += dcCount;
+
+        var rsPoly = QRUtil.getErrorCorrectPolynomial(ecCount);
+        var rawPoly = qrPolynomial(dcdata[r], rsPoly.getLength() - 1);
+
+        var modPoly = rawPoly.mod(rsPoly);
+        ecdata[r] = new Array(rsPoly.getLength() - 1);
+        for (var i = 0; i < ecdata[r].length; i += 1) {
+          var modIndex = i + modPoly.getLength() - ecdata[r].length;
+          ecdata[r][i] = (modIndex >= 0)? modPoly.getAt(modIndex) : 0;
+        }
+      }
+
+      var totalCodeCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalCodeCount += rsBlocks[i].totalCount;
+      }
+
+      var data = new Array(totalCodeCount);
+      var index = 0;
+
+      for (var i = 0; i < maxDcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < dcdata[r].length) {
+            data[index] = dcdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      for (var i = 0; i < maxEcCount; i += 1) {
+        for (var r = 0; r < rsBlocks.length; r += 1) {
+          if (i < ecdata[r].length) {
+            data[index] = ecdata[r][i];
+            index += 1;
+          }
+        }
+      }
+
+      return data;
+    };
+
+    var createData = function(typeNumber, errorCorrectionLevel, dataList) {
+
+      var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, errorCorrectionLevel);
+
+      var buffer = qrBitBuffer();
+
+      for (var i = 0; i < dataList.length; i += 1) {
+        var data = dataList[i];
+        buffer.put(data.getMode(), 4);
+        buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+        data.write(buffer);
+      }
+
+      // calc num max data.
+      var totalDataCount = 0;
+      for (var i = 0; i < rsBlocks.length; i += 1) {
+        totalDataCount += rsBlocks[i].dataCount;
+      }
+
+      if (buffer.getLengthInBits() > totalDataCount * 8) {
+        throw 'code length overflow. ('
+          + buffer.getLengthInBits()
+          + '>'
+          + totalDataCount * 8
+          + ')';
+      }
+
+      // end code
+      if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) {
+        buffer.put(0, 4);
+      }
+
+      // padding
+      while (buffer.getLengthInBits() % 8 != 0) {
+        buffer.putBit(false);
+      }
+
+      // padding
+      while (true) {
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD0, 8);
+
+        if (buffer.getLengthInBits() >= totalDataCount * 8) {
+          break;
+        }
+        buffer.put(PAD1, 8);
+      }
+
+      return createBytes(buffer, rsBlocks);
+    };
+
+    _this.addData = function(data, mode) {
+
+      mode = mode || 'Byte';
+
+      var newData = null;
+
+      switch(mode) {
+      case 'Numeric' :
+        newData = qrNumber(data);
+        break;
+      case 'Alphanumeric' :
+        newData = qrAlphaNum(data);
+        break;
+      case 'Byte' :
+        newData = qr8BitByte(data);
+        break;
+      case 'Kanji' :
+        newData = qrKanji(data);
+        break;
+      default :
+        throw 'mode:' + mode;
+      }
+
+      _dataList.push(newData);
+      _dataCache = null;
+    };
+
+    _this.isDark = function(row, col) {
+      if (row < 0 || _moduleCount <= row || col < 0 || _moduleCount <= col) {
+        throw row + ',' + col;
+      }
+      return _modules[row][col];
+    };
+
+    _this.getModuleCount = function() {
+      return _moduleCount;
+    };
+
+    _this.make = function() {
+      if (_typeNumber < 1) {
+        var typeNumber = 1;
+
+        for (; typeNumber < 40; typeNumber++) {
+          var rsBlocks = QRRSBlock.getRSBlocks(typeNumber, _errorCorrectionLevel);
+          var buffer = qrBitBuffer();
+
+          for (var i = 0; i < _dataList.length; i++) {
+            var data = _dataList[i];
+            buffer.put(data.getMode(), 4);
+            buffer.put(data.getLength(), QRUtil.getLengthInBits(data.getMode(), typeNumber) );
+            data.write(buffer);
+          }
+
+          var totalDataCount = 0;
+          for (var i = 0; i < rsBlocks.length; i++) {
+            totalDataCount += rsBlocks[i].dataCount;
+          }
+
+          if (buffer.getLengthInBits() <= totalDataCount * 8) {
+            break;
+          }
+        }
+
+        _typeNumber = typeNumber;
+      }
+
+      makeImpl(false, getBestMaskPattern() );
+    };
+
+    _this.createTableTag = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var qrHtml = '';
+
+      qrHtml += '<table style="';
+      qrHtml += ' border-width: 0px; border-style: none;';
+      qrHtml += ' border-collapse: collapse;';
+      qrHtml += ' padding: 0px; margin: ' + margin + 'px;';
+      qrHtml += '">';
+      qrHtml += '<tbody>';
+
+      for (var r = 0; r < _this.getModuleCount(); r += 1) {
+
+        qrHtml += '<tr>';
+
+        for (var c = 0; c < _this.getModuleCount(); c += 1) {
+          qrHtml += '<td style="';
+          qrHtml += ' border-width: 0px; border-style: none;';
+          qrHtml += ' border-collapse: collapse;';
+          qrHtml += ' padding: 0px; margin: 0px;';
+          qrHtml += ' width: ' + cellSize + 'px;';
+          qrHtml += ' height: ' + cellSize + 'px;';
+          qrHtml += ' background-color: ';
+          qrHtml += _this.isDark(r, c)? '#000000' : '#ffffff';
+          qrHtml += ';';
+          qrHtml += '"/>';
+        }
+
+        qrHtml += '</tr>';
+      }
+
+      qrHtml += '</tbody>';
+      qrHtml += '</table>';
+
+      return qrHtml;
+    };
+
+    _this.createSvgTag = function(cellSize, margin, alt, title) {
+
+      var opts = {};
+      if (typeof arguments[0] == 'object') {
+        // Called by options.
+        opts = arguments[0];
+        // overwrite cellSize and margin.
+        cellSize = opts.cellSize;
+        margin = opts.margin;
+        alt = opts.alt;
+        title = opts.title;
+      }
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      // Compose alt property surrogate
+      alt = (typeof alt === 'string') ? {text: alt} : alt || {};
+      alt.text = alt.text || null;
+      alt.id = (alt.text) ? alt.id || 'qrcode-description' : null;
+
+      // Compose title property surrogate
+      title = (typeof title === 'string') ? {text: title} : title || {};
+      title.text = title.text || null;
+      title.id = (title.text) ? title.id || 'qrcode-title' : null;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var c, mc, r, mr, qrSvg='', rect;
+
+      rect = 'l' + cellSize + ',0 0,' + cellSize +
+        ' -' + cellSize + ',0 0,-' + cellSize + 'z ';
+
+      qrSvg += '<svg version="1.1" xmlns="http://www.w3.org/2000/svg"';
+      qrSvg += !opts.scalable ? ' width="' + size + 'px" height="' + size + 'px"' : '';
+      qrSvg += ' viewBox="0 0 ' + size + ' ' + size + '" ';
+      qrSvg += ' preserveAspectRatio="xMinYMin meet"';
+      qrSvg += (title.text || alt.text) ? ' role="img" aria-labelledby="' +
+          escapeXml([title.id, alt.id].join(' ').trim() ) + '"' : '';
+      qrSvg += '>';
+      qrSvg += (title.text) ? '<title id="' + escapeXml(title.id) + '">' +
+          escapeXml(title.text) + '</title>' : '';
+      qrSvg += (alt.text) ? '<description id="' + escapeXml(alt.id) + '">' +
+          escapeXml(alt.text) + '</description>' : '';
+      qrSvg += '<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>';
+      qrSvg += '<path d="';
+
+      for (r = 0; r < _this.getModuleCount(); r += 1) {
+        mr = r * cellSize + margin;
+        for (c = 0; c < _this.getModuleCount(); c += 1) {
+          if (_this.isDark(r, c) ) {
+            mc = c*cellSize+margin;
+            qrSvg += 'M' + mc + ',' + mr + rect;
+          }
+        }
+      }
+
+      qrSvg += '" stroke="transparent" fill="black"/>';
+      qrSvg += '</svg>';
+
+      return qrSvg;
+    };
+
+    _this.createDataURL = function(cellSize, margin) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      return createDataURL(size, size, function(x, y) {
+        if (min <= x && x < max && min <= y && y < max) {
+          var c = Math.floor( (x - min) / cellSize);
+          var r = Math.floor( (y - min) / cellSize);
+          return _this.isDark(r, c)? 0 : 1;
+        } else {
+          return 1;
+        }
+      } );
+    };
+
+    _this.createImgTag = function(cellSize, margin, alt) {
+
+      cellSize = cellSize || 2;
+      margin = (typeof margin == 'undefined')? cellSize * 4 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+
+      var img = '';
+      img += '<img';
+      img += '\u0020src="';
+      img += _this.createDataURL(cellSize, margin);
+      img += '"';
+      img += '\u0020width="';
+      img += size;
+      img += '"';
+      img += '\u0020height="';
+      img += size;
+      img += '"';
+      if (alt) {
+        img += '\u0020alt="';
+        img += escapeXml(alt);
+        img += '"';
+      }
+      img += '/>';
+
+      return img;
+    };
+
+    var escapeXml = function(s) {
+      var escaped = '';
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charAt(i);
+        switch(c) {
+        case '<': escaped += '&lt;'; break;
+        case '>': escaped += '&gt;'; break;
+        case '&': escaped += '&amp;'; break;
+        case '"': escaped += '&quot;'; break;
+        default : escaped += c; break;
+        }
+      }
+      return escaped;
+    };
+
+    var _createHalfASCII = function(margin) {
+      var cellSize = 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r1, r2, p;
+
+      var blocks = {
+        '██': '█',
+        '█ ': '▀',
+        ' █': '▄',
+        '  ': ' '
+      };
+
+      var blocksLastLineNoMargin = {
+        '██': '▀',
+        '█ ': '▀',
+        ' █': ' ',
+        '  ': ' '
+      };
+
+      var ascii = '';
+      for (y = 0; y < size; y += 2) {
+        r1 = Math.floor((y - min) / cellSize);
+        r2 = Math.floor((y + 1 - min) / cellSize);
+        for (x = 0; x < size; x += 1) {
+          p = '█';
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r1, Math.floor((x - min) / cellSize))) {
+            p = ' ';
+          }
+
+          if (min <= x && x < max && min <= y+1 && y+1 < max && _this.isDark(r2, Math.floor((x - min) / cellSize))) {
+            p += ' ';
+          }
+          else {
+            p += '█';
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          ascii += (margin < 1 && y+1 >= max) ? blocksLastLineNoMargin[p] : blocks[p];
+        }
+
+        ascii += '\n';
+      }
+
+      if (size % 2 && margin > 0) {
+        return ascii.substring(0, ascii.length - size - 1) + Array(size+1).join('▀');
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.createASCII = function(cellSize, margin) {
+      cellSize = cellSize || 1;
+
+      if (cellSize < 2) {
+        return _createHalfASCII(margin);
+      }
+
+      cellSize -= 1;
+      margin = (typeof margin == 'undefined')? cellSize * 2 : margin;
+
+      var size = _this.getModuleCount() * cellSize + margin * 2;
+      var min = margin;
+      var max = size - margin;
+
+      var y, x, r, p;
+
+      var white = Array(cellSize+1).join('██');
+      var black = Array(cellSize+1).join('  ');
+
+      var ascii = '';
+      var line = '';
+      for (y = 0; y < size; y += 1) {
+        r = Math.floor( (y - min) / cellSize);
+        line = '';
+        for (x = 0; x < size; x += 1) {
+          p = 1;
+
+          if (min <= x && x < max && min <= y && y < max && _this.isDark(r, Math.floor((x - min) / cellSize))) {
+            p = 0;
+          }
+
+          // Output 2 characters per pixel, to create full square. 1 character per pixels gives only half width of square.
+          line += p ? white : black;
+        }
+
+        for (r = 0; r < cellSize; r += 1) {
+          ascii += line + '\n';
+        }
+      }
+
+      return ascii.substring(0, ascii.length-1);
+    };
+
+    _this.renderTo2dContext = function(context, cellSize) {
+      cellSize = cellSize || 2;
+      var length = _this.getModuleCount();
+      for (var row = 0; row < length; row++) {
+        for (var col = 0; col < length; col++) {
+          context.fillStyle = _this.isDark(row, col) ? 'black' : 'white';
+          context.fillRect(row * cellSize, col * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrcode.stringToBytes
+  //---------------------------------------------------------------------
+
+  qrcode.stringToBytesFuncs = {
+    'default' : function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        bytes.push(c & 0xff);
+      }
+      return bytes;
+    }
+  };
+
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['default'];
+
+  //---------------------------------------------------------------------
+  // qrcode.createStringToBytes
+  //---------------------------------------------------------------------
+
+  /**
+   * @param unicodeData base64 string of byte array.
+   * [16bit Unicode],[16bit Bytes], ...
+   * @param numChars
+   */
+  qrcode.createStringToBytes = function(unicodeData, numChars) {
+
+    // create conversion map.
+
+    var unicodeMap = function() {
+
+      var bin = base64DecodeInputStream(unicodeData);
+      var read = function() {
+        var b = bin.read();
+        if (b == -1) throw 'eof';
+        return b;
+      };
+
+      var count = 0;
+      var unicodeMap = {};
+      while (true) {
+        var b0 = bin.read();
+        if (b0 == -1) break;
+        var b1 = read();
+        var b2 = read();
+        var b3 = read();
+        var k = String.fromCharCode( (b0 << 8) | b1);
+        var v = (b2 << 8) | b3;
+        unicodeMap[k] = v;
+        count += 1;
+      }
+      if (count != numChars) {
+        throw count + ' != ' + numChars;
+      }
+
+      return unicodeMap;
+    }();
+
+    var unknownChar = '?'.charCodeAt(0);
+
+    return function(s) {
+      var bytes = [];
+      for (var i = 0; i < s.length; i += 1) {
+        var c = s.charCodeAt(i);
+        if (c < 128) {
+          bytes.push(c);
+        } else {
+          var b = unicodeMap[s.charAt(i)];
+          if (typeof b == 'number') {
+            if ( (b & 0xff) == b) {
+              // 1byte
+              bytes.push(b);
+            } else {
+              // 2bytes
+              bytes.push(b >>> 8);
+              bytes.push(b & 0xff);
+            }
+          } else {
+            bytes.push(unknownChar);
+          }
+        }
+      }
+      return bytes;
+    };
+  };
+
+  //---------------------------------------------------------------------
+  // QRMode
+  //---------------------------------------------------------------------
+
+  var QRMode = {
+    MODE_NUMBER :    1 << 0,
+    MODE_ALPHA_NUM : 1 << 1,
+    MODE_8BIT_BYTE : 1 << 2,
+    MODE_KANJI :     1 << 3
+  };
+
+  //---------------------------------------------------------------------
+  // QRErrorCorrectionLevel
+  //---------------------------------------------------------------------
+
+  var QRErrorCorrectionLevel = {
+    L : 1,
+    M : 0,
+    Q : 3,
+    H : 2
+  };
+
+  //---------------------------------------------------------------------
+  // QRMaskPattern
+  //---------------------------------------------------------------------
+
+  var QRMaskPattern = {
+    PATTERN000 : 0,
+    PATTERN001 : 1,
+    PATTERN010 : 2,
+    PATTERN011 : 3,
+    PATTERN100 : 4,
+    PATTERN101 : 5,
+    PATTERN110 : 6,
+    PATTERN111 : 7
+  };
+
+  //---------------------------------------------------------------------
+  // QRUtil
+  //---------------------------------------------------------------------
+
+  var QRUtil = function() {
+
+    var PATTERN_POSITION_TABLE = [
+      [],
+      [6, 18],
+      [6, 22],
+      [6, 26],
+      [6, 30],
+      [6, 34],
+      [6, 22, 38],
+      [6, 24, 42],
+      [6, 26, 46],
+      [6, 28, 50],
+      [6, 30, 54],
+      [6, 32, 58],
+      [6, 34, 62],
+      [6, 26, 46, 66],
+      [6, 26, 48, 70],
+      [6, 26, 50, 74],
+      [6, 30, 54, 78],
+      [6, 30, 56, 82],
+      [6, 30, 58, 86],
+      [6, 34, 62, 90],
+      [6, 28, 50, 72, 94],
+      [6, 26, 50, 74, 98],
+      [6, 30, 54, 78, 102],
+      [6, 28, 54, 80, 106],
+      [6, 32, 58, 84, 110],
+      [6, 30, 58, 86, 114],
+      [6, 34, 62, 90, 118],
+      [6, 26, 50, 74, 98, 122],
+      [6, 30, 54, 78, 102, 126],
+      [6, 26, 52, 78, 104, 130],
+      [6, 30, 56, 82, 108, 134],
+      [6, 34, 60, 86, 112, 138],
+      [6, 30, 58, 86, 114, 142],
+      [6, 34, 62, 90, 118, 146],
+      [6, 30, 54, 78, 102, 126, 150],
+      [6, 24, 50, 76, 102, 128, 154],
+      [6, 28, 54, 80, 106, 132, 158],
+      [6, 32, 58, 84, 110, 136, 162],
+      [6, 26, 54, 82, 110, 138, 166],
+      [6, 30, 58, 86, 114, 142, 170]
+    ];
+    var G15 = (1 << 10) | (1 << 8) | (1 << 5) | (1 << 4) | (1 << 2) | (1 << 1) | (1 << 0);
+    var G18 = (1 << 12) | (1 << 11) | (1 << 10) | (1 << 9) | (1 << 8) | (1 << 5) | (1 << 2) | (1 << 0);
+    var G15_MASK = (1 << 14) | (1 << 12) | (1 << 10) | (1 << 4) | (1 << 1);
+
+    var _this = {};
+
+    var getBCHDigit = function(data) {
+      var digit = 0;
+      while (data != 0) {
+        digit += 1;
+        data >>>= 1;
+      }
+      return digit;
+    };
+
+    _this.getBCHTypeInfo = function(data) {
+      var d = data << 10;
+      while (getBCHDigit(d) - getBCHDigit(G15) >= 0) {
+        d ^= (G15 << (getBCHDigit(d) - getBCHDigit(G15) ) );
+      }
+      return ( (data << 10) | d) ^ G15_MASK;
+    };
+
+    _this.getBCHTypeNumber = function(data) {
+      var d = data << 12;
+      while (getBCHDigit(d) - getBCHDigit(G18) >= 0) {
+        d ^= (G18 << (getBCHDigit(d) - getBCHDigit(G18) ) );
+      }
+      return (data << 12) | d;
+    };
+
+    _this.getPatternPosition = function(typeNumber) {
+      return PATTERN_POSITION_TABLE[typeNumber - 1];
+    };
+
+    _this.getMaskFunction = function(maskPattern) {
+
+      switch (maskPattern) {
+
+      case QRMaskPattern.PATTERN000 :
+        return function(i, j) { return (i + j) % 2 == 0; };
+      case QRMaskPattern.PATTERN001 :
+        return function(i, j) { return i % 2 == 0; };
+      case QRMaskPattern.PATTERN010 :
+        return function(i, j) { return j % 3 == 0; };
+      case QRMaskPattern.PATTERN011 :
+        return function(i, j) { return (i + j) % 3 == 0; };
+      case QRMaskPattern.PATTERN100 :
+        return function(i, j) { return (Math.floor(i / 2) + Math.floor(j / 3) ) % 2 == 0; };
+      case QRMaskPattern.PATTERN101 :
+        return function(i, j) { return (i * j) % 2 + (i * j) % 3 == 0; };
+      case QRMaskPattern.PATTERN110 :
+        return function(i, j) { return ( (i * j) % 2 + (i * j) % 3) % 2 == 0; };
+      case QRMaskPattern.PATTERN111 :
+        return function(i, j) { return ( (i * j) % 3 + (i + j) % 2) % 2 == 0; };
+
+      default :
+        throw 'bad maskPattern:' + maskPattern;
+      }
+    };
+
+    _this.getErrorCorrectPolynomial = function(errorCorrectLength) {
+      var a = qrPolynomial([1], 0);
+      for (var i = 0; i < errorCorrectLength; i += 1) {
+        a = a.multiply(qrPolynomial([1, QRMath.gexp(i)], 0) );
+      }
+      return a;
+    };
+
+    _this.getLengthInBits = function(mode, type) {
+
+      if (1 <= type && type < 10) {
+
+        // 1 - 9
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 10;
+        case QRMode.MODE_ALPHA_NUM : return 9;
+        case QRMode.MODE_8BIT_BYTE : return 8;
+        case QRMode.MODE_KANJI     : return 8;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 27) {
+
+        // 10 - 26
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 12;
+        case QRMode.MODE_ALPHA_NUM : return 11;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 10;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else if (type < 41) {
+
+        // 27 - 40
+
+        switch(mode) {
+        case QRMode.MODE_NUMBER    : return 14;
+        case QRMode.MODE_ALPHA_NUM : return 13;
+        case QRMode.MODE_8BIT_BYTE : return 16;
+        case QRMode.MODE_KANJI     : return 12;
+        default :
+          throw 'mode:' + mode;
+        }
+
+      } else {
+        throw 'type:' + type;
+      }
+    };
+
+    _this.getLostPoint = function(qrcode) {
+
+      var moduleCount = qrcode.getModuleCount();
+
+      var lostPoint = 0;
+
+      // LEVEL1
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount; col += 1) {
+
+          var sameCount = 0;
+          var dark = qrcode.isDark(row, col);
+
+          for (var r = -1; r <= 1; r += 1) {
+
+            if (row + r < 0 || moduleCount <= row + r) {
+              continue;
+            }
+
+            for (var c = -1; c <= 1; c += 1) {
+
+              if (col + c < 0 || moduleCount <= col + c) {
+                continue;
+              }
+
+              if (r == 0 && c == 0) {
+                continue;
+              }
+
+              if (dark == qrcode.isDark(row + r, col + c) ) {
+                sameCount += 1;
+              }
+            }
+          }
+
+          if (sameCount > 5) {
+            lostPoint += (3 + sameCount - 5);
+          }
+        }
+      };
+
+      // LEVEL2
+
+      for (var row = 0; row < moduleCount - 1; row += 1) {
+        for (var col = 0; col < moduleCount - 1; col += 1) {
+          var count = 0;
+          if (qrcode.isDark(row, col) ) count += 1;
+          if (qrcode.isDark(row + 1, col) ) count += 1;
+          if (qrcode.isDark(row, col + 1) ) count += 1;
+          if (qrcode.isDark(row + 1, col + 1) ) count += 1;
+          if (count == 0 || count == 4) {
+            lostPoint += 3;
+          }
+        }
+      }
+
+      // LEVEL3
+
+      for (var row = 0; row < moduleCount; row += 1) {
+        for (var col = 0; col < moduleCount - 6; col += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row, col + 1)
+              &&  qrcode.isDark(row, col + 2)
+              &&  qrcode.isDark(row, col + 3)
+              &&  qrcode.isDark(row, col + 4)
+              && !qrcode.isDark(row, col + 5)
+              &&  qrcode.isDark(row, col + 6) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount - 6; row += 1) {
+          if (qrcode.isDark(row, col)
+              && !qrcode.isDark(row + 1, col)
+              &&  qrcode.isDark(row + 2, col)
+              &&  qrcode.isDark(row + 3, col)
+              &&  qrcode.isDark(row + 4, col)
+              && !qrcode.isDark(row + 5, col)
+              &&  qrcode.isDark(row + 6, col) ) {
+            lostPoint += 40;
+          }
+        }
+      }
+
+      // LEVEL4
+
+      var darkCount = 0;
+
+      for (var col = 0; col < moduleCount; col += 1) {
+        for (var row = 0; row < moduleCount; row += 1) {
+          if (qrcode.isDark(row, col) ) {
+            darkCount += 1;
+          }
+        }
+      }
+
+      var ratio = Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5;
+      lostPoint += ratio * 10;
+
+      return lostPoint;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // QRMath
+  //---------------------------------------------------------------------
+
+  var QRMath = function() {
+
+    var EXP_TABLE = new Array(256);
+    var LOG_TABLE = new Array(256);
+
+    // initialize tables
+    for (var i = 0; i < 8; i += 1) {
+      EXP_TABLE[i] = 1 << i;
+    }
+    for (var i = 8; i < 256; i += 1) {
+      EXP_TABLE[i] = EXP_TABLE[i - 4]
+        ^ EXP_TABLE[i - 5]
+        ^ EXP_TABLE[i - 6]
+        ^ EXP_TABLE[i - 8];
+    }
+    for (var i = 0; i < 255; i += 1) {
+      LOG_TABLE[EXP_TABLE[i] ] = i;
+    }
+
+    var _this = {};
+
+    _this.glog = function(n) {
+
+      if (n < 1) {
+        throw 'glog(' + n + ')';
+      }
+
+      return LOG_TABLE[n];
+    };
+
+    _this.gexp = function(n) {
+
+      while (n < 0) {
+        n += 255;
+      }
+
+      while (n >= 256) {
+        n -= 255;
+      }
+
+      return EXP_TABLE[n];
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrPolynomial
+  //---------------------------------------------------------------------
+
+  function qrPolynomial(num, shift) {
+
+    if (typeof num.length == 'undefined') {
+      throw num.length + '/' + shift;
+    }
+
+    var _num = function() {
+      var offset = 0;
+      while (offset < num.length && num[offset] == 0) {
+        offset += 1;
+      }
+      var _num = new Array(num.length - offset + shift);
+      for (var i = 0; i < num.length - offset; i += 1) {
+        _num[i] = num[i + offset];
+      }
+      return _num;
+    }();
+
+    var _this = {};
+
+    _this.getAt = function(index) {
+      return _num[index];
+    };
+
+    _this.getLength = function() {
+      return _num.length;
+    };
+
+    _this.multiply = function(e) {
+
+      var num = new Array(_this.getLength() + e.getLength() - 1);
+
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        for (var j = 0; j < e.getLength(); j += 1) {
+          num[i + j] ^= QRMath.gexp(QRMath.glog(_this.getAt(i) ) + QRMath.glog(e.getAt(j) ) );
+        }
+      }
+
+      return qrPolynomial(num, 0);
+    };
+
+    _this.mod = function(e) {
+
+      if (_this.getLength() - e.getLength() < 0) {
+        return _this;
+      }
+
+      var ratio = QRMath.glog(_this.getAt(0) ) - QRMath.glog(e.getAt(0) );
+
+      var num = new Array(_this.getLength() );
+      for (var i = 0; i < _this.getLength(); i += 1) {
+        num[i] = _this.getAt(i);
+      }
+
+      for (var i = 0; i < e.getLength(); i += 1) {
+        num[i] ^= QRMath.gexp(QRMath.glog(e.getAt(i) ) + ratio);
+      }
+
+      // recursive call
+      return qrPolynomial(num, 0).mod(e);
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // QRRSBlock
+  //---------------------------------------------------------------------
+
+  var QRRSBlock = function() {
+
+    var RS_BLOCK_TABLE = [
+
+      // L
+      // M
+      // Q
+      // H
+
+      // 1
+      [1, 26, 19],
+      [1, 26, 16],
+      [1, 26, 13],
+      [1, 26, 9],
+
+      // 2
+      [1, 44, 34],
+      [1, 44, 28],
+      [1, 44, 22],
+      [1, 44, 16],
+
+      // 3
+      [1, 70, 55],
+      [1, 70, 44],
+      [2, 35, 17],
+      [2, 35, 13],
+
+      // 4
+      [1, 100, 80],
+      [2, 50, 32],
+      [2, 50, 24],
+      [4, 25, 9],
+
+      // 5
+      [1, 134, 108],
+      [2, 67, 43],
+      [2, 33, 15, 2, 34, 16],
+      [2, 33, 11, 2, 34, 12],
+
+      // 6
+      [2, 86, 68],
+      [4, 43, 27],
+      [4, 43, 19],
+      [4, 43, 15],
+
+      // 7
+      [2, 98, 78],
+      [4, 49, 31],
+      [2, 32, 14, 4, 33, 15],
+      [4, 39, 13, 1, 40, 14],
+
+      // 8
+      [2, 121, 97],
+      [2, 60, 38, 2, 61, 39],
+      [4, 40, 18, 2, 41, 19],
+      [4, 40, 14, 2, 41, 15],
+
+      // 9
+      [2, 146, 116],
+      [3, 58, 36, 2, 59, 37],
+      [4, 36, 16, 4, 37, 17],
+      [4, 36, 12, 4, 37, 13],
+
+      // 10
+      [2, 86, 68, 2, 87, 69],
+      [4, 69, 43, 1, 70, 44],
+      [6, 43, 19, 2, 44, 20],
+      [6, 43, 15, 2, 44, 16],
+
+      // 11
+      [4, 101, 81],
+      [1, 80, 50, 4, 81, 51],
+      [4, 50, 22, 4, 51, 23],
+      [3, 36, 12, 8, 37, 13],
+
+      // 12
+      [2, 116, 92, 2, 117, 93],
+      [6, 58, 36, 2, 59, 37],
+      [4, 46, 20, 6, 47, 21],
+      [7, 42, 14, 4, 43, 15],
+
+      // 13
+      [4, 133, 107],
+      [8, 59, 37, 1, 60, 38],
+      [8, 44, 20, 4, 45, 21],
+      [12, 33, 11, 4, 34, 12],
+
+      // 14
+      [3, 145, 115, 1, 146, 116],
+      [4, 64, 40, 5, 65, 41],
+      [11, 36, 16, 5, 37, 17],
+      [11, 36, 12, 5, 37, 13],
+
+      // 15
+      [5, 109, 87, 1, 110, 88],
+      [5, 65, 41, 5, 66, 42],
+      [5, 54, 24, 7, 55, 25],
+      [11, 36, 12, 7, 37, 13],
+
+      // 16
+      [5, 122, 98, 1, 123, 99],
+      [7, 73, 45, 3, 74, 46],
+      [15, 43, 19, 2, 44, 20],
+      [3, 45, 15, 13, 46, 16],
+
+      // 17
+      [1, 135, 107, 5, 136, 108],
+      [10, 74, 46, 1, 75, 47],
+      [1, 50, 22, 15, 51, 23],
+      [2, 42, 14, 17, 43, 15],
+
+      // 18
+      [5, 150, 120, 1, 151, 121],
+      [9, 69, 43, 4, 70, 44],
+      [17, 50, 22, 1, 51, 23],
+      [2, 42, 14, 19, 43, 15],
+
+      // 19
+      [3, 141, 113, 4, 142, 114],
+      [3, 70, 44, 11, 71, 45],
+      [17, 47, 21, 4, 48, 22],
+      [9, 39, 13, 16, 40, 14],
+
+      // 20
+      [3, 135, 107, 5, 136, 108],
+      [3, 67, 41, 13, 68, 42],
+      [15, 54, 24, 5, 55, 25],
+      [15, 43, 15, 10, 44, 16],
+
+      // 21
+      [4, 144, 116, 4, 145, 117],
+      [17, 68, 42],
+      [17, 50, 22, 6, 51, 23],
+      [19, 46, 16, 6, 47, 17],
+
+      // 22
+      [2, 139, 111, 7, 140, 112],
+      [17, 74, 46],
+      [7, 54, 24, 16, 55, 25],
+      [34, 37, 13],
+
+      // 23
+      [4, 151, 121, 5, 152, 122],
+      [4, 75, 47, 14, 76, 48],
+      [11, 54, 24, 14, 55, 25],
+      [16, 45, 15, 14, 46, 16],
+
+      // 24
+      [6, 147, 117, 4, 148, 118],
+      [6, 73, 45, 14, 74, 46],
+      [11, 54, 24, 16, 55, 25],
+      [30, 46, 16, 2, 47, 17],
+
+      // 25
+      [8, 132, 106, 4, 133, 107],
+      [8, 75, 47, 13, 76, 48],
+      [7, 54, 24, 22, 55, 25],
+      [22, 45, 15, 13, 46, 16],
+
+      // 26
+      [10, 142, 114, 2, 143, 115],
+      [19, 74, 46, 4, 75, 47],
+      [28, 50, 22, 6, 51, 23],
+      [33, 46, 16, 4, 47, 17],
+
+      // 27
+      [8, 152, 122, 4, 153, 123],
+      [22, 73, 45, 3, 74, 46],
+      [8, 53, 23, 26, 54, 24],
+      [12, 45, 15, 28, 46, 16],
+
+      // 28
+      [3, 147, 117, 10, 148, 118],
+      [3, 73, 45, 23, 74, 46],
+      [4, 54, 24, 31, 55, 25],
+      [11, 45, 15, 31, 46, 16],
+
+      // 29
+      [7, 146, 116, 7, 147, 117],
+      [21, 73, 45, 7, 74, 46],
+      [1, 53, 23, 37, 54, 24],
+      [19, 45, 15, 26, 46, 16],
+
+      // 30
+      [5, 145, 115, 10, 146, 116],
+      [19, 75, 47, 10, 76, 48],
+      [15, 54, 24, 25, 55, 25],
+      [23, 45, 15, 25, 46, 16],
+
+      // 31
+      [13, 145, 115, 3, 146, 116],
+      [2, 74, 46, 29, 75, 47],
+      [42, 54, 24, 1, 55, 25],
+      [23, 45, 15, 28, 46, 16],
+
+      // 32
+      [17, 145, 115],
+      [10, 74, 46, 23, 75, 47],
+      [10, 54, 24, 35, 55, 25],
+      [19, 45, 15, 35, 46, 16],
+
+      // 33
+      [17, 145, 115, 1, 146, 116],
+      [14, 74, 46, 21, 75, 47],
+      [29, 54, 24, 19, 55, 25],
+      [11, 45, 15, 46, 46, 16],
+
+      // 34
+      [13, 145, 115, 6, 146, 116],
+      [14, 74, 46, 23, 75, 47],
+      [44, 54, 24, 7, 55, 25],
+      [59, 46, 16, 1, 47, 17],
+
+      // 35
+      [12, 151, 121, 7, 152, 122],
+      [12, 75, 47, 26, 76, 48],
+      [39, 54, 24, 14, 55, 25],
+      [22, 45, 15, 41, 46, 16],
+
+      // 36
+      [6, 151, 121, 14, 152, 122],
+      [6, 75, 47, 34, 76, 48],
+      [46, 54, 24, 10, 55, 25],
+      [2, 45, 15, 64, 46, 16],
+
+      // 37
+      [17, 152, 122, 4, 153, 123],
+      [29, 74, 46, 14, 75, 47],
+      [49, 54, 24, 10, 55, 25],
+      [24, 45, 15, 46, 46, 16],
+
+      // 38
+      [4, 152, 122, 18, 153, 123],
+      [13, 74, 46, 32, 75, 47],
+      [48, 54, 24, 14, 55, 25],
+      [42, 45, 15, 32, 46, 16],
+
+      // 39
+      [20, 147, 117, 4, 148, 118],
+      [40, 75, 47, 7, 76, 48],
+      [43, 54, 24, 22, 55, 25],
+      [10, 45, 15, 67, 46, 16],
+
+      // 40
+      [19, 148, 118, 6, 149, 119],
+      [18, 75, 47, 31, 76, 48],
+      [34, 54, 24, 34, 55, 25],
+      [20, 45, 15, 61, 46, 16]
+    ];
+
+    var qrRSBlock = function(totalCount, dataCount) {
+      var _this = {};
+      _this.totalCount = totalCount;
+      _this.dataCount = dataCount;
+      return _this;
+    };
+
+    var _this = {};
+
+    var getRsBlockTable = function(typeNumber, errorCorrectionLevel) {
+
+      switch(errorCorrectionLevel) {
+      case QRErrorCorrectionLevel.L :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 0];
+      case QRErrorCorrectionLevel.M :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 1];
+      case QRErrorCorrectionLevel.Q :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 2];
+      case QRErrorCorrectionLevel.H :
+        return RS_BLOCK_TABLE[(typeNumber - 1) * 4 + 3];
+      default :
+        return undefined;
+      }
+    };
+
+    _this.getRSBlocks = function(typeNumber, errorCorrectionLevel) {
+
+      var rsBlock = getRsBlockTable(typeNumber, errorCorrectionLevel);
+
+      if (typeof rsBlock == 'undefined') {
+        throw 'bad rs block @ typeNumber:' + typeNumber +
+            '/errorCorrectionLevel:' + errorCorrectionLevel;
+      }
+
+      var length = rsBlock.length / 3;
+
+      var list = [];
+
+      for (var i = 0; i < length; i += 1) {
+
+        var count = rsBlock[i * 3 + 0];
+        var totalCount = rsBlock[i * 3 + 1];
+        var dataCount = rsBlock[i * 3 + 2];
+
+        for (var j = 0; j < count; j += 1) {
+          list.push(qrRSBlock(totalCount, dataCount) );
+        }
+      }
+
+      return list;
+    };
+
+    return _this;
+  }();
+
+  //---------------------------------------------------------------------
+  // qrBitBuffer
+  //---------------------------------------------------------------------
+
+  var qrBitBuffer = function() {
+
+    var _buffer = [];
+    var _length = 0;
+
+    var _this = {};
+
+    _this.getBuffer = function() {
+      return _buffer;
+    };
+
+    _this.getAt = function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ( (_buffer[bufIndex] >>> (7 - index % 8) ) & 1) == 1;
+    };
+
+    _this.put = function(num, length) {
+      for (var i = 0; i < length; i += 1) {
+        _this.putBit( ( (num >>> (length - i - 1) ) & 1) == 1);
+      }
+    };
+
+    _this.getLengthInBits = function() {
+      return _length;
+    };
+
+    _this.putBit = function(bit) {
+
+      var bufIndex = Math.floor(_length / 8);
+      if (_buffer.length <= bufIndex) {
+        _buffer.push(0);
+      }
+
+      if (bit) {
+        _buffer[bufIndex] |= (0x80 >>> (_length % 8) );
+      }
+
+      _length += 1;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrNumber
+  //---------------------------------------------------------------------
+
+  var qrNumber = function(data) {
+
+    var _mode = QRMode.MODE_NUMBER;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _data;
+
+      var i = 0;
+
+      while (i + 2 < data.length) {
+        buffer.put(strToNum(data.substring(i, i + 3) ), 10);
+        i += 3;
+      }
+
+      if (i < data.length) {
+        if (data.length - i == 1) {
+          buffer.put(strToNum(data.substring(i, i + 1) ), 4);
+        } else if (data.length - i == 2) {
+          buffer.put(strToNum(data.substring(i, i + 2) ), 7);
+        }
+      }
+    };
+
+    var strToNum = function(s) {
+      var num = 0;
+      for (var i = 0; i < s.length; i += 1) {
+        num = num * 10 + chatToNum(s.charAt(i) );
+      }
+      return num;
+    };
+
+    var chatToNum = function(c) {
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      }
+      throw 'illegal char :' + c;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrAlphaNum
+  //---------------------------------------------------------------------
+
+  var qrAlphaNum = function(data) {
+
+    var _mode = QRMode.MODE_ALPHA_NUM;
+    var _data = data;
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _data.length;
+    };
+
+    _this.write = function(buffer) {
+
+      var s = _data;
+
+      var i = 0;
+
+      while (i + 1 < s.length) {
+        buffer.put(
+          getCode(s.charAt(i) ) * 45 +
+          getCode(s.charAt(i + 1) ), 11);
+        i += 2;
+      }
+
+      if (i < s.length) {
+        buffer.put(getCode(s.charAt(i) ), 6);
+      }
+    };
+
+    var getCode = function(c) {
+
+      if ('0' <= c && c <= '9') {
+        return c.charCodeAt(0) - '0'.charCodeAt(0);
+      } else if ('A' <= c && c <= 'Z') {
+        return c.charCodeAt(0) - 'A'.charCodeAt(0) + 10;
+      } else {
+        switch (c) {
+        case ' ' : return 36;
+        case '$' : return 37;
+        case '%' : return 38;
+        case '*' : return 39;
+        case '+' : return 40;
+        case '-' : return 41;
+        case '.' : return 42;
+        case '/' : return 43;
+        case ':' : return 44;
+        default :
+          throw 'illegal char :' + c;
+        }
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qr8BitByte
+  //---------------------------------------------------------------------
+
+  var qr8BitByte = function(data) {
+
+    var _mode = QRMode.MODE_8BIT_BYTE;
+    var _data = data;
+    var _bytes = qrcode.stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return _bytes.length;
+    };
+
+    _this.write = function(buffer) {
+      for (var i = 0; i < _bytes.length; i += 1) {
+        buffer.put(_bytes[i], 8);
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // qrKanji
+  //---------------------------------------------------------------------
+
+  var qrKanji = function(data) {
+
+    var _mode = QRMode.MODE_KANJI;
+    var _data = data;
+
+    var stringToBytes = qrcode.stringToBytesFuncs['SJIS'];
+    if (!stringToBytes) {
+      throw 'sjis not supported.';
+    }
+    !function(c, code) {
+      // self test for sjis support.
+      var test = stringToBytes(c);
+      if (test.length != 2 || ( (test[0] << 8) | test[1]) != code) {
+        throw 'sjis not supported.';
+      }
+    }('\u53cb', 0x9746);
+
+    var _bytes = stringToBytes(data);
+
+    var _this = {};
+
+    _this.getMode = function() {
+      return _mode;
+    };
+
+    _this.getLength = function(buffer) {
+      return ~~(_bytes.length / 2);
+    };
+
+    _this.write = function(buffer) {
+
+      var data = _bytes;
+
+      var i = 0;
+
+      while (i + 1 < data.length) {
+
+        var c = ( (0xff & data[i]) << 8) | (0xff & data[i + 1]);
+
+        if (0x8140 <= c && c <= 0x9FFC) {
+          c -= 0x8140;
+        } else if (0xE040 <= c && c <= 0xEBBF) {
+          c -= 0xC140;
+        } else {
+          throw 'illegal char at ' + (i + 1) + '/' + c;
+        }
+
+        c = ( (c >>> 8) & 0xff) * 0xC0 + (c & 0xff);
+
+        buffer.put(c, 13);
+
+        i += 2;
+      }
+
+      if (i < data.length) {
+        throw 'illegal char at ' + (i + 1);
+      }
+    };
+
+    return _this;
+  };
+
+  //=====================================================================
+  // GIF Support etc.
+  //
+
+  //---------------------------------------------------------------------
+  // byteArrayOutputStream
+  //---------------------------------------------------------------------
+
+  var byteArrayOutputStream = function() {
+
+    var _bytes = [];
+
+    var _this = {};
+
+    _this.writeByte = function(b) {
+      _bytes.push(b & 0xff);
+    };
+
+    _this.writeShort = function(i) {
+      _this.writeByte(i);
+      _this.writeByte(i >>> 8);
+    };
+
+    _this.writeBytes = function(b, off, len) {
+      off = off || 0;
+      len = len || b.length;
+      for (var i = 0; i < len; i += 1) {
+        _this.writeByte(b[i + off]);
+      }
+    };
+
+    _this.writeString = function(s) {
+      for (var i = 0; i < s.length; i += 1) {
+        _this.writeByte(s.charCodeAt(i) );
+      }
+    };
+
+    _this.toByteArray = function() {
+      return _bytes;
+    };
+
+    _this.toString = function() {
+      var s = '';
+      s += '[';
+      for (var i = 0; i < _bytes.length; i += 1) {
+        if (i > 0) {
+          s += ',';
+        }
+        s += _bytes[i];
+      }
+      s += ']';
+      return s;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64EncodeOutputStream
+  //---------------------------------------------------------------------
+
+  var base64EncodeOutputStream = function() {
+
+    var _buffer = 0;
+    var _buflen = 0;
+    var _length = 0;
+    var _base64 = '';
+
+    var _this = {};
+
+    var writeEncoded = function(b) {
+      _base64 += String.fromCharCode(encode(b & 0x3f) );
+    };
+
+    var encode = function(n) {
+      if (n < 0) {
+        // error.
+      } else if (n < 26) {
+        return 0x41 + n;
+      } else if (n < 52) {
+        return 0x61 + (n - 26);
+      } else if (n < 62) {
+        return 0x30 + (n - 52);
+      } else if (n == 62) {
+        return 0x2b;
+      } else if (n == 63) {
+        return 0x2f;
+      }
+      throw 'n:' + n;
+    };
+
+    _this.writeByte = function(n) {
+
+      _buffer = (_buffer << 8) | (n & 0xff);
+      _buflen += 8;
+      _length += 1;
+
+      while (_buflen >= 6) {
+        writeEncoded(_buffer >>> (_buflen - 6) );
+        _buflen -= 6;
+      }
+    };
+
+    _this.flush = function() {
+
+      if (_buflen > 0) {
+        writeEncoded(_buffer << (6 - _buflen) );
+        _buffer = 0;
+        _buflen = 0;
+      }
+
+      if (_length % 3 != 0) {
+        // padding
+        var padlen = 3 - _length % 3;
+        for (var i = 0; i < padlen; i += 1) {
+          _base64 += '=';
+        }
+      }
+    };
+
+    _this.toString = function() {
+      return _base64;
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // base64DecodeInputStream
+  //---------------------------------------------------------------------
+
+  var base64DecodeInputStream = function(str) {
+
+    var _str = str;
+    var _pos = 0;
+    var _buffer = 0;
+    var _buflen = 0;
+
+    var _this = {};
+
+    _this.read = function() {
+
+      while (_buflen < 8) {
+
+        if (_pos >= _str.length) {
+          if (_buflen == 0) {
+            return -1;
+          }
+          throw 'unexpected end of file./' + _buflen;
+        }
+
+        var c = _str.charAt(_pos);
+        _pos += 1;
+
+        if (c == '=') {
+          _buflen = 0;
+          return -1;
+        } else if (c.match(/^\s$/) ) {
+          // ignore if whitespace.
+          continue;
+        }
+
+        _buffer = (_buffer << 6) | decode(c.charCodeAt(0) );
+        _buflen += 6;
+      }
+
+      var n = (_buffer >>> (_buflen - 8) ) & 0xff;
+      _buflen -= 8;
+      return n;
+    };
+
+    var decode = function(c) {
+      if (0x41 <= c && c <= 0x5a) {
+        return c - 0x41;
+      } else if (0x61 <= c && c <= 0x7a) {
+        return c - 0x61 + 26;
+      } else if (0x30 <= c && c <= 0x39) {
+        return c - 0x30 + 52;
+      } else if (c == 0x2b) {
+        return 62;
+      } else if (c == 0x2f) {
+        return 63;
+      } else {
+        throw 'c:' + c;
+      }
+    };
+
+    return _this;
+  };
+
+  //---------------------------------------------------------------------
+  // gifImage (B/W)
+  //---------------------------------------------------------------------
+
+  var gifImage = function(width, height) {
+
+    var _width = width;
+    var _height = height;
+    var _data = new Array(width * height);
+
+    var _this = {};
+
+    _this.setPixel = function(x, y, pixel) {
+      _data[y * _width + x] = pixel;
+    };
+
+    _this.write = function(out) {
+
+      //---------------------------------
+      // GIF Signature
+
+      out.writeString('GIF87a');
+
+      //---------------------------------
+      // Screen Descriptor
+
+      out.writeShort(_width);
+      out.writeShort(_height);
+
+      out.writeByte(0x80); // 2bit
+      out.writeByte(0);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Global Color Map
+
+      // black
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+      out.writeByte(0x00);
+
+      // white
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+      out.writeByte(0xff);
+
+      //---------------------------------
+      // Image Descriptor
+
+      out.writeString(',');
+      out.writeShort(0);
+      out.writeShort(0);
+      out.writeShort(_width);
+      out.writeShort(_height);
+      out.writeByte(0);
+
+      //---------------------------------
+      // Local Color Map
+
+      //---------------------------------
+      // Raster Data
+
+      var lzwMinCodeSize = 2;
+      var raster = getLZWRaster(lzwMinCodeSize);
+
+      out.writeByte(lzwMinCodeSize);
+
+      var offset = 0;
+
+      while (raster.length - offset > 255) {
+        out.writeByte(255);
+        out.writeBytes(raster, offset, 255);
+        offset += 255;
+      }
+
+      out.writeByte(raster.length - offset);
+      out.writeBytes(raster, offset, raster.length - offset);
+      out.writeByte(0x00);
+
+      //---------------------------------
+      // GIF Terminator
+      out.writeString(';');
+    };
+
+    var bitOutputStream = function(out) {
+
+      var _out = out;
+      var _bitLength = 0;
+      var _bitBuffer = 0;
+
+      var _this = {};
+
+      _this.write = function(data, length) {
+
+        if ( (data >>> length) != 0) {
+          throw 'length over';
+        }
+
+        while (_bitLength + length >= 8) {
+          _out.writeByte(0xff & ( (data << _bitLength) | _bitBuffer) );
+          length -= (8 - _bitLength);
+          data >>>= (8 - _bitLength);
+          _bitBuffer = 0;
+          _bitLength = 0;
+        }
+
+        _bitBuffer = (data << _bitLength) | _bitBuffer;
+        _bitLength = _bitLength + length;
+      };
+
+      _this.flush = function() {
+        if (_bitLength > 0) {
+          _out.writeByte(_bitBuffer);
+        }
+      };
+
+      return _this;
+    };
+
+    var getLZWRaster = function(lzwMinCodeSize) {
+
+      var clearCode = 1 << lzwMinCodeSize;
+      var endCode = (1 << lzwMinCodeSize) + 1;
+      var bitLength = lzwMinCodeSize + 1;
+
+      // Setup LZWTable
+      var table = lzwTable();
+
+      for (var i = 0; i < clearCode; i += 1) {
+        table.add(String.fromCharCode(i) );
+      }
+      table.add(String.fromCharCode(clearCode) );
+      table.add(String.fromCharCode(endCode) );
+
+      var byteOut = byteArrayOutputStream();
+      var bitOut = bitOutputStream(byteOut);
+
+      // clear code
+      bitOut.write(clearCode, bitLength);
+
+      var dataIndex = 0;
+
+      var s = String.fromCharCode(_data[dataIndex]);
+      dataIndex += 1;
+
+      while (dataIndex < _data.length) {
+
+        var c = String.fromCharCode(_data[dataIndex]);
+        dataIndex += 1;
+
+        if (table.contains(s + c) ) {
+
+          s = s + c;
+
+        } else {
+
+          bitOut.write(table.indexOf(s), bitLength);
+
+          if (table.size() < 0xfff) {
+
+            if (table.size() == (1 << bitLength) ) {
+              bitLength += 1;
+            }
+
+            table.add(s + c);
+          }
+
+          s = c;
+        }
+      }
+
+      bitOut.write(table.indexOf(s), bitLength);
+
+      // end code
+      bitOut.write(endCode, bitLength);
+
+      bitOut.flush();
+
+      return byteOut.toByteArray();
+    };
+
+    var lzwTable = function() {
+
+      var _map = {};
+      var _size = 0;
+
+      var _this = {};
+
+      _this.add = function(key) {
+        if (_this.contains(key) ) {
+          throw 'dup key:' + key;
+        }
+        _map[key] = _size;
+        _size += 1;
+      };
+
+      _this.size = function() {
+        return _size;
+      };
+
+      _this.indexOf = function(key) {
+        return _map[key];
+      };
+
+      _this.contains = function(key) {
+        return typeof _map[key] != 'undefined';
+      };
+
+      return _this;
+    };
+
+    return _this;
+  };
+
+  var createDataURL = function(width, height, getPixel) {
+    var gif = gifImage(width, height);
+    for (var y = 0; y < height; y += 1) {
+      for (var x = 0; x < width; x += 1) {
+        gif.setPixel(x, y, getPixel(x, y) );
+      }
+    }
+
+    var b = byteArrayOutputStream();
+    gif.write(b);
+
+    var base64 = base64EncodeOutputStream();
+    var bytes = b.toByteArray();
+    for (var i = 0; i < bytes.length; i += 1) {
+      base64.writeByte(bytes[i]);
+    }
+    base64.flush();
+
+    return 'data:image/gif;base64,' + base64;
+  };
+
+  //---------------------------------------------------------------------
+  // returns qrcode function.
+
+  return qrcode;
+}();
+
+// multibyte support
+!function() {
+
+  qrcode.stringToBytesFuncs['UTF-8'] = function(s) {
+    // http://stackoverflow.com/questions/18729405/how-to-convert-utf8-string-to-byte-array
+    function toUTF8Array(str) {
+      var utf8 = [];
+      for (var i=0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80) utf8.push(charcode);
+        else if (charcode < 0x800) {
+          utf8.push(0xc0 | (charcode >> 6),
+              0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+          utf8.push(0xe0 | (charcode >> 12),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+          i++;
+          // UTF-16 encodes 0x10000-0x10FFFF by
+          // subtracting 0x10000 and splitting the
+          // 20 bits of 0x0-0xFFFFF into two halves
+          charcode = 0x10000 + (((charcode & 0x3ff)<<10)
+            | (str.charCodeAt(i) & 0x3ff));
+          utf8.push(0xf0 | (charcode >>18),
+              0x80 | ((charcode>>12) & 0x3f),
+              0x80 | ((charcode>>6) & 0x3f),
+              0x80 | (charcode & 0x3f));
+        }
+      }
+      return utf8;
+    }
+    return toUTF8Array(s);
+  };
+
+}();
+
+(function (factory) {
+  if (typeof define === 'function' && define.amd) {
+      define([], factory);
+  } else if (typeof exports === 'object') {
+      module.exports = factory();
+  }
+}(function () {
+    return qrcode;
+}));
+</script>
+<script>
+/* Supabase project: Project Settings > API (Data API). Paste the Project URL and the anon public key. */
+const SUPABASE_URL = 'https://jybsbiwjuaksxvckszoh.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_FcGWxlimgYn9QUBUeNh_Tw_MZL15TRZ';
+const BOOT = null;
+(() => {
+  const STANDALONE = true;
+  const Q = new URLSearchParams(location.search);
+  const B = BOOT || {
+    url: location.origin + location.pathname,
+    s: (Q.get('s') || '').replace(/[^\w-]/g, '').slice(0, 40),
+    c: (Q.get('c') || '').replace(/\D/g, '').slice(0, 6),
+    r: Q.get('r') ? 1 : 0
+  };
+  const SITE = STANDALONE ? location.origin + location.pathname : B.url;
+  const $ = (id) => document.getElementById(id);
+  const app = $('app');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    sget(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } },
+    sset(k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} }
+  };
+  let toastTimer = null;
+  function toast(text, href) {
+    const t = $('toast'); t.textContent = text;
+    if (href) { const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = ' Open it'; t.appendChild(a); }
+    t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 4500);
+  }
+  /* Every action is a database function in Supabase. The page sends named values; the database checks the PIN and the rules. */
+  const RPC = {
+    studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']],
+    appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_pin']], login: ['login', ['p_pin']],
+    addGroup: ['add_group', ['p_pin', 'p_course', 'p_group', 'p_ta', 'p_list']], importGroups: ['import_groups', ['p_pin', 'p_course', 'p_groups']],
+    claimGroup: ['claim_group', ['p_pin', 'p_course', 'p_group']], assignGroup: ['assign_group', ['p_pin', 'p_course', 'p_group', 'p_ta']],
+    removeGroup: ['remove_group', ['p_pin', 'p_course', 'p_group']], addStaff: ['add_staff', ['p_pin', 'p_name', 'p_new_pin', 'p_courses']],
+    setStaffCourses: ['set_staff_courses', ['p_pin', 'p_name', 'p_courses']], removeStaff: ['remove_staff', ['p_pin', 'p_name']],
+    setTermStart: ['set_term_start', ['p_pin', 'p_date']],
+    openSession: ['open_session', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_minutes', 'p_strict', 'p_guests']],
+    extendSession: ['extend_session', ['p_pin', 'p_id', 'p_minutes']], closeSession: ['close_session', ['p_pin', 'p_id']],
+    randomCheck: ['random_check', ['p_pin', 'p_id', 'p_n']], groupState: ['group_state', ['p_pin', 'p_course', 'p_group', 'p_week']],
+    groupSummary: ['group_summary', ['p_pin', 'p_course', 'p_group']], mark: ['mark', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id', 'p_status']],
+    markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
+    gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
+    saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], exportAll: ['export_all', ['p_pin']]
+  };
+  async function api(fn, ...args) {
+    const [name, params] = RPC[fn];
+    const body = {};
+    params.forEach((p, i) => { if (args[i] !== undefined) body[p] = args[i]; });
+    for (let tries = 0; tries < 3; tries++) {
+      let res;
+      try {
+        res = await fetch(SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + name, {
+          method: 'POST',
+          headers: Object.assign({ 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
+            /^eyJ/.test(SUPABASE_KEY) ? { Authorization: 'Bearer ' + SUPABASE_KEY } : {}),
+          body: JSON.stringify(body)
+        });
+      } catch (e) { await new Promise(r => setTimeout(r, 700 * (tries + 1))); continue; }
+      const text = await res.text();
+      let data = null; try { data = text ? JSON.parse(text) : null; } catch (e) {}
+      if (res.ok) return data;
+      if (res.status >= 500 || res.status === 429) { await new Promise(r => setTimeout(r, 700 * (tries + 1))); continue; }
+      throw new Error((data && (data.message || data.error)) || 'Something went wrong (' + res.status + ').');
+    }
+    throw new Error('Could not reach the server. Check your internet.');
+  }
+  const errMsg = (e) => String((e && e.message) || e);
+  const numeric = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
+  const mmss = (s) => { s = Math.max(0, s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+
+  if (/PASTE_/.test(SUPABASE_URL + SUPABASE_KEY)) {
+    app.innerHTML = '<div class="wrap"><div class="panel narrow"><h1 style="font-size:26px;margin:0">One step left</h1><p class="sub">Open index.html in Notepad and paste the Supabase Project URL and anon key in the lines that start with <b>const SUPABASE_URL</b> and <b>const SUPABASE_KEY</b>.</p></div></div>';
+    return;
+  }
+
+  /* =============== STUDENT =============== */
+  if (B.s) { student(); return; }
+  if (B.r) { registration(); return; }
+
+  function phoneId() {
+    let device = store.get('att_device');
+    if (!device) { device = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); store.set('att_device', device); }
+    return device;
+  }
+  function registration(fromLanding) {
+    const device = phoneId();
+    const shell = (inner) => {
+      app.innerHTML = '<div class="wrap">' + (fromLanding ? '<div class="stu"><button class="back" id="rbk" type="button">&larr; Back</button></div>' : '') + '<div class="stu panel"' + (fromLanding ? ' style="margin-top:0"' : '') + '>' + inner + '</div></div>';
+      if (fromLanding) $('rbk').onclick = landingView;
+    };
+    const doneView = (name, groups) => shell('<div class="done"><div class="mark" aria-hidden="true">&#10003;</div><h2>Registered</h2><div class="name">' + esc(name) + '</div>' +
+      '<p class="sub">' + groups.map(esc).join('<br>') + '</p>' +
+      '<p class="note" style="margin-top:16px">In the section, scan the QR code on the TA\'s screen and press <b>Check in</b>. Your ID is already filled in on this phone.</p></div>');
+    const myId = store.get('att_id'), myName = store.get('att_name'), myGroups = store.get('att_groups');
+    if (myId && myName && myGroups) { try { return doneView(myName, JSON.parse(myGroups)); } catch (e) {} }
+    shell('<span class="pill">One time only</span><h1 style="font-size:30px;margin-top:16px">Register your phone</h1>' +
+      '<p class="sub">Do this once. In every section after that, you scan the QR code and press Check in.</p>' +
+      '<form class="form" id="f" autocomplete="off" style="margin-top:20px"><label class="f">Your student ID<input class="in big-in" id="sid" inputmode="numeric" maxlength="12"></label>' +
+      '<button class="btn" id="go" type="submit" style="font-size:19px;padding:15px">Register</button></form><div id="msg"></div>' +
+      '<p class="note" style="margin-top:16px">Use your own phone. Each phone can be registered to one student only.</p>');
+    $('sid').addEventListener('input', () => { $('sid').value = $('sid').value.replace(/\D/g, ''); });
+    $('sid').focus();
+    $('f').onsubmit = async (e) => {
+      e.preventDefault();
+      const say = (t, d) => { $('msg').innerHTML = '<div class="msg err">' + esc(t) + (d ? '<small>' + esc(d) + '</small>' : '') + '</div>'; };
+      if (!$('sid').value) return say('Type your ID', '');
+      $('go').disabled = true; $('go').textContent = 'Registering';
+      try {
+        const r = await api('registerPhone', { id: $('sid').value, device: device });
+        if (r.done) { store.set('att_id', r.id); store.set('att_name', r.name); store.set('att_groups', JSON.stringify(r.groups)); return doneView(r.name, r.groups); }
+        say(r.title, r.detail);
+      } catch (err) { say('Could not reach the server', 'Check your internet and try again.'); }
+      $('go').disabled = false; $('go').textContent = 'Register';
+    };
+  }
+  function student() {
+    const device = phoneId();
+    let code = B.c || '', info = null;
+    const shell = (inner) => { app.innerHTML = '<div class="wrap"><div class="stu panel">' + inner + '</div></div>'; };
+    function closedView(title, detail) {
+      shell('<span class="pill">Tally Grades</span><h1 style="font-size:28px;margin-top:14px">' + esc(title) + '</h1><p class="sub">' + esc(detail) + '</p><div style="margin-top:20px"><button class="btn" id="again" type="button">Try again</button></div>');
+      $('again').onclick = load;
+    }
+    function doneView(d) {
+      shell('<div class="done"><div class="mark" aria-hidden="true">&#10003;</div><h2>Present</h2><div class="name">' + esc(d.name) + '</div><p class="sub">' + esc(d.detail) + '</p></div>');
+    }
+    async function load() {
+      app.innerHTML = '<div class="loading">Loading</div>';
+      try { info = await api('studentInfo', B.s); }
+      catch (e) { return closedView('No connection', 'Check your internet, then tap Try again.'); }
+      if (!info.open) return closedView('Check-in is closed', 'Ask your TA to open it, then scan the QR code again.');
+      const done = store.get('att_done_' + info.session);
+      if (done) { try { return doneView(JSON.parse(done)); } catch (e) {} }
+      const myId = store.get('att_id') || '', myName = store.get('att_name') || '';
+      const locked = !!myId;
+      shell(
+        '<span class="pill">' + esc(info.course) + '</span> <span class="pill">Group ' + esc(info.group) + '</span>' +
+        '<h1 style="font-size:30px;margin-top:16px">' + esc(info.weekLabel) + '</h1>' +
+        '<p class="sub">Check in to today\'s section' + (info.ta ? ' with ' + esc(info.ta) : '') + '.</p>' +
+        '<form class="form" id="f" autocomplete="off" style="margin-top:20px">' +
+        (locked ? '<p class="note">Checking in as <b>' + esc(myName || myId) + '</b>.' + (info.strict ? ' This phone is registered to you.' : ' <button class="link" id="notme" type="button" style="font-size:14px">Not you?</button>') + '</p>' : '') +
+        '<label class="f">Your student ID<input class="in big-in" id="sid" inputmode="numeric" maxlength="12" value="' + esc(myId) + '"' + (locked ? ' readonly' : '') + '></label>' +
+        '<label class="f" id="codeRow"' + (code ? ' hidden' : '') + '>Code on the TA\'s screen<input class="in big-in" id="code" inputmode="numeric" maxlength="4"></label>' +
+        '<button class="btn" id="go" type="submit" style="font-size:19px;padding:15px">Check in</button></form>' +
+        '<div id="msg"></div><p class="note" style="margin-top:16px">Each phone can check in one student. Checking in for someone else is recorded.</p>'
+      );
+      const digits = (el) => el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, ''); });
+      digits($('sid')); digits($('code'));
+      if (!myId) $('sid').focus();
+      if ($('notme')) $('notme').onclick = () => { $('sid').readOnly = false; $('sid').value = ''; $('sid').focus(); $('notme').parentNode.hidden = true; };
+      $('f').onsubmit = async (e) => {
+        e.preventDefault();
+        const id = $('sid').value, c = $('codeRow').hidden ? code : $('code').value;
+        const say = (kind, t, d) => { $('msg').innerHTML = '<div class="msg ' + kind + '">' + esc(t) + (d ? '<small>' + esc(d) + '</small>' : '') + '</div>'; };
+        if (!id) return say('err', 'Type your ID', '');
+        if (!c) { $('codeRow').hidden = false; $('code').focus(); return say('err', 'Type the code', 'Write the 4 digits shown on the TA\'s screen.'); }
+        $('go').disabled = true; $('go').textContent = 'Checking in';
+        try {
+          const r = await api('checkIn', { session: info.session, id: id, code: c, device: device });
+          if (r.done) {
+            if (r.id !== store.get('att_id')) store.set('att_groups', '');
+            store.set('att_id', r.id); store.set('att_name', r.name);
+            const d = { name: r.name, detail: r.detail };
+            store.set('att_done_' + info.session, JSON.stringify(d));
+            return doneView(d);
+          }
+          say(r.kind, r.title, r.detail);
+          if (r.needCode) { code = ''; $('codeRow').hidden = false; $('code').value = ''; $('code').focus(); }
+        } catch (err) { say('err', 'Could not reach the server', 'Check your internet and press Check in again.'); }
+        $('go').disabled = false; $('go').textContent = 'Check in';
+      };
+    }
+    load();
+  }
+
+  /* =============== STAFF =============== */
+  let PIN = store.sget('att_pin') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
+  const stopTimers = () => { timers.forEach(t => clearInterval(t)); timers = []; document.body.classList.remove('projector'); };
+
+  async function startStaff() {
+    if (PIN) { try { D = await api('login', PIN); return dashboard(); } catch (e) { PIN = ''; store.sset('att_pin', null); } }
+    let state = { setup: true };
+    try { state = await api('appState'); } catch (e) { app.innerHTML = '<div class="loading">Could not connect. Refresh the page.</div>'; return; }
+    state.setup ? landingView() : setupView();
+  }
+  function landingView() {
+    stopTimers();
+    const card = (pill, title, text, id) => '<div class="card"><span class="pill">' + pill + '</span><h3>' + title + '</h3><p>' + text + '</p><div class="links"><button class="link" id="' + id + '">Continue &rarr;</button></div></div>';
+    app.innerHTML = '<div class="wrap"><div class="top"><div><h1>Tally Grades</h1><p class="sub">Attendance and grades. Who are you?</p></div></div><div class="grid">' +
+      card('Student', 'I am a student', 'Register your phone once. In the section, scan the QR code on the screen to check in.', 'asStudent') +
+      card('TA', 'I am a TA', 'Log in with your PIN to open check-in, see who attended, and enter grades.', 'asTa') +
+      card('Admin', 'I am the admin', 'Log in with the admin PIN to manage courses, groups and TAs.', 'asAdmin') + '</div></div>';
+    $('asStudent').onclick = () => registration(true);
+    $('asTa').onclick = () => loginView('TA');
+    $('asAdmin').onclick = () => loginView('Admin');
+  }
+  function setupView() {
+    app.innerHTML = '<div class="wrap"><div class="panel narrow"><span class="pill">First time</span><h1 style="font-size:30px;margin-top:14px">Set up Tally Grades</h1>' +
+      '<p class="sub">You become the admin. You can add the other TAs after this.</p>' +
+      '<form class="form" id="f" style="margin-top:20px"><label class="f">Your name<input class="in" id="nm" placeholder="Toqa Hamdy"></label>' +
+      '<label class="f">Choose a PIN (6 to 10 digits)<input class="in" id="pn" type="password" inputmode="numeric"></label>' +
+      '<div class="err" id="er"></div><button class="btn" type="submit">Create admin</button></form></div></div>';
+    $('f').onsubmit = async (e) => {
+      e.preventDefault(); $('er').textContent = '';
+      try { D = await api('setupAdmin', $('nm').value, $('pn').value); PIN = $('pn').value.trim(); store.sset('att_pin', PIN); dashboard(); }
+      catch (err) { $('er').textContent = errMsg(err); }
+    };
+  }
+  function loginView(as) {
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">' + (as === 'Admin' ? 'Admin' : 'TA') + '</span><h1 style="font-size:30px;margin-top:14px">Log in</h1>' +
+      '<p class="sub">' + (as === 'Admin' ? 'Use the admin PIN.' : 'Use the PIN your admin gave you.') + '</p>' +
+      '<form class="form" id="f" style="margin-top:20px"><label class="f">Your PIN<input class="in big-in" id="pn" type="password" inputmode="numeric"></label>' +
+      '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Log in</button></form></div></div>';
+    $('pn').focus();
+    $('bk').onclick = landingView;
+    $('f').onsubmit = async (e) => {
+      e.preventDefault(); $('er').textContent = ''; $('go').disabled = true;
+      try {
+        const d = await api('login', $('pn').value);
+        if (as === 'Admin' && d.me.role !== 'Admin') { $('er').textContent = 'This is a TA PIN. Go back and choose "I am a TA".'; $('go').disabled = false; return; }
+        D = d; PIN = $('pn').value.trim(); store.sset('att_pin', PIN); tab = 'mine'; dashboard();
+      } catch (err) { $('er').textContent = errMsg(err); $('go').disabled = false; }
+    };
+  }
+  function logout() { PIN = ''; store.sset('att_pin', null); stopTimers(); landingView(); }
+
+  /* ----- dashboard ----- */
+  function dashboard() {
+    stopTimers();
+    const isAdmin = D.me.role === 'Admin';
+    const groups = D.groups.slice().sort((a, b) => numeric(a.course + a.group, b.course + b.group));
+    const mine = groups.filter(g => g.ta === D.me.name);
+    if (tab === 'staff' && !isAdmin) tab = 'mine';
+    if (tab === 'mine' && !mine.length && groups.length) tab = 'all';
+    const list = tab === 'mine' ? mine : groups;
+    const tabs = [['mine', 'My groups (' + mine.length + ')'], ['all', 'All groups (' + groups.length + ')']];
+    if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin').length + ')']);
+    let body = '';
+    if (tab === 'staff') {
+      body = '<div class="grid">' + D.staff.map(st =>
+        '<div class="card"><span class="pill">' + (st.role === 'Admin' ? 'Admin' : 'TA') + '</span><h3>' + esc(st.name) + '</h3><p>' + D.groups.filter(g => g.ta === st.name).length + ' groups</p>' +
+        (st.role === 'Admin' ? '' : '<p style="margin:0">' + (st.courses.length ? st.courses.map(esc).join('<br>') : 'All courses') + '</p>') +
+        (st.name !== D.me.name ? '<div class="links"><button class="link" data-crs="' + esc(st.name) + '">Courses</button><button class="link danger" data-rm="' + esc(st.name) + '">Remove</button></div>' : '') + '</div>').join('') +
+        '<div class="card add"><button type="button" id="addStaff">+ Add a TA</button></div></div>';
+    } else {
+      const courses = [...new Set(list.map(g => g.course))].sort();
+      if (courseFilter && courses.indexOf(courseFilter) < 0) courseFilter = '';
+      body = (list.length > 4 ? '<div class="filters"><select class="in" id="fc"><option value="">All courses</option>' +
+        courses.map(c => '<option' + (c === courseFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' +
+        '<input class="in" id="fq" type="search" placeholder="Search a group or TA" value="' + esc(groupQuery) + '"></div>' : '') +
+        '<div class="grid">' + list.map((g, i) => {
+        const can = isAdmin || g.ta === D.me.name;
+        let links = '';
+        if (can) {
+          links = '<button class="link" data-open="' + i + '">' + (g.live ? 'Show check-in' : 'Open') + ' &rarr;</button><button class="link" data-grades="' + i + '">Grades &rarr;</button>';
+          if (isAdmin) links += '<button class="link" data-ta="' + i + '">Change TA</button><button class="link danger" data-del="' + i + '">Delete</button>';
+        } else if (!g.ta) {
+          links = '<button class="link" data-claim="' + i + '">This is my group &rarr;</button>';
+        }
+        return '<div class="card" data-c="' + esc(g.course) + '" data-q="' + esc((g.group + ' ' + g.ta + ' ' + g.course).toLowerCase()) + '"><span class="pill">Group ' + esc(g.group) + '</span>' + (g.live ? '<span class="pill green">Live now</span>' : '') +
+          '<h3>' + esc(g.course) + '</h3><p>' + g.count + ' students, ' + (g.registered || 0) + ' phones registered</p><span class="pill">' + (g.ta ? 'TA: ' + esc(g.ta) : 'No TA yet') + '</span>' +
+          (links ? '<div class="links">' + links + '</div>' : '<p style="margin:18px 0 0">This group belongs to ' + esc(g.ta) + '.</p>') + '</div>';
+      }).join('') + '<div class="card add"><button type="button" id="upload">+ Upload an Excel sheet</button><button type="button" id="addGroup" style="font-size:16px">or paste one group</button></div></div>';
+    }
+    const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
+    const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.'
+      : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
+    const top = '<button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
+      ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button><button class="link" id="out">Log out</button>'
+      : '<button class="link" id="out">Log out</button>');
+    app.innerHTML = '<div class="wrap"><div class="top"><div><h1>Tally Grades</h1><p class="sub">' + hello + '</p></div><div class="links" style="margin:0">' + top + '</div></div>' +
+      '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>' + body + '</div>';
+    const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
+    on('[data-tab]', b => { tab = b.dataset.tab; dashboard(); });
+    on('[data-open]', b => groupPage(list[b.dataset.open]));
+    on('[data-grades]', b => gradesPage(list[b.dataset.grades]));
+    on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
+    on('[data-claim]', async b => {
+      const g = list[b.dataset.claim];
+      if (!confirm('Take group ' + g.group + ' of ' + g.course + ' as your group?')) return;
+      try { D = await api('claimGroup', PIN, g.course, g.group); tab = 'mine'; dashboard(); toast('Group ' + g.group + ' is now yours.'); } catch (e) { toast(errMsg(e)); }
+    });
+    on('[data-del]', async b => {
+      const g = list[b.dataset.del];
+      if (!confirm('Delete group ' + g.group + ' of ' + g.course + ' from the list? Its attendance records stay in the Log sheet.')) return;
+      try { D = await api('removeGroup', PIN, g.course, g.group); dashboard(); } catch (e) { toast(errMsg(e)); }
+    });
+    on('[data-crs]', b => coursesDialog(D.staff.find(x => x.name === b.dataset.crs)));
+    on('[data-rm]', async b => {
+      if (!confirm('Remove ' + b.dataset.rm + '? Their PIN stops working, and their groups become free.')) return;
+      try { D = await api('removeStaff', PIN, b.dataset.rm); dashboard(); } catch (e) { toast(errMsg(e)); }
+    });
+    if ($('addGroup')) $('addGroup').onclick = addGroupDialog;
+    if ($('upload')) $('upload').onclick = uploadDialog;
+    const applyFilter = () => {
+      app.querySelectorAll('.grid .card[data-c]').forEach(c => {
+        c.hidden = (courseFilter && c.dataset.c !== courseFilter) || (groupQuery && c.dataset.q.indexOf(groupQuery.toLowerCase()) < 0);
+      });
+    };
+    if ($('fc')) $('fc').onchange = () => { courseFilter = $('fc').value; applyFilter(); };
+    if ($('fq')) $('fq').oninput = () => { groupQuery = $('fq').value.trim(); applyFilter(); };
+    applyFilter();
+    if ($('addStaff')) $('addStaff').onclick = addStaffDialog;
+    $('out').onclick = logout;
+    $('regqr').onclick = registrationQrDialog;
+    $('final').onclick = downloadFinal;
+    if ($('term')) $('term').onclick = termDialog;
+    if ($('backup')) $('backup').onclick = downloadBackup;
+  }
+  /** End of term: one Excel file, one tab per course, one row per student with every week, attendance %, every grade and the total. */
+  async function downloadFinal() {
+    toast('Preparing the file');
+    try {
+      await loadXlsx();
+      const data = await api('finalExport', PIN);
+      if (!data.length) return toast('No students to export yet.');
+      const wb = XLSX.utils.book_new(), used = {};
+      data.forEach(c => {
+        const head = ['Group', 'TA', 'Student Name', 'ID'].concat(c.weeks, ['Present', 'Absent', 'Excused', 'Attendance %'],
+          c.attendanceMax ? ['Attendance (' + c.attendanceMax + ')'] : [], c.items.map(it => it.item + ' (' + it.max + ')'), ['Total']);
+        const rows = c.rows.map(r => [r.group, r.ta, r.name, Number(r.id)].concat(r.weeks, [r.p, r.a, r.e, r.pct],
+          c.attendanceMax ? [r.attGrade] : [], c.items.map(it => r.scores[it.key] === undefined ? '' : r.scores[it.key]), [r.total]));
+        const ws = XLSX.utils.aoa_to_sheet([head].concat(rows));
+        const pctCol = 4 + c.weeks.length + 3;
+        for (let i = 1; i <= rows.length; i++) { const cell = ws[XLSX.utils.encode_cell({ r: i, c: pctCol })]; if (cell && cell.t === 'n') cell.z = '0%'; }
+        ws['!cols'] = head.map((h, i) => ({ wch: i === 2 ? 42 : i === 3 ? 12 : Math.max(7, String(h).length + 2) }));
+        let name = c.course.replace(/[\[\]*?\/\\:]/g, ' ').trim().slice(0, 31) || 'Course', k = 2;
+        while (used[name]) name = name.slice(0, 27) + ' (' + (k++) + ')';
+        used[name] = true;
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      });
+      XLSX.writeFile(wb, 'Tally Grades - Final attendance and grades.xlsx');
+      toast('Downloaded: Tally Grades - Final attendance and grades.xlsx');
+    } catch (e) { toast(errMsg(e)); }
+  }
+  /** Admin: every table in one Excel file (PINs are never included). */
+  async function downloadBackup() {
+    toast('Preparing the backup');
+    try {
+      await loadXlsx();
+      const data = await api('exportAll', PIN);
+      const wb = XLSX.utils.book_new();
+      Object.keys(data).forEach(k => {
+        const rows = data[k] || [];
+        const ws = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([['No data yet']]);
+        XLSX.utils.book_append_sheet(wb, ws, k);
+      });
+      XLSX.writeFile(wb, 'Tally Grades - Backup ' + new Date().toISOString().slice(0, 10) + '.xlsx');
+      toast('Backup downloaded.');
+    } catch (e) { toast(errMsg(e)); }
+  }
+  function termDialog() {
+    dialog('<h1 style="font-size:26px;margin:0">Term start</h1><p class="sub">The first day of Week 1. The site then opens every group on the current week by itself.</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Week 1 starts on<input class="in" id="ts" type="date" value="' + esc(D.termStart) + '"></label>' +
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        o.querySelector('#go').onclick = async () => {
+          try { D = await api('setTermStart', PIN, o.querySelector('#ts').value); close(); dashboard(); toast(D.currentWeek ? 'Saved. This week is ' + D.weeks[D.currentWeek - 1][1] + '.' : 'Saved.'); }
+          catch (e) { o.querySelector('#er').textContent = errMsg(e); }
+        };
+      });
+  }
+  function registrationQrDialog() {
+    const link = SITE + '?r=1';
+    const q = qrcode(0, 'M'); q.addData(link); q.make();
+    dialog('<span class="pill">For all students</span><h1 style="font-size:26px;margin-top:12px">Registration QR</h1>' +
+      '<p class="sub">Students scan it once, from home or anywhere, and type their ID. Their phone remembers them, so in the section they only press Check in.</p>' +
+      '<div class="qr" style="max-width:340px;margin:18px auto 0">' + q.createSvgTag({ cellSize: 8, margin: 2, scalable: true }) + '<p>Scan to register</p></div>' +
+      '<label class="f" style="margin-top:18px">Link to share on the LMS or WhatsApp<input class="in" id="lnk" readonly value="' + esc(link) + '"></label>' +
+      '<div class="row" style="margin-top:14px"><button class="btn" id="cp" type="button">Copy link</button><button class="btn ghost" data-close type="button">Close</button></div>',
+      (o) => {
+        const inp = o.querySelector('#lnk');
+        inp.onclick = () => inp.select();
+        o.querySelector('#cp').onclick = async () => {
+          inp.select();
+          let ok = false;
+          try { await navigator.clipboard.writeText(link); ok = true; } catch (e) { try { ok = document.execCommand('copy'); } catch (e2) {} }
+          toast(ok ? 'Link copied.' : 'Select the link and copy it.');
+        };
+      });
+  }
+  function changeTaDialog(g) {
+    const names = D.staff.map(x => x.name);
+    dialog('<span class="pill">Group ' + esc(g.group) + '</span><h1 style="font-size:26px;margin-top:12px">Change TA</h1><p class="sub">' + esc(g.course) + '</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">TA<select class="in" id="ta"><option value="">No TA (any TA can take it)</option>' +
+      names.map(n => '<option' + (n === g.ta ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select></label>' +
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        o.querySelector('#go').onclick = async () => {
+          try { D = await api('assignGroup', PIN, g.course, g.group, o.querySelector('#ta').value); close(); dashboard(); toast('Saved.'); }
+          catch (e) { o.querySelector('#er').textContent = errMsg(e); }
+        };
+      });
+  }
+  function dialog(html, onReady) {
+    const o = document.createElement('div'); o.className = 'overlay';
+    o.innerHTML = '<div class="panel">' + html + '</div>';
+    o.addEventListener('click', (e) => { if (e.target === o) o.remove(); });
+    document.body.appendChild(o);
+    const close = () => o.remove();
+    o.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
+    onReady(o, close);
+  }
+  function parseList(text) {
+    const out = [], seen = {};
+    for (const line of String(text).split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let cells = (line.indexOf('\t') >= 0 ? line.split('\t') : line.split(/[,;]/)).map(x => x.trim()).filter(Boolean);
+      let id = '', name = '';
+      if (cells.length === 1) {
+        const m = cells[0].match(/^(.*?)[\s\-:]+(\d{4,})$/) || cells[0].match(/^(\d{4,})[\s\-:]+(.*)$/);
+        if (m) { if (/^\d+$/.test(m[1])) { id = m[1]; name = m[2]; } else { name = m[1]; id = m[2]; } }
+      } else {
+        const idCell = cells.find(x => /^\d{4,}(\.0+)?$/.test(x.replace(/\s/g, '')));
+        if (idCell) {
+          id = idCell.replace(/\s/g, '').replace(/\.0+$/, '');
+          name = cells.filter(x => x !== idCell && !/^\d+$/.test(x)).sort((a, b) => b.length - a.length)[0] || '';
+        }
+      }
+      if (id && name && !seen[id]) { seen[id] = 1; out.push([name.replace(/\s+/g, ' ').trim(), id]); }
+    }
+    return out;
+  }
+  function addGroupDialog() {
+    const isAdmin = D.me.role === 'Admin';
+    const tas = isAdmin ? D.staff.map(x => x.name) : [D.me.name];
+    const courses = [...new Set(D.groups.map(g => g.course))];
+    dialog('<h1 style="font-size:26px;margin:0">Add a group</h1><p class="sub">Copy the Name and ID columns from Excel or the LMS and paste them here.</p>' +
+      '<div class="form" style="margin-top:18px"><div class="row"><label class="f">Course<input class="in" id="co" list="cl" placeholder="Electronic Projects"><datalist id="cl">' + courses.map(c => '<option value="' + esc(c) + '">').join('') + '</datalist></label>' +
+      '<label class="f">Group<input class="in" id="gr" placeholder="A3"></label></div>' +
+      (isAdmin ? '<label class="f">TA<select class="in" id="ta">' + tas.map(n => '<option' + (n === D.me.name ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select></label>'
+        : '<p class="note">This group will be yours.</p><input type="hidden" id="ta" value="' + esc(D.me.name) + '">') +
+      '<label class="f">Students<textarea class="in" id="ls" placeholder="Ahmed Mohamed Ali	692600123&#10;Sara Hassan	692600124"></textarea></label>' +
+      '<p class="note" id="pv">Paste a list to see how many students were found.</p><div class="err" id="er"></div>' +
+      '<div class="row"><button class="btn" id="go" type="button">Save group</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        const q = (s) => o.querySelector(s);
+        q('#ls').oninput = () => { const n = parseList(q('#ls').value).length; q('#pv').textContent = n ? 'Found ' + n + ' students.' : 'No students found yet. Each line needs a name and an ID.'; };
+        q('#go').onclick = async () => {
+          q('#go').disabled = true;
+          try { D = await api('addGroup', PIN, q('#co').value, q('#gr').value, q('#ta').value, parseList(q('#ls').value)); close(); toast('Saved. ' + D.added + ' students added.'); tab = 'mine'; dashboard(); }
+          catch (e) { q('#er').textContent = errMsg(e); q('#go').disabled = false; }
+        };
+      });
+  }
+  const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const sc = document.createElement('script'); sc.src = XLSX_URL;
+      sc.onload = resolve; sc.onerror = () => reject(new Error('Could not load the Excel reader. Check your internet and try again.'));
+      document.head.appendChild(sc);
+    });
+  }
+  function courseFromFile(name) {
+    return name.replace(/\.(xlsx|xlsm|xls|csv)$/i, '')
+      .replace(/__([A-Za-z]{2,5}\d{3,5})_?$/, ' ($1)')
+      .replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  /** Each tab can hold several groups: a row like "A3 - Toqa" (no ID) starts a group, rows with an ID are its students. */
+  function parseWorkbook(wb) {
+    const found = [];
+    for (const sheetName of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: true, defval: '' });
+      let nameCol = 0, idCol = 1;
+      for (let r = 0; r < Math.min(3, rows.length); r++) (rows[r] || []).forEach((v, c) => {
+        const t = String(v).trim().toLowerCase();
+        if (t === 'name' || t === 'student name') nameCol = c;
+        if (t === 'id' || t === 'student id') idCol = c;
+      });
+      let cur = null;
+      for (const row of rows) {
+        const nm = String(row[nameCol] == null ? '' : row[nameCol]).replace(/\s+/g, ' ').trim();
+        let idv = row[idCol];
+        idv = typeof idv === 'number' ? String(Math.round(idv)) : String(idv == null ? '' : idv).trim().replace(/\.0+$/, '');
+        if (!nm) continue;
+        if (/^\d{6,12}$/.test(idv)) {
+          if (!cur) { cur = { group: sheetName.trim(), ta: '', students: [] }; found.push(cur); }
+          cur.students.push([nm, idv]); continue;
+        }
+        if (!idv) {
+          const m = nm.match(/^([A-Za-z]{1,3}\s?\d{1,3})\s*(?:[-\u2013\u2014:]\s*(.*))?$/);
+          if (m) { cur = { group: m[1].replace(/\s/g, '').toUpperCase(), ta: (m[2] || '').trim(), students: [] }; found.push(cur); }
+        }
+      }
+    }
+    const byName = {}, out = [];
+    found.forEach(g => {
+      if (!g.students.length) return;
+      if (byName[g.group]) byName[g.group].students.push(...g.students);
+      else { byName[g.group] = g; out.push(g); }
+    });
+    return out.sort((a, b) => numeric(a.group, b.group));
+  }
+  function uploadDialog() {
+    const isAdmin = D.me.role === 'Admin';
+    const first = D.me.name.toLowerCase().split(' ')[0];
+    let G = [];
+    dialog('<h1 style="font-size:26px;margin:0">Upload an Excel sheet</h1>' +
+      '<p class="sub">The course file: one tab per letter, and a row like <b>A3 - Toqa</b> above each group. Every group in the file is read.</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Excel file<input class="in" id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv"></label>' +
+      '<label class="f">Course<input class="in" id="co" placeholder="Electronic Physics (BSC1105)"></label>' +
+      '<div id="pv"></div><div class="err" id="er"></div>' +
+      '<div class="row"><button class="btn" id="go" type="button" disabled>Import</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        const q = (x) => o.querySelector(x);
+        o.querySelector('.panel').classList.add('wide');
+        const count = () => {
+          const picked = G.filter((g, i) => q('#pk' + i).checked);
+          const n = picked.reduce((t, g) => t + g.students.length, 0);
+          q('#sum').textContent = picked.length + ' of ' + G.length + ' groups selected, ' + n + ' students.';
+          q('#go').disabled = !picked.length;
+        };
+        q('#file').onchange = async () => {
+          const f = q('#file').files[0]; q('#er').textContent = ''; q('#pv').innerHTML = ''; q('#go').disabled = true;
+          if (!f) return;
+          q('#pv').innerHTML = '<p class="note">Reading the file</p>';
+          try {
+            await loadXlsx();
+            const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+            G = parseWorkbook(wb);
+          } catch (e) { q('#pv').innerHTML = ''; q('#er').textContent = errMsg(e) || 'Could not read this file.'; return; }
+          if (!q('#co').value) q('#co').value = courseFromFile(f.name);
+          if (!G.length) { q('#pv').innerHTML = ''; q('#er').textContent = 'No groups found. Each student row needs a name and an ID, under a row like "A3 - Toqa".'; return; }
+          const mineInFile = (g) => g.ta && g.ta.toLowerCase().split(' ')[0] === first;
+          q('#pv').innerHTML = '<p class="note" id="sum"></p>' +
+            '<div class="links" style="margin:6px 0 10px"><button class="link" id="all" type="button">Select all</button><button class="link" id="none" type="button">Select none</button>' +
+            (isAdmin ? '' : '<span class="note">Groups you import become yours.</span>') + '</div>' +
+            '<div class="picks">' + G.map((g, i) => '<label class="pick"><input type="checkbox" id="pk' + i + '"' + ((isAdmin || mineInFile(g)) ? ' checked' : '') + '>' +
+              '<span><b>' + esc(g.group) + '</b><br>' + g.students.length + ' students' + (g.ta ? '<br>TA: ' + esc(g.ta) : '') + '</span></label>').join('') + '</div>';
+          G.forEach((g, i) => { q('#pk' + i).onchange = count; });
+          q('#all').onclick = () => { G.forEach((g, i) => { q('#pk' + i).checked = true; }); count(); };
+          q('#none').onclick = () => { G.forEach((g, i) => { q('#pk' + i).checked = false; }); count(); };
+          count();
+        };
+        q('#go').onclick = async () => {
+          const picked = G.filter((g, i) => q('#pk' + i).checked).map(g => ({ group: g.group, ta: g.ta, students: g.students }));
+          q('#go').disabled = true; q('#go').textContent = 'Importing'; q('#er').textContent = '';
+          try {
+            D = await api('importGroups', PIN, q('#co').value, picked);
+            close();
+            const r = D.imported;
+            courseFilter = q('#co').value.trim(); groupQuery = ''; tab = isAdmin ? 'all' : 'mine';
+            dashboard();
+            toast('Imported ' + r.groups + ' groups (' + r.students + ' new students).' + (r.skipped.length ? ' Skipped, they belong to other TAs: ' + r.skipped.join(', ') + '.' : ''));
+          } catch (e) { q('#er').textContent = errMsg(e); q('#go').disabled = false; q('#go').textContent = 'Import'; }
+        };
+      });
+  }
+  function courseChecks(current) {
+    const all = D.allCourses || [];
+    if (!all.length) return '<p class="note">Upload a course first, then choose it here. With no course chosen, the TA sees every course.</p>';
+    return '<div class="f" style="font-size:14px;color:var(--muted);font-weight:700">Courses this TA teaches</div><div class="picks">' +
+      all.map((c, i) => '<label class="pick"><input type="checkbox" class="crs" value="' + esc(c) + '"' + (current.indexOf(c) >= 0 ? ' checked' : '') + '><span><b>' + esc(c) + '</b></span></label>').join('') +
+      '</div><p class="note">The TA sees only these courses. Tick none to show every course.</p>';
+  }
+  const pickedCourses = (o) => [...o.querySelectorAll('.crs:checked')].map(x => x.value);
+  function coursesDialog(st) {
+    if (!st) return;
+    dialog('<span class="pill">TA</span><h1 style="font-size:26px;margin-top:12px">' + esc(st.name) + '</h1><p class="sub">Choose the courses this TA works in.</p>' +
+      '<div class="form" style="margin-top:18px">' + courseChecks(st.courses) +
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        o.querySelector('#go').onclick = async () => {
+          try { D = await api('setStaffCourses', PIN, st.name, pickedCourses(o)); close(); dashboard(); toast('Saved.'); }
+          catch (e) { o.querySelector('#er').textContent = errMsg(e); }
+        };
+      });
+  }
+  function addStaffDialog() {
+    dialog('<h1 style="font-size:26px;margin:0">Add a TA</h1><p class="sub">Give the TA their PIN. They log in with it on this same page.</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Name<input class="in" id="nm"></label>' +
+      '<label class="f">PIN (6 to 10 digits)<input class="in" id="pn" inputmode="numeric"></label>' + courseChecks([]) +
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Add</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        const q = (s) => o.querySelector(s);
+        q('#go').onclick = async () => {
+          try { D = await api('addStaff', PIN, q('#nm').value, q('#pn').value, pickedCourses(o)); close(); tab = 'staff'; dashboard(); toast('TA added.'); }
+          catch (e) { q('#er').textContent = errMsg(e); }
+        };
+      });
+  }
+
+  /* ----- group page: week first, then its QR, live count and list ----- */
+  function defaultWeek(g) {
+    if (g.live && g.liveWeek) return g.liveWeek;
+    if (D.currentWeek) return D.currentWeek;
+    const recent = g.lastOpened && Date.now() - g.lastOpened < 3 * 86400000;
+    return Math.min(14, Math.max(1, (g.lastWeek || 1) + (recent ? 0 : 1)));
+  }
+  async function groupPage(g, wantWeek) {
+    stopTimers();
+    let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
+    const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
+    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; Groups</button>' +
+      '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
+      '<div class="links hide-proj" style="margin:0"><button class="link" id="gr">Grades &rarr;</button></div></div>' +
+      '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
+      '<label class="f" style="flex:0 1 320px">Week<select class="in" id="wk">' + weekOpts + '<option value="all">All weeks (summary)</option></select></label>' +
+      '<div id="startbox" class="row" style="align-items:flex-end;flex:1 1 380px"></div></div></div>' +
+      '<div id="livebox"></div>' +
+      '<div id="listbox" class="hide-proj"><div class="row" style="align-items:center;margin:22px 0 10px"><div class="stats" id="stt" style="margin:0;flex:1 1 auto"></div>' +
+      '<input class="in" id="sr" type="search" placeholder="Search a name or ID" style="max-width:260px"><button class="btn ghost" id="guest" type="button">+ Add a guest</button><button class="btn ghost" id="all" type="button">Mark everyone present</button></div>' +
+      '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"></tbody></table></div>' +
+      '<h2 style="font-size:18px;margin:26px 0 8px">Flags this week</h2><ul id="fl" class="note"></ul></div></div>';
+
+    $('bk').onclick = async () => { stopTimers(); try { D = await api('login', PIN); } catch (e) {} dashboard(); };
+    $('gr').onclick = () => { stopTimers(); gradesPage(g); };
+    $('wk').onchange = () => { week = $('wk').value === 'all' ? 'all' : Number($('wk').value); lastQr = ''; $('livebox').innerHTML = ''; load(); };
+    $('sr').oninput = () => { q = $('sr').value.trim().toLowerCase(); renderList(); };
+    $('guest').onclick = () => {
+      if (!W) return;
+      dialog('<span class="pill">' + esc(W.weekLabel) + '</span><h1 style="font-size:26px;margin-top:12px">Add a guest</h1>' +
+        '<p class="sub">A student from another group of ' + esc(g.course) + ' who is in your section without internet. They are marked present in their own group for ' + esc(W.weekLabel) + '.</p>' +
+        '<form class="form" id="gf" style="margin-top:18px"><label class="f">Student ID<input class="in big-in" id="gid" inputmode="numeric" maxlength="12"></label>' +
+        '<div class="err" id="ger"></div><div class="row"><button class="btn" id="gok" type="submit">Add</button><button class="btn ghost" data-close type="button">Close</button></div></form>',
+        (o, close) => {
+          const gid = o.querySelector('#gid'); gid.focus();
+          gid.oninput = () => { gid.value = gid.value.replace(/\D/g, ''); };
+          o.querySelector('#gf').onsubmit = async (e) => {
+            e.preventDefault(); o.querySelector('#ger').textContent = '';
+            try {
+              const r = await api('addGuest', PIN, g.course, g.group, W.week, gid.value);
+              toast(r.already ? r.name + ' is already present this week in group ' + r.group + '.' : r.name + ' (group ' + r.group + ') is marked present.');
+              gid.value = ''; gid.focus(); refresh();
+            } catch (err) { o.querySelector('#ger').textContent = errMsg(err); }
+          };
+        });
+    };
+    $('all').onclick = async () => {
+      if (!W || !confirm('Mark everyone in group ' + W.group + ' present for ' + W.weekLabel + '? Excused students stay excused.')) return;
+      try { W = await api('markAll', PIN, g.course, g.group, W.week); renderList(); toast('Everyone is present. Now mark the absent students.'); } catch (e) { toast(errMsg(e)); }
+    };
+
+    async function load() {
+      $('rows').innerHTML = '<tr><td colspan="6" style="color:var(--muted)">Loading</td></tr>';
+      try {
+        if (week === 'all') { M = await api('groupSummary', PIN, g.course, g.group); W = null; L = null; }
+        else { const st = await api('groupState', PIN, g.course, g.group, week); L = st.live; W = st.view; M = null; }
+        renderStart(); renderLive(); renderList(); schedule();
+      } catch (e) { toast(errMsg(e)); }
+    }
+    async function refresh() {
+      if (busy || week === 'all' || !$('gp')) return;
+      busy = true;
+      try {
+        const st = await api('groupState', PIN, g.course, g.group, week);
+        const wasOpen = L && L.open;
+        L = st.live; W = st.view;
+        if (wasOpen && !(L && L.open)) toast('Check-in closed.');
+        renderStart(); renderLive(); renderList(); schedule();
+      } catch (e) {} finally { busy = false; }
+    }
+    function schedule() {
+      timers.forEach(t => clearInterval(t)); timers = [];
+      if (!(L && L.open)) return;
+      timers.push(setInterval(() => {
+        if (!$('gp')) return;
+        left--; if (L.strict) codeLeft--;
+        paintTimers();
+        if ((L.strict && codeLeft <= 0) || left <= 0) refresh();
+      }, 1000));
+      timers.push(setInterval(refresh, 4000));
+    }
+    function renderStart() {
+      $('livepill').hidden = !(L && L.open);
+      const box = $('startbox');
+      if (week === 'all') { box.innerHTML = '<p class="note" style="margin:0">Every week of the term, with each student\'s attendance %.</p>'; $('all').hidden = true; $('guest').hidden = true; return; }
+      $('all').hidden = false; $('guest').hidden = false;
+      if (L && L.open && L.week === week) { box.innerHTML = '<p class="note" style="margin:0">Check-in is open for this week. Students scan the QR code below.</p>'; return; }
+      if (L && L.open) {
+        box.innerHTML = '<p class="note" style="margin:0">Check-in is open now for <b>' + esc(L.weekLabel) + '</b>.</p><button class="btn ghost" id="gol" type="button">Go to ' + esc(L.weekLabel) + '</button>';
+        $('gol').onclick = () => { week = L.week; $('wk').value = String(week); load(); };
+        return;
+      }
+      box.innerHTML = '<label class="f" style="flex:0 0 120px">Minutes open<input class="in" id="mn" type="number" min="1" max="180" value="15"></label>' +
+        '<label class="check" style="padding-bottom:12px"><input type="checkbox" id="stc"> Strict mode</label>' +
+        '<label class="check" style="padding-bottom:12px"><input type="checkbox" id="gst" checked> Accept students from other groups</label>' +
+        '<button class="btn" id="open" type="button">Show QR for ' + esc(W ? W.weekLabel : 'this week') + '</button>';
+      $('open').onclick = async () => {
+        $('open').disabled = true;
+        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked); await load(); }
+        catch (e) { toast(errMsg(e)); $('open').disabled = false; }
+      };
+    }
+    function renderLive() {
+      const box = $('livebox');
+      if (!(L && L.open && L.week === week)) { box.innerHTML = ''; lastQr = ''; document.body.classList.remove('projector'); return; }
+      if (!$('qrsvg')) {
+        box.innerHTML = '<div class="links hide-proj" style="margin:0 0 16px"><button class="link" id="rnd">Random check</button><button class="link" id="ext">+5 minutes</button>' +
+          '<button class="link" id="prj">Projector view</button><button class="link danger" id="cls">Close check-in</button></div>' +
+          '<div class="live"><div class="qr"><div id="qrsvg"></div><p>Scan to check in</p></div>' +
+          '<div class="card"><div class="codebox"><div class="lbl"><span>' + esc(L.weekLabel) + ' code</span><span id="ctm"></span></div><div class="digits" id="dg"></div></div>' +
+          '<div class="tally"><b id="cn">0</b><span>of</span><b id="tt">0</b><span>checked in</span></div><div class="left" id="gs"></div><div class="left" id="lf"></div></div>' +
+          '<div class="side"><div class="card random" id="rb" hidden></div><h2>Just checked in</h2><ol id="rc"></ol><div id="gl"></div></div></div>' +
+          '<button class="link" id="prjx" type="button" style="margin-top:18px" hidden>Exit projector view</button>';
+        const proj = (on) => {
+          document.body.classList.toggle('projector', on); $('prjx').hidden = !on;
+          if (on && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+          if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        };
+        $('prj').onclick = () => proj(true);
+        $('prjx').onclick = () => proj(false);
+        $('ext').onclick = async () => { try { await api('extendSession', PIN, L.id, 5); toast('Added 5 minutes.'); refresh(); } catch (e) { toast(errMsg(e)); } };
+        $('cls').onclick = async () => {
+          if (!confirm('Close check-in now? Students who did not check in will be absent.')) return;
+          try { await api('closeSession', PIN, L.id); toast('Check-in closed.'); load(); } catch (e) { toast(errMsg(e)); }
+        };
+        $('rnd').onclick = async () => {
+          try {
+            const picks = await api('randomCheck', PIN, L.id, 3);
+            const rb = $('rb'); rb.hidden = false;
+            rb.innerHTML = '<h2>' + (picks.length ? 'Random check: are they here?' : 'Nobody checked in yet.') + '</h2>' + picks.map((p, i) => '<div class="item"><span>' + esc(p.name) + '</span><button class="btn danger" data-ab="' + i + '" type="button">Not here</button></div>').join('');
+            rb.querySelectorAll('[data-ab]').forEach(b => b.onclick = async () => {
+              b.disabled = true;
+              try { await api('mark', PIN, g.course, g.group, L.week, picks[b.dataset.ab].id, 'A'); b.textContent = 'Marked absent'; refresh(); } catch (e) { toast(errMsg(e)); b.disabled = false; }
+            });
+          } catch (e) { toast(errMsg(e)); }
+        };
+      }
+      $('dg').textContent = L.code;
+      const url = SITE + '?s=' + L.id + '&c=' + L.code;
+      if (url !== lastQr) { lastQr = url; const qq = qrcode(0, 'M'); qq.addData(url); qq.make(); $('qrsvg').innerHTML = qq.createSvgTag({ cellSize: 8, margin: 2, scalable: true }); }
+      $('cn').textContent = L.count; $('tt').textContent = L.total;
+      $('gs').textContent = L.guests ? '+ ' + L.guests + ' from other groups (counted in their own groups)' : (L.guestsAllowed === false ? '' : '');
+      $('gl').innerHTML = L.guests ? '<h2>From other groups</h2><ol>' + L.guestNames.map(n => '<li>' + esc(n) + '</li>').join('') + '</ol>' : '';
+      $('rc').innerHTML = L.recent.length ? L.recent.map(n => '<li>' + esc(n) + '</li>').join('') : '<li style="color:var(--muted)">Waiting for students</li>';
+      left = L.secondsLeft; codeLeft = L.codeLeft; paintTimers();
+    }
+    function paintTimers() {
+      if (!$('lf')) return;
+      $('lf').textContent = 'Closes in ' + mmss(left);
+      $('ctm').textContent = L.strict ? 'changes in ' + codeLeft + 's' : 'same code for this session';
+    }
+    function renderList() {
+      if (M) {
+        $('stt').innerHTML = '<span>P = present, A = absent, E = excused, empty = no check-in that week.</span>';
+        $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th>' + M.weeks.map(w => '<th>' + esc(w) + '</th>').join('') + '<th>Present</th><th>Absent</th><th>%</th></tr>';
+        $('rows').innerHTML = M.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
+          '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td>' +
+          r.weeks.map(v => '<td>' + (v ? '<span class="chip ' + v + '" style="min-width:0;padding:3px 9px">' + v + '</span>' : '') + '</td>').join('') +
+          '<td>' + r.p + '</td><td>' + r.a + '</td><td><b>' + (r.pct === '' ? '' : Math.round(r.pct * 100) + '%') + '</b></td></tr>').join('');
+        $('fl').innerHTML = '<li>Choose a single week to see flags.</li>';
+        return;
+      }
+      if (!W) return;
+      const live = L && L.open && L.week === W.week;
+      const waiting = (r) => live && r.status === 'A' && !r.method;
+      $('stt').innerHTML = live ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.rows.filter(waiting).length + '</b>not checked in yet</span>' : W.held ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.absent + '</b>absent</span><span><b>' + W.excused + '</b>excused</span>'
+        : '<span>' + esc(W.weekLabel) + ': no check-in yet.</span>';
+      $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th><th>Time</th><th>How</th><th>Status</th></tr>';
+      $('rows').innerHTML = W.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
+        '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
+        '<td><button type="button" class="chip ' + (waiting(r) ? '' : r.status) + '" data-i="' + i + '">' + (waiting(r) ? 'Not yet' : ({ P: 'Present', A: 'Absent', E: 'Excused' }[r.status] || 'Not marked')) + '</button></td></tr>').join('');
+      $('rows').querySelectorAll('[data-i]').forEach(b => b.onclick = async () => {
+        const r = W.rows[b.dataset.i];
+        b.disabled = true;
+        try { W = await api('mark', PIN, W.course, W.group, W.week, r.id, { A: 'P', '': 'P', P: 'E', E: 'A' }[r.status]); renderList(); if (L && L.open) refresh(); }
+        catch (e) { toast(errMsg(e)); b.disabled = false; }
+      });
+      $('fl').innerHTML = W.flags.length ? W.flags.map(f => '<li>' + esc(f) + '</li>').join('') : '<li>None</li>';
+    }
+    load();
+  }
+
+  /* ----- grades ----- */
+  async function copyText(text, msg) {
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (e2) {}
+      ta.remove();
+    }
+    toast(ok ? msg : 'Could not copy. Try again.');
+  }
+  async function gradesPage(g) {
+    stopTimers();
+    let V = null; const dirty = {};
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Groups</button>' +
+      '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1><p class="sub">Grades. Type the marks, then press Save.</p></div>' +
+      '<div class="links" style="margin:0"><button class="link" id="items" hidden>Grade items</button><button class="link" id="cpsec">Copy section attendance (W1 to W12)</button><button class="link" id="cpgr">Copy grades</button><button class="link" id="cpall">Copy all</button></div></div>' +
+      '<div class="panel" style="padding:16px 20px;margin-bottom:16px"><div class="row" style="align-items:center"><input class="in" id="sr" type="search" placeholder="Search a name or ID" style="max-width:320px">' +
+      '<button class="btn" id="save" type="button" disabled>Save</button><span class="note" id="st"></span></div></div>' +
+      '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
+      '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and 0 for absent, in the order of the course sheet: weeks 1 to 6 and 8 to 13 become W1 to W12. Paste it on the first student\'s W1 cell.</p></div>';
+    const unsaved = () => Object.keys(dirty).length;
+    $('bk').onclick = async () => {
+      if (unsaved() && !confirm('You have marks that are not saved. Leave anyway?')) return;
+      try { D = await api('login', PIN); } catch (e) {} dashboard();
+    };
+    $('sr').oninput = () => {
+      const q = $('sr').value.trim().toLowerCase();
+      $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; });
+    };
+    const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
+    function render() {
+      $('items').hidden = !V.canEditItems;
+      if (!V.items.length && !V.attendanceMax) {
+        $('th').innerHTML = '';
+        $('rows').innerHTML = '<tr><td style="padding:22px">' + (V.canEditItems ? 'No grade items yet. Press <b>Grade items</b> to add the quizzes, assignments and midterm of this course.' : 'No grade items yet. The admin adds the quizzes and assignments of this course.') + '</td></tr>';
+        return;
+      }
+      $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th><th>Attendance</th>' + (V.attendanceMax ? '<th>Attendance<small>/' + V.attendanceMax + '</small></th>' : '') +
+        V.items.map(it => '<th>' + esc(it.item) + '<small>/' + it.max + '</small></th>').join('') + '<th>Total</th></tr>';
+      $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td>' +
+        '<td>' + fmtPct(r.pct) + '</td>' + (V.attendanceMax ? '<td>' + (r.attGrade === '' ? '' : r.attGrade) + '</td>' : '') +
+        V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
+          return '<td><input class="cell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '"></td>'; }).join('') +
+        '<td class="total" id="tot' + i + '">' + r.total + '</td></tr>').join('');
+      $('rows').querySelectorAll('.cell').forEach(inp => inp.oninput = () => {
+        const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = inp.value.trim().replace(',', '.');
+        const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
+        const n = Number(raw), bad = raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max));
+        inp.classList.toggle('bad', bad);
+        if (raw === orig) delete dirty[k]; else dirty[k] = raw;
+        inp.classList.toggle('dirty', k in dirty);
+        let sum = r.attGrade || 0;
+        V.items.forEach(it => { const kk = r.id + '|' + it.key; const v = kk in dirty ? Number(dirty[kk]) : r.scores[it.key]; if (v !== undefined && v !== '' && !isNaN(v)) sum += Number(v); });
+        $('tot' + inp.dataset.i).textContent = Math.round(sum * 100) / 100;
+        $('save').disabled = !unsaved() || !!$('rows').querySelector('.cell.bad');
+        $('st').textContent = unsaved() ? unsaved() + ' marks not saved' : '';
+      });
+      $('save').disabled = true; $('st').textContent = '';
+    }
+    async function load() {
+      try { V = await api('gradesView', PIN, g.course, g.group); render(); } catch (e) { toast(errMsg(e)); }
+    }
+    $('save').onclick = async () => {
+      const changes = Object.keys(dirty).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: dirty[k] }; });
+      $('save').disabled = true; $('save').textContent = 'Saving';
+      try { V = await api('saveScores', PIN, g.course, g.group, changes); Object.keys(dirty).forEach(k => delete dirty[k]); render(); toast('Saved.'); }
+      catch (e) { toast(errMsg(e)); $('save').disabled = false; }
+      $('save').textContent = 'Save';
+    };
+    $('items').onclick = () => itemsDialog(g.course, V, load);
+    $('cpsec').onclick = () => { if (V) copyText(V.rows.map(r => r.section.join('\t')).join('\n'), 'Copied. Paste it on the first student\'s W1 cell in the course sheet.'); };
+    $('cpgr').onclick = () => { if (V) copyText(V.rows.map(r => V.items.map(it => r.scores[it.key] === undefined ? '' : r.scores[it.key]).join('\t')).join('\n'), 'Copied the grade columns, in the same student order.'); };
+    $('cpall').onclick = () => {
+      if (!V) return;
+      const head = ['Student Name', 'ID', 'Attendance %'].concat(V.attendanceMax ? ['Attendance /' + V.attendanceMax] : [], V.items.map(it => it.item + ' /' + it.max), ['Total']);
+      const lines = [head.join('\t')].concat(V.rows.map(r => [r.name, r.id, fmtPct(r.pct)].concat(V.attendanceMax ? [r.attGrade] : [], V.items.map(it => r.scores[it.key] === undefined ? '' : r.scores[it.key]), [r.total]).join('\t')));
+      copyText(lines.join('\n'), 'Copied the whole table. Paste it in Excel or Google Sheets.');
+    };
+    load();
+  }
+  function itemsDialog(course, V, reload) {
+    let rows = V.items.map(it => ({ key: it.key, item: it.item, max: it.max }));
+    dialog('<span class="pill">' + esc(course) + '</span><h1 style="font-size:26px;margin-top:12px">Grade items</h1>' +
+      '<p class="sub">These are the same for every group of this course. Renaming an item keeps its marks.</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Attendance is worth (marks, 0 for none)<input class="in" id="am" type="number" min="0" step="0.5" value="' + (V.attendanceMax || 0) + '"></label>' +
+      '<div class="note">Items, in the same order as the course sheet</div><div id="list" class="form" style="gap:10px"></div>' +
+      '<div class="links" style="margin:0"><button class="link" id="aq" type="button">+ Quiz</button><button class="link" id="aa" type="button">+ Assignment</button><button class="link" id="amid" type="button">+ Midterm</button><button class="link" id="ao" type="button">+ Other</button></div>' +
+      '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
+      (o, close) => {
+        const q = (x) => o.querySelector(x);
+        const sync = () => o.querySelectorAll('.item-row').forEach((el, i) => { rows[i].item = el.querySelector('.nm').value; rows[i].max = el.querySelector('.mx').value; });
+        const draw = () => {
+          q('#list').innerHTML = rows.length ? rows.map((r, i) => '<div class="item-row"><input class="in nm" placeholder="Name" value="' + esc(r.item) + '"><input class="in mx" type="number" min="0" step="0.5" placeholder="Full mark" value="' + esc(r.max) + '"><button class="x" data-rm="' + i + '" type="button" aria-label="Remove">&times;</button></div>').join('') : '<p class="note">No items yet.</p>';
+          o.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { sync(); rows.splice(Number(b.dataset.rm), 1); draw(); });
+        };
+        const add = (name, max) => { sync(); rows.push({ key: '', item: name, max: max }); draw(); const ins = o.querySelectorAll('.nm'); ins[ins.length - 1].focus(); };
+        const count = (re) => rows.filter(r => re.test(r.item)).length;
+        q('#aq').onclick = () => add('Q' + (count(/^Q\d+$/i) + 1), '');
+        q('#aa').onclick = () => add('Sheet ' + (count(/^Sheet \d+$/i) + 1), '');
+        q('#amid').onclick = () => add('Midterm', '');
+        q('#ao').onclick = () => add('', '');
+        draw();
+        q('#go').onclick = async () => {
+          sync(); q('#er').textContent = '';
+          try { await api('saveItems', PIN, course, Number(q('#am').value), rows); close(); toast('Grade items saved.'); reload(); }
+          catch (e) { q('#er').textContent = errMsg(e); }
+        };
+      });
+  }
+
+  startStaff();
+})();
+</script>
+</body>
+</html>
