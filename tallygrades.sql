@@ -22,6 +22,7 @@ create table if not exists tg.sessions (
   id text primary key, ta text, course text not null, grp text not null, week int not null,
   opened timestamptz not null default now(), closes timestamptz not null, closed timestamptz,
   strict_mode boolean not null default false, guests boolean not null default true, secret text not null, code text not null);
+alter table tg.sessions add column if not exists also text[] not null default '{}';   -- other groups checking in together with grp
 create table if not exists tg.log (
   id bigserial primary key, ts timestamptz not null default now(), session text not null default '',
   course text not null, grp text not null, week int not null, sid text not null, name text not null,
@@ -107,6 +108,8 @@ create or replace function tg.current_week() returns int language sql stable as 
     else least(14, greatest(1, floor(((now() at time zone 'Africa/Cairo')::date - tg.term_start()) / 7.0)::int + 1)) end $$;
 
 -- ---------------------------------------------------------------- sessions and codes
+-- every group of a session: its own group, then the groups that check in together with it
+create or replace function tg.sgroups(s tg.sessions) returns text[] language sql immutable as $$ select array[s.grp] || coalesce(s.also, '{}') $$;
 create or replace function tg.is_live(s tg.sessions) returns boolean language sql stable as $$ select s.id is not null and s.closed is null and now() <= s.closes $$;
 create or replace function tg.finalize(p_id text) returns tg.sessions language plpgsql as $$
 declare s tg.sessions;
@@ -142,22 +145,25 @@ create or replace function tg.flags(c text, g text, w int, lim int) returns json
 -- check-ins that belong to a session: its own students, plus guests from other groups
 create or replace function tg.session_rows(s tg.sessions) returns setof tg.log language sql stable as $$
   select * from tg.log l where l.status = 'P' and (
-    (l.method = 'Self' and l.course = s.course and l.grp = s.grp and l.week = s.week) or (l.session = s.id and l.grp <> s.grp)) $$;
+    (l.method = 'Self' and l.course = s.course and l.grp = any(tg.sgroups(s)) and l.week = s.week) or (l.session = s.id and l.grp <> all(tg.sgroups(s)))) $$;
 
 create or replace function tg.live(p_id text) returns jsonb language plpgsql as $$
-declare s tg.sessions := tg.finalize(p_id); total int; cnt int; recent jsonb; guests jsonb;
+declare s tg.sessions := tg.finalize(p_id); gs text[]; total int; cnt int; recent jsonb; guests jsonb;
 begin
   if s.id is null then return jsonb_build_object('open', false); end if;
   if not tg.is_live(s) then
     return jsonb_build_object('open', false, 'id', s.id, 'course', s.course, 'group', s.grp, 'week', s.week, 'weekLabel', tg.week_label(s.week));
   end if;
-  select count(*) into total from tg.students where course = s.course and grp = s.grp;
-  select count(*) into cnt from tg.latest(s.course, s.grp, s.week) l join tg.students st on st.course = s.course and st.grp = s.grp and st.sid = l.sid where l.status in ('P', 'E');
+  gs := tg.sgroups(s);
+  select count(*) into total from tg.students where course = s.course and grp = any(gs);
+  select count(*) into cnt from unnest(gs) as g(x) cross join lateral tg.latest(s.course, g.x, s.week) l
+    join tg.students st on st.course = s.course and st.grp = g.x and st.sid = l.sid where l.status in ('P', 'E');
   select coalesce(jsonb_agg(label order by id desc), '[]') into recent from (
-    select id, case when grp <> s.grp then name || ' (from group ' || grp || ')' else name end as label from tg.session_rows(s) order by id desc limit 6) x;
+    select id, case when grp = s.grp then name when grp = any(gs) then name || ' (' || grp || ')' else name || ' (from group ' || grp || ')' end as label
+    from tg.session_rows(s) order by id desc limit 6) x;
   select coalesce(jsonb_agg(name || ' (group ' || grp || ')' order by id), '[]') into guests from (
-    select distinct on (sid) sid, name, grp, id from tg.log where session = s.id and grp <> s.grp and status = 'P' order by sid, id) x;
-  return jsonb_build_object('open', true, 'id', s.id, 'ta', s.ta, 'course', s.course, 'group', s.grp, 'week', s.week, 'weekLabel', tg.week_label(s.week),
+    select distinct on (sid) sid, name, grp, id from tg.log where session = s.id and grp <> all(gs) and status = 'P' order by sid, id) x;
+  return jsonb_build_object('open', true, 'id', s.id, 'ta', s.ta, 'course', s.course, 'group', s.grp, 'groups', to_jsonb(gs), 'week', s.week, 'weekLabel', tg.week_label(s.week),
     'strict', s.strict_mode, 'code', tg.current_code(s), 'codeLeft', case when s.strict_mode then 20 - (floor(extract(epoch from clock_timestamp()))::bigint % 20) else 0 end,
     'secondsLeft', greatest(0, floor(extract(epoch from s.closes - now()))::int), 'count', cnt, 'total', total,
     'recent', recent, 'guests', jsonb_array_length(guests), 'guestNames', guests, 'flags', tg.flags(s.course, s.grp, s.week, 8));
@@ -166,7 +172,7 @@ end $$;
 create or replace function tg.week_view(c text, g text, w int) returns jsonb language plpgsql as $$
 declare held boolean; rows jsonb;
 begin
-  held := w = 1 or exists (select 1 from tg.sessions where course = c and grp = g and week = w)
+  held := w = 1 or exists (select 1 from tg.sessions where course = c and (grp = g or g = any(also)) and week = w)
               or exists (select 1 from tg.log where course = c and grp = g and week = w and status in ('P', 'A', 'E'));
   select coalesce(jsonb_agg(jsonb_build_object('id', st.sid, 'name', st.name,
       'status', coalesce(l.status, case when w = 1 then 'P' when held then 'A' else '' end),
@@ -188,7 +194,7 @@ returns table (grp text, ta text, name text, sid text, ord bigint, weeks text[],
                        where l.course = c and l.status in ('P', 'A', 'E') order by l.grp, l.week, l.sid, l.id desc),
   held as materialized (select distinct x.grp, x.week from (
                           select l.grp, l.week from tg.log l where l.course = c and l.status in ('P', 'A', 'E')
-                          union all select s.grp, s.week from tg.sessions s where s.course = c) x),
+                          union all select x.g, s.week from tg.sessions s cross join unnest(tg.sgroups(s)) as x(g) where s.course = c) x),
   cells as materialized (
     select st.grp, st.ta, st.name, st.sid, st.ord, w.week,
            coalesce(lat.status, case when w.week = 1 then 'P' when h.week is not null then 'A' else '' end) as v
@@ -233,7 +239,8 @@ begin
            (count(*) filter (where exists (select 1 from tg.devices d where d.sid = st.sid)))::int as registered
     from tg.students st group by st.course, st.grp),
   lastw as (select distinct on (s.course, s.grp) s.course, s.grp, s.week, s.opened from tg.sessions s order by s.course, s.grp, s.week desc, s.opened desc),
-  live as (select distinct on (s.course, s.grp) s.course, s.grp, s.id, s.week from tg.sessions s where s.closed is null and s.closes >= now() order by s.course, s.grp, s.opened desc)
+  live as (select distinct on (s.course, x.g) s.course, x.g as grp, s.id, s.week from tg.sessions s cross join unnest(tg.sgroups(s)) as x(g)
+           where s.closed is null and s.closes >= now() order by s.course, x.g, s.opened desc)
   select coalesce(jsonb_agg(jsonb_build_object('course', g.course, 'group', g.grp, 'ta', g.ta, 'count', g.cnt, 'registered', g.registered,
            'lastWeek', greatest(1, coalesce(lastw.week, 1)), 'lastOpened', tg.ms(lastw.opened), 'live', live.id, 'liveWeek', coalesce(live.week, 0))), '[]')
     into groups
@@ -253,7 +260,7 @@ create or replace function public.student_info(p_session text) returns jsonb lan
 declare s tg.sessions := tg.finalize(coalesce(p_session, ''));
 begin
   if not tg.is_live(s) then return jsonb_build_object('open', false); end if;
-  return jsonb_build_object('open', true, 'session', s.id, 'course', s.course, 'group', s.grp, 'weekLabel', tg.week_label(s.week), 'strict', s.strict_mode, 'ta', s.ta);
+  return jsonb_build_object('open', true, 'session', s.id, 'course', s.course, 'group', array_to_string(tg.sgroups(s), ' + '), 'weekLabel', tg.week_label(s.week), 'strict', s.strict_mode, 'ta', s.ta);
 end $$;
 
 create or replace function public.check_in(p jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
@@ -266,10 +273,12 @@ begin
   if v_id = '' then return tg.res('err', 'Type your ID', 'Write your student ID, then press Check in.'); end if;
   select * into st from tg.students where course = s.course and grp = s.grp and sid = v_id;
   if not found then
-    select * into st from tg.students where course = s.course and sid = v_id order by ord limit 1;
+    select * into st from tg.students where course = s.course and sid = v_id order by (grp = any(s.also)) desc, ord limit 1;
     if not found then return tg.res('err', 'ID not found', v_id || ' is not on any group list of ' || s.course || '. Check the number.'); end if;
-    if not s.guests then return tg.res('err', st.name, 'You are in group ' || st.grp || '. This check-in is only for group ' || s.grp || '.'); end if;
-    guest := true;
+    if not (st.grp = any(s.also)) then
+      if not s.guests then return tg.res('err', st.name, 'You are in group ' || st.grp || '. This check-in is only for group ' || array_to_string(tg.sgroups(s), ' + ') || '.'); end if;
+      guest := true;
+    end if;
   end if;
   if not tg.code_ok(s, p->>'code') then
     return tg.res('err', 'Code expired', case when s.strict_mode then 'The code changes every 20 seconds. Type the code on the screen now.' else 'Type the code shown on the screen.' end, '{"needCode": true}');
@@ -277,7 +286,7 @@ begin
   perform pg_advisory_xact_lock(hashtext(s.id));
   select min(ts) into prev from tg.session_rows(s) r where r.sid = v_id;
   if prev is not null then return tg.res('warn', st.name, 'Already checked in at ' || tg.hm(prev) || '.', jsonb_build_object('done', true, 'id', v_id, 'name', st.name)); end if;
-  if guest and exists (select 1 from tg.latest(s.course, st.grp, s.week) l where l.sid = v_id and l.status = 'P') then
+  if st.grp <> s.grp and exists (select 1 from tg.latest(s.course, st.grp, s.week) l where l.sid = v_id and l.status = 'P') then
     return tg.res('warn', st.name, 'You are already present for ' || tg.week_label(s.week) || ' in your group ' || st.grp || '.', jsonb_build_object('done', true, 'id', v_id, 'name', st.name));
   end if;
   if v_dev <> '' then
@@ -497,17 +506,24 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------- check-in sessions
-create or replace function public.open_session(p_pin text, p_course text, p_group text, p_week int, p_minutes int default 15, p_strict boolean default false, p_guests boolean default true)
+drop function if exists public.open_session(text, text, text, int, int, boolean, boolean);
+-- p_also: other groups of the course that check in together with p_group (one QR, one code)
+create or replace function public.open_session(p_pin text, p_course text, p_group text, p_week int, p_minutes int default 15, p_strict boolean default false, p_guests boolean default true, p_also jsonb default '[]')
 returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin); v_id text := left(replace(gen_random_uuid()::text, '-', ''), 16); mins int := least(180, greatest(1, coalesce(p_minutes, 15)));
+  v_also text[] := array(select distinct tg.clean(x) from jsonb_array_elements_text(coalesce(p_also, '[]')) x where tg.clean(x) not in ('', p_group)); x text;
 begin
   perform tg.can_manage(me, p_course, p_group);
   if p_week is null or p_week < 1 or p_week > 14 then raise exception 'Choose a week from 1 to 14.'; end if;
   if not exists (select 1 from tg.students where course = p_course and grp = p_group) then raise exception 'No students found for %, group %.', p_course, p_group; end if;
-  perform pg_advisory_xact_lock(hashtext('open:' || p_course || '|' || p_group));
-  update tg.sessions set closed = now() where course = p_course and grp = p_group and closed is null and closes >= now();
-  insert into tg.sessions (id, ta, course, grp, week, opened, closes, strict_mode, guests, secret, code)
-    values (v_id, me.name, p_course, p_group, p_week, now(), now() + make_interval(mins => mins), coalesce(p_strict, false), coalesce(p_guests, true),
+  foreach x in array v_also loop
+    if not exists (select 1 from tg.students where course = p_course and grp = x) then raise exception 'No students found for %, group %.', p_course, x; end if;
+    perform tg.can_manage(me, p_course, x);
+  end loop;
+  perform pg_advisory_xact_lock(hashtext('open:' || p_course));
+  update tg.sessions set closed = now() where course = p_course and closed is null and closes >= now() and (array[grp] || also) && (array[p_group] || v_also);
+  insert into tg.sessions (id, ta, course, grp, also, week, opened, closes, strict_mode, guests, secret, code)
+    values (v_id, me.name, p_course, p_group, v_also, p_week, now(), now() + make_interval(mins => mins), coalesce(p_strict, false), coalesce(p_guests, true),
             gen_random_uuid()::text, (1000 + floor(random() * 9000))::int::text);
   return tg.live(v_id);
 end $$;
@@ -538,8 +554,9 @@ create or replace function public.random_check(p_pin text, p_id text, p_n int de
 declare s tg.sessions := tg.session_for(p_pin, p_id);
 begin
   if not tg.is_live(s) then return '[]'; end if;
-  return coalesce((select jsonb_agg(jsonb_build_object('id', x.sid, 'name', x.name)) from (
-    select st.sid, st.name from tg.latest(s.course, s.grp, s.week) l join tg.students st on st.course = s.course and st.grp = s.grp and st.sid = l.sid
+  return coalesce((select jsonb_agg(jsonb_build_object('id', x.sid, 'name', x.name, 'group', x.grp)) from (
+    select st.sid, st.name, st.grp from unnest(tg.sgroups(s)) as g(x) cross join lateral tg.latest(s.course, g.x, s.week) l
+    join tg.students st on st.course = s.course and st.grp = g.x and st.sid = l.sid
     where l.status = 'P' and l.method = 'Self' order by random() limit coalesce(p_n, 3)) x), '[]');
 end $$;
 
@@ -548,8 +565,8 @@ create or replace function public.group_state(p_pin text, p_course text, p_group
 declare me tg.staff := tg.who(p_pin); v_id text;
 begin
   perform tg.can_manage(me, p_course, p_group);
-  update tg.sessions set closed = closes where course = p_course and grp = p_group and closed is null and now() > closes;
-  select id into v_id from tg.sessions where course = p_course and grp = p_group and closed is null and closes >= now() order by opened desc limit 1;
+  update tg.sessions set closed = closes where course = p_course and (grp = p_group or p_group = any(also)) and closed is null and now() > closes;
+  select id into v_id from tg.sessions where course = p_course and (grp = p_group or p_group = any(also)) and closed is null and closes >= now() order by opened desc limit 1;
   return jsonb_build_object('live', case when v_id is null then null else tg.live(v_id) end, 'view', tg.week_view(p_course, p_group, p_week));
 end $$;
 create or replace function public.week_view(p_pin text, p_course text, p_group text, p_week int) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
@@ -592,7 +609,7 @@ begin
   if exists (select 1 from tg.latest(p_course, st.grp, p_week) l where l.sid = v_id and l.status = 'P') then
     return jsonb_build_object('name', st.name, 'group', st.grp, 'already', true);
   end if;
-  select id into v_sess from tg.sessions where course = p_course and grp = p_group and week = p_week and closed is null and closes >= now() order by opened desc limit 1;
+  select id into v_sess from tg.sessions where course = p_course and (grp = p_group or p_group = any(also)) and week = p_week and closed is null and closes >= now() order by opened desc limit 1;
   insert into tg.log (session, course, grp, week, sid, name, status, method, by_ta, note)
     values (coalesce(v_sess, ''), p_course, st.grp, p_week, v_id, st.name, 'P', 'Manual', me.name, 'Attended group ' || p_group || ' with ' || me.name);
   return jsonb_build_object('name', st.name, 'group', st.grp, 'already', false);
@@ -666,7 +683,7 @@ begin
     'Students', (select coalesce(jsonb_agg(jsonb_build_object('Course', course, 'Group', grp, 'Name', name, 'ID', sid, 'TA', ta) order by ord), '[]') from tg.students),
     'Log', (select coalesce(jsonb_agg(jsonb_build_object('Time', to_char(ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'Course', course, 'Group', grp, 'Week', week, 'ID', sid, 'Name', name, 'Status', status, 'Method', method, 'By', by_ta, 'Note', note) order by id), '[]') from tg.log),
     'Grades', (select coalesce(jsonb_agg(jsonb_build_object('Time', to_char(g.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'Course', g.course, 'Group', g.grp, 'ID', g.sid, 'Name', g.name, 'Item', coalesce(i.item, g.key), 'Score', g.score, 'By', g.by_ta) order by g.id), '[]') from tg.grades g left join tg.items i on i.course = g.course and i.key = g.key),
-    'Sessions', (select coalesce(jsonb_agg(jsonb_build_object('TA', ta, 'Course', course, 'Group', grp, 'Week', week, 'Opened', to_char(opened at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'Mode', case when strict_mode then 'Strict' else 'Normal' end) order by opened), '[]') from tg.sessions));
+    'Sessions', (select coalesce(jsonb_agg(jsonb_build_object('TA', ta, 'Course', course, 'Group', array_to_string(array[grp] || also, ' + '), 'Week', week, 'Opened', to_char(opened at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'Mode', case when strict_mode then 'Strict' else 'Normal' end) order by opened), '[]') from tg.sessions));
 end $$;
 
 -- only these functions can be called from the website
@@ -677,7 +694,7 @@ begin
     'whoami(text)', 'logout(text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
     'add_group(text,text,text,text,jsonb)', 'import_groups(text,text,jsonb)', 'claim_group(text,text,text)', 'assign_group(text,text,text,text)',
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',
-    'open_session(text,text,text,int,int,boolean,boolean)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
+    'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)',
     'save_items(text,text,numeric,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
