@@ -3510,7 +3510,7 @@ const BOOT = null;
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID">' +
       '<div class="seg"><span>Copy</span><button type="button" id="cpsec">Section attendance (W1 to W12)</button><button type="button" id="cpgr">Grades</button><button type="button" id="cpall">Whole table</button></div></div>' +
       '<div class="table-wrap gtable"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
-      '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and 0 for absent, in the order of the course sheet: weeks 1 to 6 and 8 to 13 become W1 to W12. Paste it on the first student\'s W1 cell.</p>' +
+      '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and leaves absent students empty, so it never writes 0 over a mark another TA already put. Weeks 1 to 6 and 8 to 13 become W1 to W12, in the order of the course sheet. In Excel, click the first student\'s W1 cell, then Paste Special and tick <b>Skip blanks</b>, so the empty cells keep what is already there.</p>' +
       '<p class="note wklegend"><i class="P"></i>Present <i class="A"></i>Absent <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
@@ -3604,7 +3604,8 @@ const BOOT = null;
       $('save').textContent = 'Save';
     };
     $('items').onclick = () => itemsDialog(g.course, V, load);
-    $('cpsec').onclick = () => { if (V) copyText(V.rows.map(r => r.section.join('\t')).join('\n'), 'Copied. Paste it on the first student\'s W1 cell in the course sheet.'); };
+    /* absent stays empty (not 0), so pasting with Skip blanks never overwrites another TA's mark */
+    $('cpsec').onclick = () => { if (V) copyText(V.rows.map(r => r.section.map(v => Number(v) === 1 ? 1 : '').join('\t')).join('\n'), 'Copied. In Excel: first student\'s W1 cell, Paste Special, tick Skip blanks.'); };
     $('cpgr').onclick = () => { if (V) copyText(V.rows.map(r => V.items.map(it => r.scores[it.key] === undefined ? '' : r.scores[it.key]).join('\t')).join('\n'), 'Copied the grade columns, in the same student order.'); };
     $('cpall').onclick = () => {
       if (!V) return;
