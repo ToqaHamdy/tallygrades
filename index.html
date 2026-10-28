@@ -825,6 +825,8 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .mk-all { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 12px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
   .mk-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 10px; }
   .mk-tools #mkid { flex: 1 1 320px; } .mk-tools #mksr { flex: 0 1 240px; }
+  .mk-ready { background: var(--card); border: 1px dashed var(--line); border-radius: 16px; padding: 22px 24px; margin-top: 8px; }
+  .mk-ready b { font-size: 18px; } .mk-ready p { color: var(--muted); margin: 6px 0 14px; }
   .mk-stat { color: var(--muted); margin: 6px 0 12px; } .mk-stat b { color: var(--text); }
   .mk-table th.num small { display: block; font-weight: 500; text-transform: none; letter-spacing: 0; }
   .mk-table tr.flash-row td { background: color-mix(in srgb, var(--accent) 18%, transparent); transition: background-color .3s; }
@@ -4333,10 +4335,16 @@ const BOOT = null;
     leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
     try { data = await api('askData', PIN); } catch (e) { $('mkb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
     if (!$('mk')) return;
-    const courses = data.courses.filter(c => c.items.length);
-    if (!courses.length) { $('mkb').innerHTML = '<div class="empty">No grade items yet. The admin adds them in Courses (Grade items).</div>'; return; }
+    /* every course is listed, ready: one without grade items or students yet says what to add */
+    const courses = data.courses.slice();
+    (D.allCourses || []).forEach(c => { if (!courses.some(x => x.course === c)) courses.push({ course: c, rows: [], items: [], attendanceMax: 0 }); });
+    courses.sort((a, b) => a.course.localeCompare(b.course));
+    if (!courses.length) {
+      $('mkb').innerHTML = '<div class="empty">No courses yet. Upload a course Excel sheet first.' + ' <button class="btn" id="mkup" type="button" style="margin-left:10px">+ Upload an Excel sheet</button>' + '</div>';
+      $('mkup').onclick = uploadDialog; return;
+    }
     course = courses.some(c => c.course === wantCourse) ? wantCourse : (store.get('tg_mk_course') || '');
-    if (!courses.some(c => c.course === course)) course = courses[0].course;
+    if (!courses.some(c => c.course === course)) course = (courses.find(c => c.items.length && c.rows.length) || courses[0]).course;
     const isAdmin = D.me.role === 'Admin';
     const C = () => courses.find(c => c.course === course);
     const item = () => C().items.find(it => it.key === key);
@@ -4344,7 +4352,7 @@ const BOOT = null;
     const mineOf = () => groupsOf().filter(g => D.groups.some(x => x.course === course && x.group === g && x.ta === D.me.name));
     const setCourse = (c) => {
       course = c; store.set('tg_mk_course', c);
-      const its = C().items; key = store.get('tg_mk_item_' + c) || ''; if (!its.some(it => it.key === key)) key = its[0].key;
+      const its = C().items; key = store.get('tg_mk_item_' + c) || ''; if (!its.some(it => it.key === key)) key = its.length ? its[0].key : '';
       let saved = []; try { saved = JSON.parse(store.get('tg_mk_groups_' + c) || '[]'); } catch (e) {}
       picked = saved.filter(g => groupsOf().indexOf(g) >= 0);
       if (!picked.length) picked = mineOf().length ? mineOf() : groupsOf();
@@ -4353,10 +4361,28 @@ const BOOT = null;
     const val = (r) => { const k = r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
     const shown = () => C().rows.filter(r => picked.indexOf(r.group) >= 0).sort((a, b) => numeric(a.group, b.group) || 0);
     function draw() {
+      const courseRow = '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips">' + courses.map(c => '<button type="button" class="mk-chip' + (c.course === course ? ' on' : '') + '" data-mc="' + esc(c.course) + '"><b>' + esc(c.course) + '</b><small>' +
+          (c.items.length ? c.items.length + (c.items.length === 1 ? ' item' : ' items') : 'no grade items yet') + (c.rows.length ? '' : ', no students yet') + '</small></button>').join('') +
+        '<button type="button" class="mk-all" id="mknew">+ New course</button></div></div>';
+      if (!item() || !C().rows.length) {
+        const noItems = !item(), adm = D.me.role === 'Admin';
+        $('mkb').innerHTML = courseRow + '<div class="mk-ready"><b>' + esc(course) + ' is ready.</b><p>' +
+          (noItems ? 'Add its grade items (for example Quiz 1, Midterm, Final) and their full marks.' : '') + (noItems && !C().rows.length ? ' ' : '') +
+          (!C().rows.length ? 'Upload the Excel sheet of its students' + (D.groups.some(g => g.course === course) ? '' : ' (or ask the TA of the groups to upload it)') + '.' : '') +
+          ' Then you can enter the marks of every group here.</p><div class="row">' +
+          (noItems ? (adm ? '<button class="btn" id="mkitems" type="button">Set grade items</button>' : '<span class="note">Only the admin can add the grade items.</span>') : '') +
+          (!C().rows.length ? '<button class="btn ghost" id="mkupl" type="button">+ Upload an Excel sheet</button>' : '') + '</div></div>';
+        const b2 = $('mkb');
+        b2.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
+        $('mknew').onclick = uploadDialog;
+        if ($('mkitems')) $('mkitems').onclick = () => itemsDialog(course, { items: C().items, attendanceMax: C().attendanceMax || 0 }, async () => { try { data = await api('askData', PIN); const nc = data.courses.find(x => x.course === course); if (nc) Object.assign(C(), nc); setCourse(course); } catch (e) {} if ($('mk')) draw(); });
+        if ($('mkupl')) $('mkupl').onclick = () => { uploadDialog(); const co = document.querySelector('.overlay #co'); if (co) co.value = course; };
+        return;
+      }
       const it = item(), rows = shown(), gs = groupsOf(), mine = mineOf();
       const filled = rows.filter(r => val(r) !== ''), nums = filled.map(r => Number(val(r))).filter(x => !isNaN(x));
       $('mkb').innerHTML =
-        (courses.length > 1 ? '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips">' + courses.map(c => '<button type="button" class="mk-chip' + (c.course === course ? ' on' : '') + '" data-mc="' + esc(c.course) + '">' + esc(c.course) + '</button>').join('') + '</div></div>' : '') +
+        courseRow +
         '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + C().items.map(x => '<button type="button" class="mk-chip' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '"><b>' + esc(x.item) + '</b><small>' + (x.check ? 'done / not done' : 'out of ' + x.max) + '</small></button>').join('') + '</div></div>' +
         '<div class="mk-row"><span class="mk-lbl">Groups</span><div class="mk-chips">' +
           '<button type="button" class="mk-all" data-mg="*all">All (' + gs.length + ')</button>' + (mine.length && mine.length !== gs.length ? '<button type="button" class="mk-all" data-mg="*mine">My groups (' + mine.length + ')</button>' : '') +
@@ -4387,6 +4413,7 @@ const BOOT = null;
     function bind() {
       const box = $('mkb');
       box.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
+      $('mknew').onclick = uploadDialog;
       box.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { key = b.dataset.mi; store.set('tg_mk_item_' + course, key); draw(); });
       box.querySelectorAll('[data-mg]').forEach(b => b.onclick = () => {
         const g = b.dataset.mg;
