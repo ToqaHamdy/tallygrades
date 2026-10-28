@@ -345,6 +345,25 @@ begin
   return tg.res('ok', st.name, '', jsonb_build_object('done', true, 'id', v_id, 'name', st.name, 'groups', groups));
 end $$;
 
+-- a student sees their own attendance and team, only from a phone that registered or checked in as them (never grades)
+create or replace function public.student_status(p jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare v_id text := tg.norm_id(p->>'id'); v_dev text := left(regexp_replace(coalesce(p->>'device', ''), '[^\w-]', '', 'g'), 80); v_out jsonb;
+begin
+  if v_id = '' or v_dev = '' or not (exists (select 1 from tg.devices where device = v_dev and sid = v_id)
+                                     or exists (select 1 from tg.log where device = v_dev and sid = v_id and status = 'P')) then
+    return jsonb_build_object('ok', false);
+  end if;
+  select coalesce(jsonb_agg(jsonb_build_object('course', st.course, 'group', st.grp, 'name', st.name,
+      'team', (select jsonb_build_object('num', t.num, 'name', t.name,
+                 'leader', coalesce((select s2.name from tg.students s2 where s2.course = t.course and s2.sid = t.leader order by s2.ord limit 1), ''))
+               from tg.team_members m join tg.teams t on t.course = m.course and t.num = m.num where m.course = st.course and m.sid = st.sid),
+      'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb)) order by st.course, st.grp), '[]')
+    into v_out
+  from tg.students st cross join lateral (select * from tg.matrix(st.course, st.grp) x where x.sid = st.sid limit 1) mx
+  where st.sid = v_id;
+  return jsonb_build_object('ok', true, 'id', v_id, 'courses', v_out, 'currentWeek', tg.current_week());
+end $$;
+
 -- ---------------------------------------------------------------- staff API
 create or replace function public.app_state() returns jsonb language sql security definer set search_path = tg, public, extensions as $$
   select jsonb_build_object('setup', exists (select 1 from tg.staff)) $$;
@@ -779,7 +798,7 @@ end $$;
 do $$
 declare f text;
 begin
-  foreach f in array array['student_info(text)', 'check_in(jsonb)', 'register_phone(jsonb)', 'app_state()', 'setup_admin(text,text,text)', 'login(text,text)',
+  foreach f in array array['student_info(text)', 'check_in(jsonb)', 'register_phone(jsonb)', 'student_status(jsonb)', 'app_state()', 'setup_admin(text,text,text)', 'login(text,text)',
     'whoami(text)', 'logout(text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
     'add_group(text,text,text,text,jsonb)', 'import_groups(text,text,jsonb)', 'claim_group(text,text,text)', 'assign_group(text,text,text,text)',
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',

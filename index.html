@@ -163,6 +163,23 @@
   .gtable tr.leader td { background: color-mix(in srgb, var(--tc, var(--accent)) 5%, var(--card)); }
   .lead { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; background: var(--tc, var(--accent)); color: #fff; font-family: var(--mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; vertical-align: 1px; }
   .cell[disabled] { opacity: .45; cursor: not-allowed; }
+  .mystat { max-width: 460px; margin: 18px auto 0; display: grid; gap: 12px; }
+  .mystat h2 { font-size: 22px; margin: 6px 0 0; text-align: center; }
+  .mycourse { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+  .my-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .my-top b { display: block; font-size: 16px; } .my-top span { color: var(--muted); font-size: 13px; }
+  .my-pct { font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; }
+  .my-pct.hi { color: var(--ok); } .my-pct.mid { color: var(--warn); } .my-pct.lo { color: var(--err); }
+  .my-team { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--tc) 12%, transparent); }
+  .my-team b { display: block; font-size: 14px; } .my-team small { color: var(--muted); font-size: 12px; }
+  .my-weeks { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .mw { display: grid; gap: 3px; text-align: center; }
+  .mw i { display: grid; place-items: center; height: 30px; border-radius: 8px; background: var(--card2); border: 1px solid var(--line); font-style: normal; font-weight: 800; font-size: 13px; }
+  .mw.P i { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+  .mw.A i { background: var(--err-bg); color: var(--err); border-color: transparent; }
+  .mw.E i { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+  .mw.now i { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .mw span { font-family: var(--mono); font-size: 10px; color: var(--muted); }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2674,7 +2691,7 @@ const BOOT = null;
   }
   /* Every action is a database function in Supabase. The page sends named values; the database checks the PIN and the rules. */
   const RPC = {
-    studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']],
+    studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']], studentStatus: ['student_status', ['p']],
     appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_user', 'p_pass']], login: ['login', ['p_user', 'p_pass']],
     whoami: ['whoami', ['p_pin']], logout: ['logout', ['p_pin']], courseList: ['course_list', []],
     registerTa: ['register_ta', ['p_name', 'p_user', 'p_pass', 'p_courses']], approveTa: ['approve_ta', ['p_pin', 'p_name', 'p_courses']],
@@ -2740,15 +2757,37 @@ const BOOT = null;
     if (!device) { device = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); store.set('att_device', device); }
     return device;
   }
+  /** The student's own attendance in every course, and their project team, shown on their own phone only. */
+  async function showMyStatus() {
+    const box = $('mystat'), id = store.get('att_id');
+    if (!box || !id) return;
+    box.innerHTML = '<p class="note" style="text-align:center;margin-top:18px">Loading your attendance</p>';
+    let r;
+    try { r = await api('studentStatus', { id: id, device: phoneId() }); } catch (e) { box.innerHTML = ''; return; }
+    if (!$('mystat')) return;
+    if (!r.ok) { box.innerHTML = '<p class="note" style="text-align:center;margin-top:18px">Your attendance shows here after your first check-in from this phone.</p>'; return; }
+    const lv = (f) => f === '' ? '' : f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
+    const word = { P: 'Present', A: 'Absent', E: 'Excused' };
+    box.innerHTML = '<div class="mystat"><h2>My attendance</h2>' + r.courses.map(c =>
+      '<div class="mycourse"><div class="my-top"><div><b>' + esc(c.course) + '</b><span>Group ' + esc(c.group) + '</span></div>' +
+        '<div class="my-pct ' + lv(c.pct) + '">' + (c.pct === '' ? '&ndash;' : Math.round(c.pct * 100) + '%') + '</div></div>' +
+      (c.team ? '<div class="my-team" style="--tc:' + teamColor(c.team.num) + '"><span class="tmchip" style="margin:0">T' + esc(c.team.num) + '</span><div><b>' + esc(c.team.name) + '</b>' +
+        (c.team.leader ? '<small>Team leader: ' + esc(c.team.leader) + '</small>' : '') + '</div></div>' : '') +
+      '<div class="my-weeks">' + (c.weeks || []).map((v, n) => '<div class="mw ' + (v || 'none') + (r.currentWeek === n + 1 ? ' now' : '') + '" title="Week ' + (n + 1) + ': ' + (word[v] || 'No check-in') + '"><i>' +
+        (v || '') + '</i><span>' + (n === 6 ? 'Mid' : n === 13 ? 'Final' : 'W' + (n + 1)) + '</span></div>').join('') + '</div>' +
+      '<p class="note">' + c.p + ' present, ' + c.a + ' absent, ' + c.e + ' excused</p></div>').join('') +
+      '<p class="note" style="text-align:center">P present, A absent, E excused, empty: no check-in that week. Open this page any time to see it again.</p></div>';
+  }
   function registration(fromLanding) {
     const device = phoneId();
-    const shell = (inner) => {
+    const shell = (inner, withStatus) => {
       app.innerHTML = '<div class="wrap">' + (fromLanding ? '<div class="stu"><button class="back" id="rbk" type="button">&larr; Back</button></div>' : '') + '<div class="stu panel"' + (fromLanding ? ' style="margin-top:0"' : '') + '>' + inner + '</div></div>';
       if (fromLanding) $('rbk').onclick = landingView;
+      if (withStatus) showMyStatus();
     };
     const doneView = (name, groups) => shell('<div class="done"><div class="mark" aria-hidden="true">&#10003;</div><h2>Registered</h2><div class="name">' + esc(name) + '</div>' +
       '<p class="sub">' + groups.map(esc).join('<br>') + '</p>' +
-      '<p class="note" style="margin-top:16px">In the section, scan the QR code on the TA\'s screen and press <b>Check in</b>. Your ID is already filled in on this phone.</p></div>');
+      '<p class="note" style="margin-top:16px">In the section, scan the QR code on the TA\'s screen and press <b>Check in</b>. Your ID is already filled in on this phone.</p></div><div id="mystat"></div>', true);
     const myId = store.get('att_id'), myName = store.get('att_name'), myGroups = store.get('att_groups');
     if (myId && myName && myGroups) { try { return doneView(myName, JSON.parse(myGroups)); } catch (e) {} }
     shell('<span class="pill">One time only</span><h1 style="font-size:30px;margin-top:16px">Register your phone</h1>' +
@@ -2780,7 +2819,8 @@ const BOOT = null;
       $('again').onclick = load;
     }
     function doneView(d) {
-      shell('<div class="done"><div class="mark" aria-hidden="true">&#10003;</div><h2>Present</h2><div class="name">' + esc(d.name) + '</div><p class="sub">' + esc(d.detail) + '</p></div>');
+      shell('<div class="done"><div class="mark" aria-hidden="true">&#10003;</div><h2>Present</h2><div class="name">' + esc(d.name) + '</div><p class="sub">' + esc(d.detail) + '</p></div><div id="mystat"></div>');
+      showMyStatus();
     }
     async function load() {
       app.innerHTML = '<div class="loading">Loading</div>';
