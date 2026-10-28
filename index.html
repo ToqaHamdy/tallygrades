@@ -152,6 +152,17 @@
   a.link { cursor: pointer; }
   .newtab { font-size: 16px !important; padding: 0 2px !important; color: var(--muted) !important; }
   .newtab:hover { color: var(--ink) !important; text-decoration: none !important; }
+  .tmchip { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 1px 7px; border-radius: 6px; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    color: var(--tc); background: color-mix(in srgb, var(--tc) 16%, transparent); vertical-align: 1px; white-space: nowrap; }
+  .tmchip small { font-family: var(--font); font-weight: 600; font-size: 11px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+  .letter.team .letter-head { border-bottom-color: var(--tc); }
+  .letter.team .letter-big, .gbadge.team-badge { background: var(--tc); color: #fff; }
+  .team-name { font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 1.2; margin-bottom: 4px; }
+  .teamrow td { background: color-mix(in srgb, var(--tc, var(--accent)) 10%, var(--card)) !important; }
+  .teamrow .stn { color: var(--tc, var(--ink)); }
+  .gtable tr.leader td { background: color-mix(in srgb, var(--tc, var(--accent)) 5%, var(--card)); }
+  .lead { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; background: var(--tc, var(--accent)); color: #fff; font-family: var(--mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; vertical-align: 1px; }
+  .cell[disabled] { opacity: .45; cursor: not-allowed; }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2679,7 +2690,8 @@ const BOOT = null;
     groupSummary: ['group_summary', ['p_pin', 'p_course', 'p_group']], mark: ['mark', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id', 'p_status']],
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
-    saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']], exportAll: ['export_all', ['p_pin']]
+    saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']],
+    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']]
   };
   async function api(fn, ...args) {
     const [name, params] = RPC[fn];
@@ -2707,6 +2719,9 @@ const BOOT = null;
   }
   /* an item named Bonus adds to the student's total but not to the total it is out of */
   const isBonus = (it) => /^bonus\b/i.test(String(it.item || '').trim());
+  /* project teams: a colour per team number, and a small "T3" badge shown next to a student */
+  const TEAM_COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6', '#F97316', '#06B6D4', '#3B82F6', '#EF4444', '#14B8A6'];
+  const teamColor = (n) => TEAM_COLORS[(Number(n) - 1 + TEAM_COLORS.length) % TEAM_COLORS.length];
   const errMsg = (e) => String((e && e.message) || e);
   const numeric = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
   const mmss = (s) => { s = Math.max(0, s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -2837,6 +2852,12 @@ const BOOT = null;
     }).filter(Boolean);
     return chips.length > 1 ? '<div class="obar hide-proj"><span>Open groups</span>' + chips.join('') + '</div>' : '';
   }
+  const teamOf = (course, num) => (D && D.teams || []).find(t => t.course === course && t.num === num);
+  function teamChip(course, num) {
+    if (num == null || num === '') return '';
+    const t = teamOf(course, num);
+    return '<span class="tmchip" style="--tc:' + teamColor(num) + '" title="' + esc('Team ' + num + (t ? ': ' + t.name : '')) + '">T' + esc(num) + (t ? '<small>' + esc(t.name) + '</small>' : '') + '</span>';
+  }
   function bindBar(g, kind) {
     app.querySelectorAll('[data-ox]').forEach(b => b.onclick = (e) => {
       e.preventDefault(); e.stopPropagation();
@@ -2850,8 +2871,13 @@ const BOOT = null;
     if (!D || !PIN) return;
     if (leaveGuard && !leaveGuard()) { history.replaceState(null, '', lastHash || location.pathname + location.search); return; }
     leaveGuard = null; window.onbeforeunload = null; lastHash = location.hash;
-    const m = location.hash.match(/^#(group|grades)\/([^/]*)\/([^/]*)$/);
-    if (m) {
+    const m = location.hash.match(/^#(group|grades|team)\/([^/]*)\/([^/]*)$/);
+    if (m && m[1] === 'team') {
+      const t = teamOf(decodeURIComponent(m[2]), Number(decodeURIComponent(m[3])));
+      if (t) return teamPage(t);
+      toast('Team not found.');
+      history.replaceState(null, '', location.pathname + location.search); lastHash = '';
+    } else if (m) {
       const c = decodeURIComponent(m[2]), gr = decodeURIComponent(m[3]);
       const g = D.groups.find(x => x.course === c && x.group === gr);
       if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); return m[1] === 'grades' ? gradesPage(g) : groupPage(g); }
@@ -2951,14 +2977,26 @@ const BOOT = null;
     const groups = D.groups.slice().sort((a, b) => numeric(a.course + a.group, b.course + b.group));
     const mine = groups.filter(g => g.ta === D.me.name);
     if ((tab === 'staff' || tab === 'courses') && !isAdmin) tab = 'mine';
+    const teams = D.teams || [];
+    if (tab === 'teams' && !teams.length) tab = 'mine';
     if (tab === 'mine' && !mine.length && groups.length) tab = 'all';
     const list = tab === 'mine' ? mine : groups;
     const tabs = [['mine', 'My groups (' + mine.length + ')'], ['all', 'All groups (' + groups.length + ')']];
     const waiting = isAdmin ? D.staff.filter(x => x.status === 'pending') : [];
+    if (teams.length) tabs.push(['teams', 'Teams (' + teams.length + ')']);
     if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin' && x.status !== 'pending').length + ')' + (waiting.length ? ', ' + waiting.length + ' waiting' : '')]);
     if (isAdmin) tabs.push(['courses', 'Courses (' + (D.allCourses || []).length + ')']);
     let body = '';
-    if (tab === 'courses') {
+    if (tab === 'teams') {
+      const tHash = (t) => '#team/' + encodeURIComponent(t.course) + '/' + t.num;
+      body = [...new Set(teams.map(t => t.course))].map(c => '<section class="course"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + teams.filter(t => t.course === c).length + ' teams, ' +
+          teams.filter(t => t.course === c).reduce((n, t) => n + t.count, 0) + ' students</span></div><div class="letters">' +
+        teams.filter(t => t.course === c).map(t => '<div class="letter team" style="--tc:' + teamColor(t.num) + '"><div class="letter-head"><span class="letter-big">' + t.num + '</span>' +
+          '<div><div class="team-name">' + esc(t.name) + '</div><span class="letter-meta">' + t.count + ' students, ' + (t.groups || []).map(esc).join(', ') + '</span></div></div>' +
+          '<p class="note" style="margin:12px 0 0">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></p>' +
+          '<div class="links" style="margin:12px 0 6px"><a class="link" href="' + tHash(t) + '">Grade team &rarr;</a><a class="link newtab" href="' + tHash(t) + '" target="_blank" rel="noopener" title="Open in a new browser tab">&#8599;</a></div></div>').join('') +
+        '</div></section>').join('');
+    } else if (tab === 'courses') {
       const all = D.allCourses || [];
       body = all.length ? '<p class="sub" style="margin:-8px 0 22px">The grade distribution of each course. It is the same for every group of the course. The attendance mark is calculated from each student\'s attendance %.</p>' +
         all.map((c, ci) => '<section class="course cset"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</span></div><div id="cs' + ci + '"><p class="note" style="padding:16px 0">Loading</p></div></section>').join('')
@@ -3052,7 +3090,7 @@ const BOOT = null;
       app.querySelectorAll('.grow[data-c]').forEach(c => {
         c.hidden = (courseFilter && c.dataset.c !== courseFilter) || (groupQuery && c.dataset.q.indexOf(groupQuery.toLowerCase()) < 0);
       });
-      app.querySelectorAll('.letter').forEach(b => { b.hidden = !b.querySelector('.grow:not([hidden])'); });
+      app.querySelectorAll('.course[data-course] .letter').forEach(b => { b.hidden = !b.querySelector('.grow:not([hidden])'); });
       app.querySelectorAll('.course[data-course]').forEach(sec => { sec.hidden = !sec.querySelector('.grow:not([hidden])'); });
     };
     if ($('fc')) $('fc').onchange = () => { courseFilter = $('fc').value; applyFilter(); };
@@ -3632,7 +3670,7 @@ const BOOT = null;
         : '<span>' + esc(W.weekLabel) + ': no check-in yet.</span>';
       $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th><th>Time</th><th>How</th><th>Status</th></tr>';
       $('rows').innerHTML = W.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
-        '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
+        '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + teamChip(W.course, r.team) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
         '<td><button type="button" class="chip ' + (waiting(r) ? '' : r.status) + '" data-i="' + i + '">' + (waiting(r) ? 'Not yet' : ({ P: 'Present', A: 'Absent', E: 'Excused' }[r.status] || 'Not marked')) + '</button></td></tr>').join('');
       $('rows').querySelectorAll('[data-i]').forEach(b => b.onclick = async () => {
         const r = W.rows[b.dataset.i];
@@ -3717,7 +3755,7 @@ const BOOT = null;
       $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance<div class="wk wkh">' + weekNums + '</div></th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
         V.items.map(it => '<th class="num">' + esc(it.item) + '<small>' + (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
       $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td class="sx">' + (i + 1) + '</td>' +
-        '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
+        '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + teamChip(V.course, r.team) + '</div></td>' +
         '<td><div class="attc"><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b><span>' + r.p + ' P, ' + r.a + ' A, ' + r.e + ' E</span></div>' +
           '<div class="wk">' + (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="' + weekName(n) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></div></td>' +
         (V.attendanceMax ? '<td class="num mono">' + (r.attGrade === '' ? '&ndash;' : r.attGrade) + '</td>' : '') +
@@ -3769,6 +3807,88 @@ const BOOT = null;
       const head = ['Student Name', 'ID', 'Attendance %'].concat(V.attendanceMax ? ['Attendance /' + V.attendanceMax] : [], V.items.map(it => it.item + ' /' + it.max), ['Total']);
       const lines = [head.join('\t')].concat(V.rows.map(r => [r.name, r.id, fmtPct(r.pct)].concat(V.attendanceMax ? [r.attGrade] : [], V.items.map(it => r.scores[it.key] === undefined ? '' : r.scores[it.key]), [r.total]).join('\t')));
       copyText(lines.join('\n'), 'Copied the whole table. Paste it in Excel or Google Sheets.');
+    };
+    load();
+  }
+  /* ----- one project team, every member whatever their group: type a mark once for the whole team, then adjust anyone ----- */
+  async function teamPage(t) {
+    stopTimers();
+    let V = null; const dirty = {};
+    const unsaved = () => Object.keys(dirty).length;
+    app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button">&larr; Teams</button>' +
+      '<div class="top"><div class="gtitle"><span class="gbadge team-badge">T' + t.num + '</span><div><h1>' + esc(t.name) + '</h1><p class="sub">Team ' + t.num + ' of ' + esc(t.course) + ', ' + t.count + ' students from ' +
+      (t.groups || []).map(esc).join(', ') + '. Type a mark in the <b>Whole team</b> row to give it to everyone, change any student after that, then press Save.</p></div></div></div>' +
+      '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID"><span class="note">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></span></div>' +
+      '<div class="table-wrap gtable"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
+      '<p class="note" style="margin-top:14px">Each mark is saved in the student\'s own group, so it also shows on that group\'s grades page.</p>' +
+      '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
+    leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
+    $('bk').onclick = () => { tab = 'teams'; go(''); };
+    $('sr').oninput = () => { const q = $('sr').value.trim().toLowerCase(); $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; }); };
+    const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
+    const level = (f) => f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
+    const status = () => {
+      const n = unsaved(), bad = !!$('rows').querySelector('.cell.bad');
+      $('save').disabled = !n || bad;
+      $('sbar').classList.toggle('dirty', n > 0);
+      window.onbeforeunload = n ? (e) => { e.preventDefault(); e.returnValue = ''; } : null;
+      $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
+    };
+    function render() {
+      if (!V.items.length) {
+        $('th').innerHTML = '';
+        $('rows').innerHTML = '<tr><td style="padding:22px;white-space:normal">No grade items yet. The admin adds them in the Courses tab (for example Project or Discussion).</td></tr>';
+        return status();
+      }
+      const mt = (V.attendanceMax || 0) + V.items.reduce((n, it) => n + (isBonus(it) ? 0 : Number(it.max)), 0);
+      $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Group</th><th>Attendance</th>' +
+        V.items.map(it => '<th class="num">' + esc(it.item) + '<small>' + (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
+      const editable = V.rows.some(r => r.canEdit);
+      $('rows').innerHTML = (editable ? '<tr class="teamrow"><td class="sx"></td><td class="sn"><div class="stn">Whole team</div><div class="sid">Type here to give the same mark to everyone</div></td><td></td><td></td>' +
+          V.items.map(it => '<td class="num"><input class="cell tcell" inputmode="decimal" autocomplete="off" data-k="' + esc(it.key) + '" data-max="' + it.max + '" aria-label="' + esc(it.item + ' for the whole team') + '"></td>').join('') + '<td class="tot"></td></tr>' : '') +
+        V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id + ' ' + r.group).toLowerCase()) + '"' + (r.leader ? ' class="leader"' : '') + '><td class="sx">' + (i + 1) + '</td>' +
+          '<td class="sn"><div class="stn">' + esc(r.name) + (r.leader ? ' <span class="lead">Leader</span>' : '') + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
+          '<td class="mono">' + esc(r.group) + '</td>' +
+          '<td><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b></div><div class="wk">' +
+            (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="Week ' + (n + 1) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></td>' +
+          V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
+            return '<td class="num"><input class="cell mcell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" autocomplete="off" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '"' + (r.canEdit ? '' : ' disabled title="Not your group"') + ' aria-label="' + esc(it.item + ', ' + r.name) + '"></td>'; }).join('') +
+          '<td class="num tot"><span class="total" id="tot' + i + '">' + r.total + '</span></td></tr>').join('');
+      const recalc = (i) => {
+        const r = V.rows[i]; let sum = r.attGrade || 0;
+        V.items.forEach(it => { const kk = r.id + '|' + it.key; const v = kk in dirty ? Number(dirty[kk]) : r.scores[it.key]; if (v !== undefined && v !== '' && !isNaN(v)) sum += Number(v); });
+        $('tot' + i).textContent = Math.round(sum * 100) / 100;
+      };
+      const check = (inp) => { const raw = inp.value.trim().replace(',', '.'), n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max))); return raw; };
+      $('rows').querySelectorAll('.mcell').forEach(inp => inp.oninput = () => {
+        const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = check(inp);
+        const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
+        if (raw === orig) delete dirty[k]; else dirty[k] = raw;
+        inp.classList.toggle('dirty', k in dirty);
+        recalc(Number(inp.dataset.i)); status();
+      });
+      /* the Whole team row writes its mark into every member this user can edit */
+      $('rows').querySelectorAll('.tcell').forEach(inp => inp.oninput = () => {
+        check(inp);
+        $('rows').querySelectorAll('.mcell[data-k="' + CSS.escape(inp.dataset.k) + '"]:not([disabled])').forEach(c => { c.value = inp.value; c.oninput(); });
+      });
+      $('rows').querySelectorAll('.cell').forEach(inp => inp.onkeydown = (e) => {
+        const step = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+        if (!step) return;
+        e.preventDefault();
+        const col = [...$('rows').querySelectorAll('.cell[data-k="' + CSS.escape(inp.dataset.k) + '"]:not([disabled])')].filter(x => !x.closest('tr').hidden);
+        const next = col[col.indexOf(inp) + step];
+        if (next) { next.focus(); next.select(); }
+      });
+      status();
+    }
+    async function load() { try { V = await api('teamView', PIN, t.course, t.num); render(); } catch (e) { toast(errMsg(e)); } }
+    $('save').onclick = async () => {
+      const changes = Object.keys(dirty).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: dirty[k] }; });
+      $('save').disabled = true; $('save').textContent = 'Saving';
+      try { V = await api('saveTeamScores', PIN, t.course, t.num, changes); Object.keys(dirty).forEach(k => delete dirty[k]); render(); toast('Saved for team ' + t.num + '.'); }
+      catch (e) { toast(errMsg(e)); $('save').disabled = false; }
+      $('save').textContent = 'Save';
     };
     load();
   }

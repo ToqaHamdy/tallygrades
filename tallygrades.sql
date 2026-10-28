@@ -31,6 +31,9 @@ create table if not exists tg.devices (device text primary key, sid text not nul
 create table if not exists tg.items (course text not null, key text not null, item text not null, max numeric not null, kind text not null default 'Grade', ord int not null default 0, primary key (course, key));
 create table if not exists tg.grades (id bigserial primary key, ts timestamptz not null default now(), course text not null, grp text not null, sid text not null, name text not null, key text not null, score numeric, by_ta text not null default '');
 create table if not exists tg.settings (key text primary key, value text);
+-- project teams: a team can mix students of several groups of the course
+create table if not exists tg.teams (course text not null, num int not null, name text not null default '', leader text not null default '', primary key (course, num));
+create table if not exists tg.team_members (course text not null, sid text not null, num int not null, primary key (course, sid));
 create index if not exists log_cgw on tg.log (course, grp, week);
 create index if not exists log_session on tg.log (session);
 create index if not exists grades_cg on tg.grades (course, grp);
@@ -40,6 +43,7 @@ alter table tg.sessions enable row level security; alter table tg.log enable row
 alter table tg.devices enable row level security;  alter table tg.items enable row level security;
 alter table tg.grades enable row level security;   alter table tg.settings enable row level security;
 alter table tg.tokens enable row level security;
+alter table tg.teams enable row level security;    alter table tg.team_members enable row level security;
 
 -- ---------------------------------------------------------------- helpers
 create or replace function tg.clean(x text) returns text language sql immutable as $$ select regexp_replace(btrim(coalesce(x, '')), '\s+', ' ', 'g') $$;
@@ -177,7 +181,8 @@ begin
   select coalesce(jsonb_agg(jsonb_build_object('id', st.sid, 'name', st.name,
       'status', coalesce(l.status, case when w = 1 then 'P' when held then 'A' else '' end),
       'time', case when l.status = 'P' and l.method = 'Self' then tg.hm(l.ts) else '' end,
-      'method', case when l.sid is null then case when w = 1 then 'Week 1' else '' end else tg.method_label(l.method, l.by_ta, l.note) end) order by st.ord), '[]')
+      'method', case when l.sid is null then case when w = 1 then 'Week 1' else '' end else tg.method_label(l.method, l.by_ta, l.note) end,
+      'team', (select tm.num from tg.team_members tm where tm.course = c and tm.sid = st.sid)) order by st.ord), '[]')
     into rows from tg.students st left join tg.latest(c, g, w) l on l.sid = st.sid where st.course = c and st.grp = g;
   return jsonb_build_object('course', c, 'group', g, 'week', w, 'weekLabel', tg.week_label(w), 'held', held, 'rows', rows,
     'present', (select count(*) from jsonb_array_elements(rows) r where r->>'status' = 'P'),
@@ -222,6 +227,7 @@ create or replace function tg.grade_rows(c text, g text default null, t text def
           from sc group by sc.grp, sc.sid)
   select coalesce(jsonb_agg(jsonb_build_object(
       'group', m.grp, 'ta', m.ta, 'name', m.name, 'id', m.sid, 'weeks', to_jsonb(m.weeks), 'p', m.p, 'a', m.a, 'e', m.e,
+      'team', (select tm.num from tg.team_members tm where tm.course = c and tm.sid = m.sid),
       'pct', coalesce(to_jsonb(m.pct), '""'::jsonb),
       'attGrade', case when att.mx > 0 and m.pct is not null then to_jsonb(round(m.pct * att.mx, 2)) else '""'::jsonb end,
       'scores', coalesce(agg.obj, '{}'::jsonb),
@@ -252,6 +258,12 @@ begin
     'allCourses', case when me.role = 'Admin' then coalesce((select jsonb_agg(c order by c) from (select distinct course as c from tg.students) x), '[]') else '[]' end,
     'weeks', (select jsonb_agg(jsonb_build_array(n, tg.week_label(n) || case when ts is not null then ', ' || to_char(ts + (n - 1) * 7, 'FMDD Mon') else '' end) order by n) from generate_series(1, 14) n),
     'termStart', coalesce(to_char(ts, 'YYYY-MM-DD'), ''), 'currentWeek', tg.current_week(), 'url', '', 'sheetUrl', '',
+    'teams', coalesce((select jsonb_agg(jsonb_build_object('course', t.course, 'num', t.num, 'name', t.name,
+        'leader', coalesce((select st.name from tg.students st where st.course = t.course and st.sid = t.leader order by st.ord limit 1), ''),
+        'count', (select count(*) from tg.team_members m where m.course = t.course and m.num = t.num),
+        'groups', (select coalesce(jsonb_agg(distinct st.grp order by st.grp), '[]') from tg.team_members m join tg.students st on st.course = m.course and st.sid = m.sid
+                   where m.course = t.course and m.num = t.num)) order by t.course, t.num)
+      from tg.teams t where me.role = 'Admin' or cardinality(me.courses) = 0 or t.course = any(me.courses)), '[]'),
     'staff', case when me.role = 'Admin' then (select jsonb_agg(jsonb_build_object('name', name, 'role', role, 'courses', to_jsonb(courses), 'username', coalesce(username, ''), 'status', status) order by role, status, name) from tg.staff) end);
 end $$;
 
@@ -698,6 +710,46 @@ begin
   end loop;
   return public.grades_view(p_pin, p_course, p_group);
 end $$;
+-- a project team: every member with attendance and marks, whatever their group, for grading the team together
+create or replace function public.team_view(p_pin text, p_course text, p_num int) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); t tg.teams; g text; acc jsonb := '[]'; r jsonb;
+begin
+  perform tg.in_course(me, p_course);
+  select * into t from tg.teams where course = p_course and num = p_num;
+  if not found then raise exception 'Team not found.'; end if;
+  for g in select distinct st.grp from tg.team_members m join tg.students st on st.course = m.course and st.sid = m.sid where m.course = p_course and m.num = p_num order by 1 loop
+    for r in select value from jsonb_array_elements(tg.grade_rows(p_course, g)) loop
+      if exists (select 1 from tg.team_members m where m.course = p_course and m.num = p_num and m.sid = r->>'id') then
+        acc := acc || jsonb_build_array(r || jsonb_build_object('leader', r->>'id' = t.leader, 'canEdit', me.role = 'Admin' or r->>'ta' = me.name));
+      end if;
+    end loop;
+  end loop;
+  select coalesce(jsonb_agg(x order by (x->>'leader')::boolean desc, x->>'group', x->>'name'), '[]') into acc from jsonb_array_elements(acc) x;
+  return jsonb_build_object('course', p_course, 'num', t.num, 'name', t.name, 'canEditItems', me.role = 'Admin', 'rows', acc) || tg.items_json(p_course);
+end $$;
+-- marks for team members; each mark is saved in the student's own group, like the group grades page
+create or replace function public.save_team_scores(p_pin text, p_course text, p_num int, p_changes jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); x jsonb; it tg.items; st tg.students; v text; n numeric;
+begin
+  perform tg.in_course(me, p_course);
+  for x in select value from jsonb_array_elements(coalesce(p_changes, '[]')) loop
+    select * into it from tg.items where course = p_course and key = x->>'key' and kind <> 'Attendance';
+    if not found then continue; end if;
+    select s2.* into st from tg.students s2 join tg.team_members m on m.course = s2.course and m.sid = s2.sid
+      where s2.course = p_course and m.num = p_num and s2.sid = tg.norm_id(x->>'id') order by s2.ord limit 1;
+    if not found then continue; end if;
+    perform tg.can_manage(me, p_course, st.grp);
+    v := btrim(coalesce(x->>'score', ''));
+    if v = '' then n := null;
+    else
+      if v !~ '^\d+(\.\d+)?$' then raise exception '%: % must be a number.', st.name, it.item; end if;
+      n := v::numeric;
+      if n < 0 or n > it.max then raise exception '%: % must be from 0 to %.', st.name, it.item, it.max; end if;
+    end if;
+    insert into tg.grades (course, grp, sid, name, key, score, by_ta) values (p_course, st.grp, st.sid, st.name, it.key, n, me.name);
+  end loop;
+  return public.team_view(p_pin, p_course, p_num);
+end $$;
 create or replace function public.final_export(p_pin text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin); out jsonb := '[]'; cc text; r jsonb;
   wk jsonb := (select jsonb_agg(tg.week_label(n) order by n) from generate_series(1, 14) n);
@@ -734,7 +786,7 @@ begin
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)',
-    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
+    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
