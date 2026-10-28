@@ -3631,9 +3631,9 @@ const BOOT = null;
           });
           const nT = teams.filter(t => t.course === sec.course).length, view = nT && courseView[sec.course] === 'teams' ? 'teams' : 'groups';
           const sw = nT ? '<div class="cview" role="tablist"><button type="button" role="tab" data-cv="' + esc(sec.course) + '|groups" aria-selected="' + (view === 'groups') + '">Groups</button>' +
-            '<button type="button" role="tab" data-cv="' + esc(sec.course) + '|teams" aria-selected="' + (view === 'teams') + '">Teams (' + nT + ')</button></div>' : '';
+            '<button type="button" role="tab" data-cv="' + esc(sec.course) + '|teams" aria-selected="' + (view === 'teams') + '">Project teams (' + nT + ')</button></div>' : '';
           const head = '<section class="course" data-course="' + esc(sec.course) + '" data-view="' + view + '"><div class="course-head"><div class="ch-left">' + (C ? '' : '<h2>' + esc(sec.course) + '</h2>') + sw + '</div><span>' +
-            (view === 'teams' ? nT + ' teams, ' + teams.filter(t => t.course === sec.course).reduce((n, t) => n + t.count, 0) + ' students'
+            (view === 'teams' ? nT + ' project teams, ' + teams.filter(t => t.course === sec.course).reduce((n, t) => n + t.count, 0) + ' students'
               : sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') + sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students') + '</span></div>';
           if (view === 'teams') return head + '<div class="letters">' + teamBlocks(sec.course) + '</div></section>';
           return head + '<div class="letters">' +
@@ -3666,7 +3666,7 @@ const BOOT = null;
         (cs.length ? '<div class="ccards">' + cs.map(c => {
           const gs = groups.filter(g => g.course === c), nt = teams.filter(t => t.course === c).length, lv = gs.filter(g => g.live).length;
           return '<a class="ccard" href="' + courseHash(c) + '"><span class="cbadge">' + esc(initials(c)) + '</span><span class="cinfo"><b>' + esc(c) + '</b><small>' + gs.length + (gs.length === 1 ? ' group, ' : ' groups, ') +
-            gs.reduce((a, g) => a + g.count, 0) + ' students' + (nt ? ', ' + nt + (nt === 1 ? ' team' : ' teams') : '') + '</small>' + (lv ? '<small class="clive"><i class="odot"></i>' + lv + ' live now</small>' : '') + '</span><span class="go" aria-hidden="true">&rarr;</span></a>';
+            gs.reduce((a, g) => a + g.count, 0) + ' students' + (nt ? ', ' + nt + (nt === 1 ? ' project team' : ' project teams') : '') + '</small>' + (lv ? '<small class="clive"><i class="odot"></i>' + lv + ' live now</small>' : '') + '</span><span class="go" aria-hidden="true">&rarr;</span></a>';
         }).join('') + '</div>' : '') + quickHtml(null) +
         '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
     }
@@ -4067,7 +4067,7 @@ const BOOT = null;
       /* teams */
       const nums = [...new Set(rows.map(r => r.team).filter(t => t != null && t !== ''))].sort((a, b) => a - b);
       if (nums.length) {
-        h += '<section class="ins-card"><div class="ins-h"><h2>Teams (' + nums.length + ')</h2><span>Press a team to grade it.</span></div><div class="table-wrap"><table><thead><tr><th>Team</th><th>Name</th><th>Members</th><th>Average attendance</th><th>At risk</th>' + (maxT ? '<th>Average total</th>' : '') + '</tr></thead><tbody>' +
+        h += '<section class="ins-card"><div class="ins-h"><h2>Project teams (' + nums.length + ')</h2><span>Press a team to grade it.</span></div><div class="table-wrap"><table><thead><tr><th>Team</th><th>Name</th><th>Members</th><th>Average attendance</th><th>At risk</th>' + (maxT ? '<th>Average total</th>' : '') + '</tr></thead><tbody>' +
           nums.map(n => { const rs = rows.filter(r => r.team === n), t = teamOf(course, n) || {}, ps = rs.filter(r => r.pct !== '').map(r => Number(r.pct)), pa = avgOf(ps), tt = avgOf(rs.map(r => Number(r.total)));
             return '<tr data-team="' + n + '"><td><span class="tmchip" style="--tc:' + teamColor(n) + ';margin:0">T' + n + '</span></td><td>' + esc(t.name || '') + '</td><td>' + rs.length + '</td><td><span class="mrow">' + meter(pa, pa != null && pa < .75) + '<b>' + pctS(pa) + '</b></span></td>' +
               '<td>' + rs.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length + '</td>' + (maxT ? '<td>' + (tt == null ? '&ndash;' : Math.round(tt * 10) / 10 + ' / ' + maxT) + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table></div></section>';
@@ -5015,7 +5015,7 @@ const BOOT = null;
     let rows = V.items.map(it => ({ key: it.key, item: it.item, max: it.max }));
     dialog('<span class="pill">' + esc(course) + '</span><h1 style="font-size:26px;margin-top:12px">Grade items</h1>' +
       '<p class="sub">These are the same for every group of this course. Renaming an item keeps its marks.</p>' +
-      '<div class="form" style="margin-top:18px"><label class="f">Attendance is worth (marks, 0 for none)<input class="in" id="am" type="number" min="0" step="0.5" value="' + (V.attendanceMax || 0) + '"></label>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Attendance is worth (marks, 0 for none)<input class="in" id="am" type="number" min="0" step="any" value="' + (V.attendanceMax || 0) + '"></label>' +
       '<div class="note">Items, in the same order as the course sheet</div><div id="list" class="form" style="gap:10px"></div>' +
       '<div class="links" style="margin:0"><button class="link" id="aq" type="button">+ Quiz</button><button class="link" id="aa" type="button">+ Assignment</button><button class="link" id="amid" type="button">+ Midterm</button><button class="link" id="ao" type="button">+ Other</button></div>' +
       '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
@@ -5023,7 +5023,7 @@ const BOOT = null;
         const q = (x) => o.querySelector(x);
         const sync = () => o.querySelectorAll('.item-row').forEach((el, i) => { rows[i].item = el.querySelector('.nm').value; rows[i].max = el.querySelector('.mx').value; });
         const draw = () => {
-          q('#list').innerHTML = rows.length ? rows.map((r, i) => '<div class="item-row"><input class="in nm" placeholder="Name" value="' + esc(r.item) + '"><input class="in mx" type="number" min="0" step="0.5" placeholder="Full mark" value="' + esc(r.max) + '"><button class="x" data-rm="' + i + '" type="button" aria-label="Remove">&times;</button></div>').join('') : '<p class="note">No items yet.</p>';
+          q('#list').innerHTML = rows.length ? rows.map((r, i) => '<div class="item-row"><input class="in nm" placeholder="Name" value="' + esc(r.item) + '"><input class="in mx" type="number" min="0" step="any" placeholder="Full mark" value="' + esc(r.max) + '"><button class="x" data-rm="' + i + '" type="button" aria-label="Remove">&times;</button></div>').join('') : '<p class="note">No items yet.</p>';
           o.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { sync(); rows.splice(Number(b.dataset.rm), 1); draw(); });
         };
         const add = (name, max) => { sync(); rows.push({ key: '', item: name, max: max }); draw(); const ins = o.querySelectorAll('.nm'); ins[ins.length - 1].focus(); };
