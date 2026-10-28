@@ -377,7 +377,9 @@ begin
                  'leader', coalesce((select s2.name from tg.students s2 where s2.course = t.course and s2.sid = t.leader order by s2.ord limit 1), ''))
                from tg.team_members m join tg.teams t on t.course = m.course and t.num = m.num where m.course = st.course and m.sid = st.sid),
       'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb),
-      'grade', tg.student_grade(st.course, st.grp, st.sid, mx.pct)) order by st.course, st.grp), '[]')
+      'grade', tg.student_grade(st.course, st.grp, st.sid, mx.pct),
+      'groupAvg', (select jsonb_build_object('pct', avg((r->>'pct')::numeric) filter (where r->>'pct' <> ''), 'total', round(avg((r->>'total')::numeric), 2), 'n', count(*))
+                   from jsonb_array_elements(tg.grade_rows(st.course, st.grp)) r)) order by st.course, st.grp), '[]')
     into v_out
   from tg.students st cross join lateral (select * from tg.matrix(st.course, st.grp) x where x.sid = st.sid limit 1) mx
   where st.sid = v_id;
