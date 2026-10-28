@@ -220,7 +220,7 @@ returns table (grp text, ta text, name text, sid text, ord bigint, weeks text[],
 create or replace function tg.items_json(c text) returns jsonb language sql stable as $$
   select jsonb_build_object(
     'attendanceMax', coalesce((select max from tg.items where course = c and kind = 'Attendance'), 0),
-    'items', coalesce((select jsonb_agg(jsonb_build_object('key', key, 'item', item, 'max', max) order by ord) from tg.items where course = c and kind <> 'Attendance'), '[]')) $$;
+    'items', coalesce((select jsonb_agg(jsonb_build_object('key', key, 'item', item, 'max', max, 'check', kind = 'Check') order by ord) from tg.items where course = c and kind <> 'Attendance'), '[]')) $$;
 
 create or replace function tg.grade_rows(c text, g text default null, t text default null) returns jsonb language sql stable as $$
   with it as (select key from tg.items where course = c and kind <> 'Attendance'),
@@ -354,13 +354,13 @@ end $$;
 -- one student's marks in one course: what the student sees on their own phone
 create or replace function tg.student_grade(c text, g text, v_sid text, v_pct numeric) returns jsonb language sql stable as $$
   with att as (select coalesce((select max from tg.items where course = c and kind = 'Attendance'), 0) as mx),
-  it as (select i.item, i.max, i.ord,
+  it as (select i.item, i.max, i.ord, i.kind = 'Check' as chk,
            (select gr.score from tg.grades gr where gr.course = c and gr.grp = g and gr.sid = v_sid and gr.key = i.key order by gr.id desc limit 1) as score
          from tg.items i where i.course = c and i.kind <> 'Attendance')
   select case when att.mx = 0 and not exists (select 1 from it) then null else jsonb_build_object(
     'attMax', att.mx,
     'attGrade', case when att.mx > 0 and v_pct is not null then to_jsonb(round(v_pct * att.mx, 2)) else '""'::jsonb end,
-    'items', coalesce((select jsonb_agg(jsonb_build_object('item', it.item, 'max', it.max, 'score', coalesce(to_jsonb(it.score), '""'::jsonb)) order by it.ord) from it), '[]'),
+    'items', coalesce((select jsonb_agg(jsonb_build_object('item', it.item, 'max', it.max, 'check', it.chk, 'score', coalesce(to_jsonb(it.score), '""'::jsonb)) order by it.ord) from it), '[]'),
     'total', round(coalesce((select sum(it.score) from it), 0) + case when att.mx > 0 and v_pct is not null then round(v_pct * att.mx, 2) else 0 end, 2),
     'max', att.mx + coalesce((select sum(it.max) from it where it.item !~* '^\s*bonus\M'), 0)) end
   from att $$;
@@ -801,7 +801,8 @@ begin
     if tg.clean(x->>'item') = '' then continue; end if;
     i := i + 1;
     k := coalesce(nullif(regexp_replace(coalesce(x->>'key', ''), '[^\w-]', '', 'g'), ''), 'i' || left(replace(gen_random_uuid()::text, '-', ''), 8));
-    insert into tg.items (course, key, item, max, kind, ord) values (c, k, tg.clean(x->>'item'), (x->>'max')::numeric, 'Grade', i);
+    -- Check: a done / not done item, the TA ticks it and the student gets the full mark
+    insert into tg.items (course, key, item, max, kind, ord) values (c, k, tg.clean(x->>'item'), (x->>'max')::numeric, case when coalesce((x->>'check')::boolean, false) then 'Check' else 'Grade' end, i);
   end loop;
   return tg.items_json(c);
 end $$;

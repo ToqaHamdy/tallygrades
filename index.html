@@ -216,6 +216,17 @@
   @keyframes fadein { from { opacity: 0; } }
   .wsel .btn { padding: 10px 18px; }
   @media (max-width: 640px) { .wsel { left: 12px; right: 84px; transform: none; max-width: none; bottom: 14px; } }
+  .ckcell { display: inline-grid; place-items: center; width: 40px; height: 36px; cursor: pointer; position: relative; }
+  .ckcell input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .ckcell span { width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--line); background: var(--card2); display: grid; place-items: center; transition: background-color .15s, border-color .15s, transform .15s; }
+  .ckcell input:checked + span { background: var(--ok); border-color: var(--ok); }
+  .ckcell input:checked + span::after { content: ""; width: 6px; height: 11px; border: solid var(--bg); border-width: 0 3px 3px 0; transform: translateY(-1px) rotate(45deg); }
+  .ckcell:hover span { border-color: var(--ok); } .ckcell input:focus-visible + span { box-shadow: 0 0 0 3px var(--focus); outline: 2px solid var(--accent); }
+  .ckcell input.dirty + span { box-shadow: 0 0 0 3px var(--warn-bg); } .ckcell input:disabled + span { opacity: .4; }
+  .ckcell input:active + span { transform: scale(.9); }
+  .ckall { display: block; margin: 4px auto 0; border: 1px solid var(--line); background: var(--card2); color: var(--muted); border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 11px; cursor: pointer; text-transform: none; letter-spacing: 0; }
+  .ckall:hover { color: var(--text); border-color: var(--ok); }
+  .ckit-l { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
   .my-grade { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 6px; }
   .mg-head { display: flex; justify-content: space-between; align-items: baseline; }
   .mg-head span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
@@ -536,7 +547,8 @@
     background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 12px 18px; box-shadow: 0 18px 40px -16px rgba(0,0,0,.55); color: var(--muted); font-weight: 600; font-size: 14px; }
   .savebar.dirty { border-color: var(--warn); color: var(--warn); }
   .total { font-family: var(--mono); font-weight: 800; color: var(--text); }
-  .item-row { display: grid; grid-template-columns: 1fr 110px 42px; gap: 10px; align-items: center; }
+  .item-row { display: grid; grid-template-columns: 1fr 110px auto 42px; gap: 10px; align-items: center; }
+  @media (max-width: 560px) { .item-row { grid-template-columns: 1fr 90px 42px; } .item-row .ckit-l { grid-column: 1 / -1; grid-row: 2; } }
   .x { background: none; border: 1px solid var(--line); border-radius: 10px; color: var(--err); height: 46px; font-size: 20px; }
 
   /* student phone */
@@ -3094,6 +3106,13 @@ const BOOT = null;
   }
   /* an item named Bonus adds to the student's total but not to the total it is out of */
   const isBonus = (it) => /^bonus\b/i.test(String(it.item || '').trim());
+  /* a Check item is done or not done: a tick gives the full mark */
+  const markCell = (it, cls, v, attrs) => it.check
+    ? '<label class="ckcell"><input type="checkbox" class="cell ck ' + cls + '"' + (v !== '' && Number(v) > 0 ? ' checked' : '') + ' data-max="' + it.max + '" ' + attrs + '><span aria-hidden="true"></span></label>'
+    : '<input class="cell ' + cls + '" inputmode="decimal" autocomplete="off" data-max="' + it.max + '" value="' + esc(v) + '" ' + attrs + '>';
+  const cellVal = (inp) => inp.type === 'checkbox' ? (inp.checked ? String(Number(inp.dataset.max)) : '') : inp.value.trim().replace(',', '.');
+  const itemHead = (it) => '<th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small>' +
+    (it.check ? '<button type="button" class="ckall" data-ck="' + esc(it.key) + '" title="Tick or untick everyone shown">all</button>' : '') + '</th>';
   /* project teams: a colour per team number, and a small "T3" badge shown next to a student */
   const TEAM_COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#8B5CF6', '#F97316', '#06B6D4', '#3B82F6', '#EF4444', '#14B8A6'];
   const teamColor = (n) => TEAM_COLORS[(Number(n) - 1 + TEAM_COLORS.length) % TEAM_COLORS.length];
@@ -3153,7 +3172,7 @@ const BOOT = null;
     if (!G) return '';
     const n = (v) => v === '' || v == null ? '&ndash;' : String(Math.round(Number(v) * 100) / 100);
     const max = G.attMax + G.items.reduce((t, it) => t + (isBonus(it) ? 0 : Number(it.max)), 0);
-    const rows = (G.attMax ? [['Attendance', G.attGrade, G.attMax, 'from your attendance %']] : []).concat(G.items.map(it => [it.item, it.score, it.max, isBonus(it) ? 'extra' : '']));
+    const rows = (G.attMax ? [['Attendance', G.attGrade, G.attMax, 'from your attendance %']] : []).concat(G.items.map(it => [it.item, it.score, it.max, isBonus(it) ? 'extra' : it.check ? (it.score !== '' && Number(it.score) > 0 ? 'done &#10003;' : 'not done yet') : '']));
     return '<div class="my-grade"><div class="mg-head"><span>My marks</span><b>' + n(G.total) + '<small> / ' + max + '</small></b></div>' +
       rows.map(([k, v, m, hint]) => '<div class="mg-row' + (v === '' ? ' mg-none' : '') + '"><span>' + esc(k) + (hint ? '<small>' + hint + '</small>' : '') + '</span><b>' + n(v) + '<small> / ' + m + '</small></b></div>').join('') +
       '<p class="note" style="margin:6px 0 0">A dash means no mark yet.</p></div>';
@@ -4872,18 +4891,18 @@ const BOOT = null;
       const weekName = (n) => 'Week ' + (n + 1) + (n === 6 ? ' (Midterm)' : n === 13 ? ' (Final)' : '');
       const weekNums = Array.from({ length: 14 }, (x, n) => '<i>' + (n + 1) + '</i>').join('');
       $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance<div class="wk wkh">' + weekNums + '</div></th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
-        V.items.map(it => '<th class="num">' + esc(it.item) + '<small>' + (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
+        V.items.map(itemHead).join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
       $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td class="sx">' + (i + 1) + '</td>' +
         '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + teamChip(V.course, r.team) + '</div></td>' +
         '<td><div class="attc"><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b><span>' + r.p + ' P, ' + r.a + ' A, ' + r.e + ' E</span></div>' +
           '<div class="wk">' + (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="' + weekName(n) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></div></td>' +
         (V.attendanceMax ? '<td class="num mono">' + (r.attGrade === '' ? '&ndash;' : r.attGrade) + '</td>' : '') +
         V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
-          return '<td class="num"><input class="cell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" autocomplete="off" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"></td>'; }).join('') +
+          return '<td class="num">' + markCell(it, k in dirty ? 'dirty' : '', v, 'data-i="' + i + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td>'; }).join('') +
         '<td class="num tot"><div class="totc"><span class="total" id="tot' + i + '">' + r.total + '</span>' + bar(r.total, mt).replace('<span class="mbar', '<span id="totb' + i + '" class="mbar') + '</div></td></tr>').join('');
       $('rows').querySelectorAll('.cell').forEach(inp => {
         inp.oninput = () => {
-          const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = inp.value.trim().replace(',', '.');
+          const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = cellVal(inp);
           const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
           const n = Number(raw), bad = raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max));
           inp.classList.toggle('bad', bad);
@@ -4902,8 +4921,13 @@ const BOOT = null;
           e.preventDefault();
           const col = [...$('rows').querySelectorAll('.cell[data-k="' + CSS.escape(inp.dataset.k) + '"]')].filter(x => !x.closest('tr').hidden);
           const next = col[col.indexOf(inp) + step];
-          if (next) { next.focus(); next.select(); }
+          if (next) { next.focus(); if (next.select) next.select(); }
         };
+      });
+      $('th').querySelectorAll('[data-ck]').forEach(b => b.onclick = () => {
+        const col = [...$('rows').querySelectorAll('.ck[data-k="' + CSS.escape(b.dataset.ck) + '"]')].filter(x => !x.closest('tr').hidden && !x.disabled);
+        const on = !col.every(x => x.checked);
+        col.forEach(x => { x.checked = on; x.oninput(); });
       });
       status();
     }
@@ -4961,24 +4985,24 @@ const BOOT = null;
       }
       const mt = (V.attendanceMax || 0) + V.items.reduce((n, it) => n + (isBonus(it) ? 0 : Number(it.max)), 0);
       $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Group</th><th>Attendance</th>' +
-        V.items.map(it => '<th class="num">' + esc(it.item) + '<small>' + (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
+        V.items.map(it => itemHead(it).replace(/<button[^>]*>all<\/button>/, '')).join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
       const editable = V.rows.some(r => r.canEdit);
       $('rows').innerHTML = (editable ? '<tr class="teamrow"><td class="sx"></td><td class="sn"><div class="stn">Whole team</div><div class="sid">Type here to give the same mark to everyone</div></td><td></td><td></td>' +
-          V.items.map(it => '<td class="num"><input class="cell tcell" inputmode="decimal" autocomplete="off" data-k="' + esc(it.key) + '" data-max="' + it.max + '" aria-label="' + esc(it.item + ' for the whole team') + '"></td>').join('') + '<td class="tot"></td></tr>' : '') +
+          V.items.map(it => '<td class="num">' + markCell(it, 'tcell', '', 'data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ' for the whole team') + '"') + '</td>').join('') + '<td class="tot"></td></tr>' : '') +
         V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id + ' ' + r.group).toLowerCase()) + '"' + (r.leader ? ' class="leader"' : '') + '><td class="sx">' + (i + 1) + '</td>' +
           '<td class="sn"><div class="stn">' + esc(r.name) + (r.leader ? ' <span class="lead">Leader</span>' : '') + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
           '<td class="mono">' + esc(r.group) + '</td>' +
           '<td><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b></div><div class="wk">' +
             (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="Week ' + (n + 1) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></td>' +
           V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
-            return '<td class="num"><input class="cell mcell' + (k in dirty ? ' dirty' : '') + '" inputmode="decimal" autocomplete="off" data-i="' + i + '" data-k="' + esc(it.key) + '" data-max="' + it.max + '" value="' + esc(v) + '"' + (r.canEdit ? '' : ' disabled title="Not your group"') + ' aria-label="' + esc(it.item + ', ' + r.name) + '"></td>'; }).join('') +
+            return '<td class="num">' + markCell(it, 'mcell' + (k in dirty ? ' dirty' : ''), v, 'data-i="' + i + '" data-k="' + esc(it.key) + '"' + (r.canEdit ? '' : ' disabled title="Not your group"') + ' aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td>'; }).join('') +
           '<td class="num tot"><span class="total" id="tot' + i + '">' + r.total + '</span></td></tr>').join('');
       const recalc = (i) => {
         const r = V.rows[i]; let sum = r.attGrade || 0;
         V.items.forEach(it => { const kk = r.id + '|' + it.key; const v = kk in dirty ? Number(dirty[kk]) : r.scores[it.key]; if (v !== undefined && v !== '' && !isNaN(v)) sum += Number(v); });
         $('tot' + i).textContent = Math.round(sum * 100) / 100;
       };
-      const check = (inp) => { const raw = inp.value.trim().replace(',', '.'), n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max))); return raw; };
+      const check = (inp) => { const raw = cellVal(inp), n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(inp.dataset.max))); return raw; };
       $('rows').querySelectorAll('.mcell').forEach(inp => inp.oninput = () => {
         const r = V.rows[inp.dataset.i], k = r.id + '|' + inp.dataset.k, raw = check(inp);
         const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
@@ -4989,7 +5013,7 @@ const BOOT = null;
       /* the Whole team row writes its mark into every member this user can edit */
       $('rows').querySelectorAll('.tcell').forEach(inp => inp.oninput = () => {
         check(inp);
-        $('rows').querySelectorAll('.mcell[data-k="' + CSS.escape(inp.dataset.k) + '"]:not([disabled])').forEach(c => { c.value = inp.value; c.oninput(); });
+        $('rows').querySelectorAll('.mcell[data-k="' + CSS.escape(inp.dataset.k) + '"]:not([disabled])').forEach(c => { if (c.type === 'checkbox') c.checked = inp.checked; else c.value = inp.value; c.oninput(); });
       });
       $('rows').querySelectorAll('.cell').forEach(inp => inp.onkeydown = (e) => {
         const step = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
@@ -4997,7 +5021,7 @@ const BOOT = null;
         e.preventDefault();
         const col = [...$('rows').querySelectorAll('.cell[data-k="' + CSS.escape(inp.dataset.k) + '"]:not([disabled])')].filter(x => !x.closest('tr').hidden);
         const next = col[col.indexOf(inp) + step];
-        if (next) { next.focus(); next.select(); }
+        if (next) { next.focus(); if (next.select) next.select(); }
       });
       status();
     }
@@ -5012,24 +5036,24 @@ const BOOT = null;
     load();
   }
   function itemsDialog(course, V, reload) {
-    let rows = V.items.map(it => ({ key: it.key, item: it.item, max: it.max }));
+    let rows = V.items.map(it => ({ key: it.key, item: it.item, max: it.max, check: !!it.check }));
     dialog('<span class="pill">' + esc(course) + '</span><h1 style="font-size:26px;margin-top:12px">Grade items</h1>' +
       '<p class="sub">These are the same for every group of this course. Renaming an item keeps its marks.</p>' +
       '<div class="form" style="margin-top:18px"><label class="f">Attendance is worth (marks, 0 for none)<input class="in" id="am" type="number" min="0" step="any" value="' + (V.attendanceMax || 0) + '"></label>' +
-      '<div class="note">Items, in the same order as the course sheet</div><div id="list" class="form" style="gap:10px"></div>' +
+      '<div class="note">Items, in the same order as the course sheet. Tick <b>Done / not done</b> for an item you only mark as done (like an assignment): a tick gives the full mark.</div><div id="list" class="form" style="gap:10px"></div>' +
       '<div class="links" style="margin:0"><button class="link" id="aq" type="button">+ Quiz</button><button class="link" id="aa" type="button">+ Assignment</button><button class="link" id="amid" type="button">+ Midterm</button><button class="link" id="ao" type="button">+ Other</button></div>' +
       '<div class="err" id="er"></div><div class="row"><button class="btn" id="go" type="button">Save</button><button class="btn ghost" data-close type="button">Cancel</button></div></div>',
       (o, close) => {
         const q = (x) => o.querySelector(x);
-        const sync = () => o.querySelectorAll('.item-row').forEach((el, i) => { rows[i].item = el.querySelector('.nm').value; rows[i].max = el.querySelector('.mx').value; });
+        const sync = () => o.querySelectorAll('.item-row').forEach((el, i) => { rows[i].item = el.querySelector('.nm').value; rows[i].max = el.querySelector('.mx').value; rows[i].check = el.querySelector('.ckit').checked; });
         const draw = () => {
-          q('#list').innerHTML = rows.length ? rows.map((r, i) => '<div class="item-row"><input class="in nm" placeholder="Name" value="' + esc(r.item) + '"><input class="in mx" type="number" min="0" step="any" placeholder="Full mark" value="' + esc(r.max) + '"><button class="x" data-rm="' + i + '" type="button" aria-label="Remove">&times;</button></div>').join('') : '<p class="note">No items yet.</p>';
+          q('#list').innerHTML = rows.length ? rows.map((r, i) => '<div class="item-row"><input class="in nm" placeholder="Name" value="' + esc(r.item) + '"><input class="in mx" type="number" min="0" step="any" placeholder="Full mark" value="' + esc(r.max) + '"><label class="ckit-l" title="Tick: you mark it Done or not done, and Done gives the full mark"><input type="checkbox" class="ckit"' + (r.check ? ' checked' : '') + '> Done / not done</label><button class="x" data-rm="' + i + '" type="button" aria-label="Remove">&times;</button></div>').join('') : '<p class="note">No items yet.</p>';
           o.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { sync(); rows.splice(Number(b.dataset.rm), 1); draw(); });
         };
-        const add = (name, max) => { sync(); rows.push({ key: '', item: name, max: max }); draw(); const ins = o.querySelectorAll('.nm'); ins[ins.length - 1].focus(); };
+        const add = (name, max, ck) => { sync(); rows.push({ key: '', item: name, max: max, check: !!ck }); draw(); const ins = o.querySelectorAll('.nm'); ins[ins.length - 1].focus(); };
         const count = (re) => rows.filter(r => re.test(r.item)).length;
         q('#aq').onclick = () => add('Q' + (count(/^Q\d+$/i) + 1), '');
-        q('#aa').onclick = () => add('Sheet ' + (count(/^Sheet \d+$/i) + 1), '');
+        q('#aa').onclick = () => add('Assignment ' + (count(/^Assignment \d+$/i) + 1), '', true);
         q('#amid').onclick = () => add('Midterm', '');
         q('#ao').onclick = () => add('', '');
         draw();
