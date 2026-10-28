@@ -393,8 +393,15 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .tn-take.alt:hover, .tn-take.alt.on { background: color-mix(in srgb, var(--accent) 14%, transparent); filter: none; } .tn-take + .tn-take { margin-left: 8px; }
   .hist-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 16px 0 12px; } .hist-tools .in { flex: 1 1 220px; }
   #hk button.on { background: var(--soft); color: var(--ink); }
-  .hist-wrap { max-height: 55vh; overflow: auto; } .hist-id { display: block; color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
-  .hist-k { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-right: 4px; } .hist-k.mk { background: var(--soft); color: var(--ink); } .hist-k.at { background: var(--ok-bg); color: var(--ok); } .tn-take:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hist-sum { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; } .hist-sum b { color: var(--text); }
+  .hist-feed { max-height: 56vh; overflow-y: auto; padding-right: 4px; }
+  .hist-day { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .hist-it { display: flex; gap: 12px; align-items: flex-start; padding: 10px 4px; border-bottom: 1px solid color-mix(in srgb, var(--line) 55%, transparent); }
+  .hist-av { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--ink); font-weight: 800; font-size: 12px; } .hist-av.st { background: var(--ok-bg); color: var(--ok); }
+  .hist-tx { flex: 1 1 auto; min-width: 0; } .hist-tx p { margin: 0; line-height: 1.55; overflow-wrap: anywhere; } .hist-tx small { color: var(--muted); font-size: 12.5px; } .hist-tx p small { font-size: 12.5px; }
+  .hist-tx s { color: var(--muted); } .hist-tx b.P { color: var(--ok); } .hist-tx b.E { color: var(--warn); }
+  .hist-it time { flex: 0 0 auto; color: var(--muted); font-size: 12.5px; font-family: var(--mono); padding-top: 2px; }
+  .hist-k { display: inline-block; padding: 0 8px; border-radius: 6px; font-size: 12.5px; font-weight: 700; } .hist-k.mk { background: var(--soft); color: var(--ink); } .hist-k.at { background: var(--ok-bg); color: var(--ok); }
   .tn-h { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 4px; } .tn-h:not(:first-child) { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
   .tn-a { display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
   .tn-a:hover, .tn-a[aria-expanded="true"] { background: var(--soft); color: var(--text); }
@@ -525,7 +532,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .back:hover .bk-ic { transform: translateX(-3px); }
   .back:active { transform: scale(.97); }
 
-  .overlay { position: fixed; inset: 0; background: rgba(5,5,4,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; z-index: 20; animation: fade .15s ease-out; }
+  .overlay { position: fixed; inset: 0; background: rgba(5,5,4,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; z-index: 40; animation: fade .15s ease-out; }
   .overlay .panel { width: min(560px, 100%); max-height: 92vh; overflow: auto; animation: rise .18s ease-out; }
   .overlay .panel.wide { width: min(860px, 100%); }
   @keyframes fade { from { opacity: 0; } }
@@ -4395,28 +4402,55 @@ const BOOT = null;
     o.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
     onReady(o, close);
   }
-  /* who changed what: every mark and attendance change of a group (or a whole course), newest first */
+  /* who changed what: every mark and attendance change of a group (or a whole course), newest first, as plain sentences under each day */
   function historyDialog(course, group) {
-    const ST = { P: 'Present', E: 'Excused', A: 'Empty', '': 'Empty' };
+    const ST = { P: 'present', E: 'excused' };
     dialog('<span class="pill">' + esc(course) + (group ? ' &middot; group ' + esc(group) : '') + '</span><h1 style="font-size:26px;margin-top:12px">History</h1>' +
-      '<p class="sub">Every mark and attendance change, with the TA who made it. Newest first.</p>' +
+      '<p class="sub">Who changed what, and when. The newest change is at the top.</p>' +
       '<div class="hist-tools"><input class="in" id="hq" type="search" placeholder="Search a student, an ID or a TA"><div class="seg" id="hk"><button type="button" class="on" data-k="">All</button><button type="button" data-k="Mark">Marks</button><button type="button" data-k="Attendance">Attendance</button></div></div>' +
-      '<div class="table-wrap hist-wrap"><table><thead><tr><th>When</th><th>By</th><th>Student</th>' + (group ? '' : '<th>Group</th>') + '<th>Change</th></tr></thead><tbody id="hrows"><tr><td colspan="5" style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
+      '<p class="hist-sum" id="hsum"></p><div class="hist-feed" id="hrows"><p class="note">Loading</p></div>' +
       '<div class="row" style="margin-top:16px"><button class="btn ghost" data-close type="button">Close</button></div>',
       async (o) => {
         o.querySelector('.panel').classList.add('wide');
         let rows = [], kind = '', q = '';
-        const val = (x, v) => x.kind === 'Attendance' ? ST[v] || v : v === '' ? '&ndash;' : esc(v);
+        const tag = (x) => '<span class="hist-k ' + (x.kind === 'Mark' ? 'mk' : 'at') + '">' + esc(x.what) + '</span>';
+        /* one change as a sentence: "gave 4 in Quiz 1", "changed Quiz 1 from 4 to 5", "marked present in Week 3" */
+        const say = (x) => {
+          if (x.kind === 'Mark') {
+            if (x.from === '') return 'gave <b>' + esc(x.to) + '</b> in ' + tag(x);
+            if (x.to === '') return 'removed the mark <b>' + esc(x.from) + '</b> of ' + tag(x);
+            return 'changed ' + tag(x) + ' from <s>' + esc(x.from) + '</s> to <b>' + esc(x.to) + '</b>';
+          }
+          if (x.how === 'Self') return 'checked in with the QR code in ' + tag(x);
+          const was = ST[x.from], now = ST[x.to], src = x.how === 'Import' ? ' <small>(from an Excel sheet)</small>' : '';
+          if (!now) return 'removed the attendance of ' + tag(x) + (was ? ' <small>(was ' + was + ')</small>' : '') + src;
+          if (!was) return 'marked <b class="' + x.to + '">' + now + '</b> in ' + tag(x) + src;
+          return 'changed ' + tag(x) + ' from <s>' + was + '</s> to <b class="' + x.to + '">' + now + '</b>' + src;
+        };
+        const ampm = (hm) => { const [h, m] = hm.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); };
+        const dayOf = (t) => {
+          const d = new Date(t.slice(0, 10) + 'T00:00:00'), today = new Date(); today.setHours(0, 0, 0, 0);
+          const n = Math.round((today - d) / 864e5);
+          return n === 0 ? 'Today' : n === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+        };
         const paint = () => {
-          const shown = rows.filter(x => (!kind || x.kind === kind) && (!q || (x.name + ' ' + x.id + ' ' + x.by + ' ' + x.what).toLowerCase().indexOf(q) >= 0));
-          o.querySelector('#hrows').innerHTML = shown.length ? shown.map(x => '<tr><td class="mono" style="white-space:nowrap">' + esc(x.t) + '</td><td><b>' + esc(x.by || 'Unknown') + '</b></td><td>' + esc(x.name) + '<small class="hist-id">' + esc(x.id) + '</small></td>' + (group ? '' : '<td>' + esc(x.group) + '</td>') +
-            '<td><span class="hist-k ' + (x.kind === 'Mark' ? 'mk' : 'at') + '">' + esc(x.what) + '</span> ' + val(x, x.from) + ' &rarr; <b>' + val(x, x.to) + '</b></td></tr>').join('')
-            : '<tr><td colspan="5" style="color:var(--muted)">' + (rows.length ? 'Nothing matches.' : 'No changes yet.') + '</td></tr>';
+          const shown = rows.filter(x => (!kind || x.kind === kind) && (!q || (x.name + ' ' + x.id + ' ' + x.by + ' ' + x.what + ' ' + x.group).toLowerCase().indexOf(q) >= 0));
+          const tas = new Set(shown.map(x => x.by));
+          o.querySelector('#hsum').innerHTML = shown.length ? '<b>' + shown.length + '</b> ' + (shown.length === 1 ? 'change' : 'changes') + ' by <b>' + tas.size + '</b> ' + (tas.size === 1 ? 'person' : 'people') : '';
+          let day = '', html = '';
+          shown.forEach(x => {
+            const d = dayOf(x.t);
+            if (d !== day) { day = d; html += '<h3 class="hist-day">' + esc(d) + '</h3>'; }
+            const self = x.how === 'Self', who = self ? x.name : (x.by || 'Unknown');
+            html += '<div class="hist-it"><span class="hist-av' + (self ? ' st' : '') + '">' + esc(initials(who)) + '</span><div class="hist-tx"><p><b>' + esc(who) + '</b> ' + say(x) + (self ? '' : ' for <b>' + esc(x.name) + '</b>') + '</p>' +
+              '<small>Group ' + esc(x.group) + ' &middot; ID ' + esc(x.id) + (self ? ' &middot; by the student' : '') + '</small></div><time>' + ampm(x.t.slice(11)) + '</time></div>';
+          });
+          o.querySelector('#hrows').innerHTML = html || '<p class="note">' + (rows.length ? 'Nothing matches.' : 'No changes yet.') + '</p>';
         };
         o.querySelector('#hq').oninput = (e) => { q = e.target.value.trim().toLowerCase(); paint(); };
         o.querySelectorAll('#hk [data-k]').forEach(b => b.onclick = () => { kind = b.dataset.k; o.querySelectorAll('#hk button').forEach(x => x.classList.toggle('on', x === b)); paint(); });
         try { rows = await api('changeHistory', PIN, course, group || null); paint(); }
-        catch (e) { o.querySelector('#hrows').innerHTML = '<tr><td colspan="5" class="err">' + esc(errMsg(e)) + '</td></tr>'; }
+        catch (e) { o.querySelector('#hrows').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; }
       });
   }
   function parseList(text) {
