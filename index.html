@@ -93,6 +93,9 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .card h3 { font-family: var(--display); font-size: 25px; font-weight: 700; letter-spacing: -.02em; margin: 14px 0 6px; line-height: 1.15; }
   .card p { color: var(--muted); margin: 0 0 14px; font-size: 15px; line-height: 1.5; }
   .pill { display: inline-block; background: var(--soft); color: var(--ink); font-family: var(--mono); font-weight: 700; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 4px 9px; }
+  .gta-src { margin-left: 8px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; font-weight: 600; }
+  .gwhen { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .q-g em.q-ta { color: var(--text); opacity: .75; }
   .pill.sched { margin-left: 6px; background: var(--card2); color: var(--text); }
   .pill.green { background: var(--ok-bg); color: var(--ok); margin-left: 6px; }
   .pill.green::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; animation: pulse 1.6s infinite; }
@@ -373,7 +376,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .acct { position: fixed; top: 16px; right: 16px; z-index: 30; display: flex; align-items: center; gap: 10px; }
   body.has-nav .acct { top: 0; left: 0; right: 0; padding: 10px 16px 10px 20px; background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--line); }
   body.has-nav .wrap { padding-top: 92px; }
-  .nav-brand { display: inline-flex; align-items: center; gap: 10px; margin-right: auto; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; }
+  .nav-brand { white-space: nowrap; display: inline-flex; align-items: center; gap: 10px; margin-right: auto; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; }
   .nav-brand[hidden] { display: none; }
   .nb-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--grad2), var(--accent)); display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
   .nb-mark i { width: 3px; height: 13px; border-radius: 2px; background: #fff; }
@@ -385,7 +388,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .nav-menu .tb { border-color: transparent; box-shadow: none; justify-content: flex-start; }
   .nav-menu .tb:hover { transform: none; background: var(--soft); }
   #navMoreBox { display: none; }
-  @media (max-width: 1260px) { .nav-tools .tb span { display: none; } .nav-tools .tb { padding: 9px; } .nav-tools .tb.primary span { display: inline; } .nav-tools .tb.primary { padding: 8px 13px; } }
+  @media (max-width: 1420px) { .nav-tools .tb span { display: none; } .nav-tools .tb { padding: 9px; } .nav-tools .tb.primary span { display: inline; } .nav-tools .tb.primary { padding: 8px 13px; } }
   @media (max-width: 760px) { .nav-tools { display: none; } body.has-nav #navMoreBox:not([hidden]) { display: block; } .nav-brand b { display: none; } body.has-nav .wrap { padding-top: 80px; } }
   body.projector .acct { display: none; }
   .acct-slot { position: relative; }
@@ -3790,8 +3793,11 @@ const BOOT = null;
           links = '<button class="link" data-claim="' + i + '">This is my group &rarr;</button>';
         }
         const pct = g.count ? Math.round(100 * (g.registered || 0) / g.count) : 0;
-        return '<div class="grow' + (g.live ? ' is-live' : '') + '" data-c="' + esc(g.course) + '" data-q="' + esc((g.group + ' ' + g.ta + ' ' + g.course).toLowerCase()) + '"><div class="gcode">' + esc(g.group) + '</div>' +
-          '<div><div class="gta' + (g.ta ? '' : ' none') + '">' + (g.ta ? esc(g.ta) : 'No TA yet') + (g.live ? '<span class="pill green">Live now</span>' : '') + '</div>' +
+        const sl = slotsOf(g.course, g.group), sTa = sl.length ? sl[0].ta : '', who = g.ta || sTa;
+        const when = sl.map(x => DAY3[x.day] + ' ' + t12(x.start) + (x.room ? ' &middot; ' + esc(x.room) : '')).join(', ');
+        return '<div class="grow' + (g.live ? ' is-live' : '') + '" data-c="' + esc(g.course) + '" data-q="' + esc((g.group + ' ' + g.ta + ' ' + sTa + ' ' + g.course).toLowerCase()) + '"><div class="gcode">' + esc(g.group) + '</div>' +
+          '<div><div class="gta' + (who ? '' : ' none') + '">' + (who ? esc(who) : 'No TA yet') + (!g.ta && sTa ? '<small class="gta-src" title="This group has no TA account in the site yet. The name is from the schedule.">schedule</small>' : '') + (g.live ? '<span class="pill green">Live now</span>' : '') + '</div>' +
+          (when ? '<div class="gwhen">' + when + '</div>' : '') +
           '<div class="gmeta">' + g.count + ' students, ' + (g.registered || 0) + ' phones</div><div class="gbar" title="' + pct + '% of phones registered"><i style="width:' + pct + '%"></i></div></div>' +
           (links ? '<div class="links">' + links + '</div>' : '<div class="owner">Belongs to ' + esc(g.ta) + '</div>') + '</div>';
       };
@@ -4216,7 +4222,7 @@ const BOOT = null;
       /* groups */
       if (!grp && groups.length > 1) {
         const gs = groups.map(g => { const rs = C.rows.filter(r => r.group === g), ps = rs.filter(r => r.pct !== '').map(r => Number(r.pct)), gr = rs.filter(r => Object.keys(r.scores || {}).length || (C.attendanceMax && r.pct !== ''));
-          return { g: g, ta: rs[0] ? rs[0].ta : '', n: rs.length, pct: avgOf(ps), risk: rs.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length, tot: avgOf(gr.map(r => Number(r.total))) }; });
+          return { g: g, ta: (rs[0] && rs[0].ta) || ((slotsOf(course, g)[0] || {}).ta || ''), n: rs.length, pct: avgOf(ps), risk: rs.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length, tot: avgOf(gr.map(r => Number(r.total))) }; });
         h += '<section class="ins-card"><div class="ins-h"><h2>Groups</h2><span>Press a group to see only that group.</span></div><div class="table-wrap"><table><thead><tr><th>Group</th><th>TA</th><th>Students</th><th>Average attendance</th><th>At risk</th>' + (maxT ? '<th>Average total</th>' : '') + '</tr></thead><tbody>' +
           gs.map(x => '<tr data-grp="' + esc(x.g) + '"><td><b>' + esc(x.g) + '</b></td><td>' + esc(x.ta || '') + '</td><td>' + x.n + '</td><td><span class="mrow">' + meter(x.pct, x.pct != null && x.pct < .75) + '<b>' + pctS(x.pct) + '</b></span></td>' +
             '<td>' + (x.risk ? '<span class="chip A" style="min-width:0">' + x.risk + '</span>' : '0') + '</td>' + (maxT ? '<td>' + (x.tot == null ? '&ndash;' : Math.round(x.tot * 10) / 10 + ' / ' + maxT) + '</td>' : '') + '</tr>').join('') + '</tbody></table></div></section>';
@@ -4762,8 +4768,9 @@ const BOOT = null;
       (courses.length > 1 && !C ? '<div class="q-course">' + courses.map(c => '<button type="button" class="q-cbtn' + (c === quickCourse ? ' on' : '') + '" data-qc="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' : '') +
       '<div class="q-letters">' + letters.map(b => '<div class="q-lrow"><button type="button" class="q-letter" data-ql="' + esc(b.L) + '" title="Pick every ' + esc(b.L) + ' group">' + esc(b.L) + '</button><div class="q-chips">' +
         b.gs.map(g => { const sl = slotsOf(g.course, g.group), lab = sl.map(x => DAY3[x.day] + ' ' + t12(x.start) + (x.room ? ' · ' + x.room : '')).join(', '), isNow = now.some(x => x.group === g.group);
+          const gta = g.ta || (sl[0] && sl[0].ta) || '';
           return '<button type="button" class="q-g' + (sel.indexOf(g.group) >= 0 ? ' on' : '') + (isNow ? ' now' : '') + '" data-qg="' + esc(g.group) + '" aria-pressed="' + (sel.indexOf(g.group) >= 0) + '"' +
-            (sl.length ? ' title="' + esc(lab + (sl[0].ta ? ' · ' + sl[0].ta : '')) + '"' : '') + '><span class="q-gt"><b>' + esc(g.group) + '</b><small>' + g.count + '</small></span>' + (lab ? '<em>' + esc(lab) + '</em>' : '') + '<i class="q-tick" aria-hidden="true"></i></button>'; }).join('') + '</div></div>').join('') + '</div>' + allBtn +
+            (sl.length ? ' title="' + esc(lab + (sl[0].ta ? ' · ' + sl[0].ta : '')) + '"' : '') + '><span class="q-gt"><b>' + esc(g.group) + '</b><small>' + g.count + '</small></span>' + (lab ? '<em>' + esc(lab) + '</em>' : '') + (gta && gta !== D.me.name ? '<em class="q-ta">' + esc(gta) + '</em>' : '') + '<i class="q-tick" aria-hidden="true"></i></button>'; }).join('') + '</div></div>').join('') + '</div>' + allBtn +
       '<div class="q-opts"><label class="q-week"><span>Week</span><select id="qw">' + weekOpts + '</select></label>' +
         '<div class="q-mins" role="radiogroup" aria-label="Minutes open"><span>Open for</span>' + [10, 15, 20, 30].map(n => '<button type="button" role="radio" data-qm="' + n + '" aria-checked="' + (n === quickMins) + '">' + n + ' min</button>').join('') + '</div></div>' +
       '<p class="q-note">One QR for every group you pick. Students of any other group of ' + esc(quickCourse) + ' can scan it too and are marked in their own group. No internet? Type their ID on the QR screen.</p>' +
