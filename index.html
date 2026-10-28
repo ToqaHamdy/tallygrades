@@ -185,6 +185,34 @@
   .cview button { background: none; border: 0; padding: 7px 14px; font-weight: 600; font-size: 14px; color: var(--muted); }
   .cview button + button { border-left: 1px solid var(--line); }
   .cview button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+  .ccards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; margin: 0 0 30px; }
+  .ccard { display: flex; align-items: center; gap: 14px; padding: 18px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; color: var(--text); text-decoration: none; box-shadow: var(--shadow); transition: border-color .15s, transform .15s; }
+  .ccard:hover { border-color: var(--ink); transform: translateY(-2px); }
+  .cbadge { width: 52px; height: 52px; flex: none; display: grid; place-items: center; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-family: var(--display); font-size: 20px; font-weight: 800; }
+  .cinfo { display: grid; gap: 3px; min-width: 0; }
+  .cinfo b { font-family: var(--display); font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .cinfo small { color: var(--muted); font-size: 13px; }
+  .clive { display: flex; align-items: center; gap: 6px; color: var(--ok) !important; font-weight: 600; }
+  .ccard .go { margin-left: auto; color: var(--muted); font-size: 22px; transition: transform .15s; }
+  .ccard:hover .go { color: var(--ink); transform: translateX(4px); }
+  .gstat.gs-live { border-color: var(--ok); } .gstat.gs-live b { color: var(--ok); }
+  .acct { position: fixed; top: 16px; right: 16px; z-index: 30; }
+  .acct-btn { width: 46px; height: 46px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); background: var(--accent); color: var(--on-accent);
+    font-family: var(--display); font-weight: 800; font-size: 16px; display: grid; place-items: center; padding: 0; box-shadow: 0 8px 24px -10px rgba(0,0,0,.6); }
+  .acct-btn.out { background: var(--card); color: var(--text); border-color: var(--line); }
+  .acct-btn:hover { filter: brightness(1.08); }
+  .acct-panel { position: absolute; right: 0; top: 56px; width: min(340px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow: auto; background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.7); padding: 18px; animation: rise .15s ease-out; }
+  .acct-me { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .acct-me b { display: block; font-size: 16px; } .acct-me small { color: var(--muted); font-size: 13px; }
+  .acct-av { width: 50px; height: 50px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-family: var(--display); font-weight: 800; font-size: 18px; }
+  .acct-sec h4 { font-family: var(--mono); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 16px 0 6px; }
+  .acct-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; margin: 0 -10px; border-radius: 10px; color: var(--text); text-decoration: none; font-size: 14px; }
+  .acct-row span { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+  .acct-row small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .acct-row .acct-sub { flex-basis: 100%; white-space: normal; }
+  a.acct-row:hover { background: var(--card2); }
+  .acct-out { width: 100%; margin-top: 16px; color: var(--err); }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2877,6 +2905,9 @@ const BOOT = null;
   }
 
   /* =============== STAFF =============== */
+  let courseOnly = null;   // the course page being shown (#course/<name>), or null for the home page
+  const courseHash = (c) => '#course/' + encodeURIComponent(c);
+  const initials = (t) => String(t || '').replace(/\(.*?\)/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
   let courseView = {};
   try { courseView = JSON.parse(store.sget('tg_cview') || '{}') || {}; } catch (e) {}
   let PIN = store.get('tg_token') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
@@ -2921,16 +2952,18 @@ const BOOT = null;
     const m = location.hash.match(/^#(group|grades|team)\/([^/]*)\/([^/]*)$/);
     if (m && m[1] === 'team') {
       const t = teamOf(decodeURIComponent(m[2]), Number(decodeURIComponent(m[3])));
-      if (t) return teamPage(t);
+      if (t) { acct(); return teamPage(t); }
       toast('Team not found.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     } else if (m) {
       const c = decodeURIComponent(m[2]), gr = decodeURIComponent(m[3]);
       const g = D.groups.find(x => x.course === c && x.group === gr);
-      if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); return m[1] === 'grades' ? gradesPage(g) : groupPage(g); }
+      if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); acct(); return m[1] === 'grades' ? gradesPage(g) : groupPage(g); }
       toast('This group is not one of yours.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
+    const mc = location.hash.match(/^#course\/([^/]*)$/);
+    courseOnly = mc ? decodeURIComponent(mc[1]) : null;
     stopTimers();
     if (!fresh) { try { D = await api('whoami', PIN); } catch (e) {} }
     dashboard();
@@ -2945,7 +2978,7 @@ const BOOT = null;
     state.setup ? landingView() : setupView();
   }
   function landingView() {
-    stopTimers();
+    stopTimers(); acct();
     const card = (pill, title, text, id) => '<button class="door" id="' + id + '" type="button"><span class="pill">' + pill + '</span><span class="door-t">' + title + '</span><span class="door-d">' + text + '</span><span class="door-go" aria-hidden="true">&rarr;</span></button>';
     app.innerHTML = '<div class="wrap"><div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">Attendance and grades. Who are you?</p></div></div><div class="doors">' +
       card('Student', 'I am a student', 'Register your phone once. In the section, scan the QR code on the screen to check in.', 'asStudent') +
@@ -2955,8 +2988,42 @@ const BOOT = null;
     $('asTa').onclick = () => loginView('TA');
     $('asAdmin').onclick = () => loginView('Admin');
   }
+  /* ----- the circle at the top right: who is logged in, their courses and groups, and Log out (Log in when nobody is) ----- */
+  function acct() {
+    let el = $('acct');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'acct'; el.className = 'acct hide-proj'; document.body.appendChild(el);
+      document.addEventListener('click', (e) => { const p = $('acctp'); if (p && !p.hidden && !el.contains(e.target)) { p.hidden = true; $('acctb').setAttribute('aria-expanded', 'false'); } });
+      document.addEventListener('keydown', (e) => { const p = $('acctp'); if (e.key === 'Escape' && p && !p.hidden) { p.hidden = true; $('acctb').setAttribute('aria-expanded', 'false'); $('acctb').focus(); } });
+    }
+    if (!PIN || !D) {
+      el.innerHTML = '<button class="acct-btn out" id="acctb" type="button" title="Log in" aria-label="Log in"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>';
+      $('acctb').onclick = () => { stopTimers(); loginView('TA'); };
+      return;
+    }
+    const me = D.me, isAdmin = me.role === 'Admin';
+    const mine = D.groups.filter(g => g.ta === me.name).sort((a, b) => numeric(a.course + a.group, b.course + b.group));
+    const myStaff = (D.staff || []).find(x => x.name === me.name);
+    const courses = isAdmin ? (D.allCourses || []) : (me.courses && me.courses.length ? me.courses : [...new Set(D.groups.map(g => g.course))]);
+    const tas = isAdmin ? (D.staff || []).filter(x => x.role !== 'Admin' && x.status === 'active') : [];
+    el.innerHTML = '<button class="acct-btn" id="acctb" type="button" aria-haspopup="true" aria-expanded="false" title="' + esc(me.name) + '">' + esc(initials(me.name)) + '</button>' +
+      '<div class="acct-panel" id="acctp" hidden role="dialog" aria-label="Account">' +
+        '<div class="acct-me"><span class="acct-av">' + esc(initials(me.name)) + '</span><div><b>' + esc(me.name) + '</b><small>' + (isAdmin ? 'Admin' : 'TA') + (myStaff && myStaff.username ? ', username ' + esc(myStaff.username) : '') + '</small></div></div>' +
+        '<div class="acct-sec"><h4>Courses</h4>' + (courses.length ? courses.map(c => '<a class="acct-row" href="' + courseHash(c) + '"><span>' + esc(c) + '</span><small>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</small></a>').join('') : '<p class="note">No courses yet.</p>') + '</div>' +
+        '<div class="acct-sec"><h4>My groups (' + mine.length + ')</h4>' + (mine.length ? mine.map(g => '<a class="acct-row" href="' + pageHash('group', g) + '"><span>' + (g.live ? '<i class="odot"></i>' : '') + '<b>' + esc(g.group) + '</b> ' + esc(g.course) + '</span><small>' + g.count + ' students</small></a>').join('')
+          : '<p class="note">' + (isAdmin ? 'No groups of your own. You see every group.' : 'No groups yet. Open a course and press This is my group.') + '</p>') + '</div>' +
+        (isAdmin ? '<div class="acct-sec"><h4>TAs (' + tas.length + ')</h4>' + (tas.length ? tas.map(t => { const gs = D.groups.filter(g => g.ta === t.name);
+            return '<div class="acct-row static"><span><b>' + esc(t.name) + '</b><small class="acct-sub">' + (gs.length ? gs.map(g => esc(g.group)).join(', ') : 'no groups') + '</small></span><small>' + gs.length + '</small></div>'; }).join('') : '<p class="note">No TAs yet.</p>') +
+          '<button class="link" id="acctTas" type="button" style="margin-top:8px">Manage TAs &rarr;</button></div>' : '') +
+        '<button class="btn ghost acct-out" id="acctOut" type="button">Log out</button></div>';
+    const p = $('acctp'), b = $('acctb');
+    b.onclick = (e) => { e.stopPropagation(); p.hidden = !p.hidden; b.setAttribute('aria-expanded', String(!p.hidden)); };
+    p.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { p.hidden = true; }));
+    $('acctOut').onclick = logout;
+    if ($('acctTas')) $('acctTas').onclick = () => { p.hidden = true; tab = 'staff'; go(''); };
+  }
   function signedIn(r) { D = r.dash; PIN = r.token; store.set('tg_token', PIN); tab = 'mine'; route(true); }
-  function loggedOut() { PIN = ''; store.set('tg_token', ''); stopTimers(); document.querySelectorAll('.overlay').forEach(o => o.remove()); landingView(); toast('Please log in again.'); }
+  function loggedOut() { PIN = ''; D = null; store.set('tg_token', ''); stopTimers(); document.querySelectorAll('.overlay').forEach(o => o.remove()); landingView(); toast('Please log in again.'); }
   const loginFields = (pre) => '<label class="f">Username<input class="in" id="us" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(pre || '') + '"></label>' +
     '<label class="f">Password<input class="in" id="pw" type="password" autocomplete="current-password"></label>';
   function setupView() {
@@ -3015,7 +3082,7 @@ const BOOT = null;
       } catch (err) { $('er').textContent = errMsg(err); $('go').disabled = false; }
     };
   }
-  function logout() { if (PIN) api('logout', PIN).catch(() => {}); PIN = ''; store.set('tg_token', ''); store.sset('tg_open', null); opened = []; stopTimers(); history.replaceState(null, '', location.pathname + location.search); landingView(); }
+  function logout() { if (PIN) api('logout', PIN).catch(() => {}); PIN = ''; D = null; store.set('tg_token', ''); store.sset('tg_open', null); opened = []; stopTimers(); history.replaceState(null, '', location.pathname + location.search); landingView(); }
 
   /* ----- dashboard ----- */
   function dashboard() {
@@ -3027,18 +3094,20 @@ const BOOT = null;
     const teams = D.teams || [];
     if (tab === 'teams') tab = 'mine';
     if (tab === 'mine' && !mine.length && groups.length) tab = 'all';
-    const list = tab === 'mine' ? mine : groups;
+    if (courseOnly && !groups.some(g => g.course === courseOnly)) { courseOnly = null; history.replaceState(null, '', location.pathname + location.search); lastHash = ''; }
+    const C = courseOnly;
+    const list = C ? groups.filter(g => g.course === C) : tab === 'mine' ? mine : groups;
     const tabs = [['mine', 'My groups (' + mine.length + ')'], ['all', 'All groups (' + groups.length + ')']];
     const waiting = isAdmin ? D.staff.filter(x => x.status === 'pending') : [];
     if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin' && x.status !== 'pending').length + ')' + (waiting.length ? ', ' + waiting.length + ' waiting' : '')]);
     if (isAdmin) tabs.push(['courses', 'Courses (' + (D.allCourses || []).length + ')']);
     let body = '';
-    if (tab === 'courses') {
+    if (!C && tab === 'courses') {
       const all = D.allCourses || [];
       body = all.length ? '<p class="sub" style="margin:-8px 0 22px">The grade distribution of each course. It is the same for every group of the course. The attendance mark is calculated from each student\'s attendance %.</p>' +
         all.map((c, ci) => '<section class="course cset"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</span></div><div id="cs' + ci + '"><p class="note" style="padding:16px 0">Loading</p></div></section>').join('')
         : '<div class="empty">No courses yet. Upload a course Excel sheet first, then set its grades here.</div>';
-    } else if (tab === 'staff') {
+    } else if (!C && tab === 'staff') {
       const crsText = (st) => '<p style="margin:0">' + (st.courses.length ? st.courses.map(esc).join('<br>') : 'All courses') + '</p>';
       body = (waiting.length ? '<h2 style="font-size:20px;margin:0 0 14px">Waiting for you to confirm</h2><div class="grid" style="margin-bottom:30px">' + waiting.map(st =>
           '<div class="card" style="border-top-color:var(--warn)"><span class="pill" style="background:var(--warn-bg);color:var(--warn)">New request</span><h3>' + esc(st.name) + '</h3><p>Username: ' + esc(st.username) + '</p>' + crsText(st) +
@@ -3077,9 +3146,10 @@ const BOOT = null;
           '<div class="links" style="margin:12px 0 6px"><a class="link" href="' + tHash(t) + '">Grade team &rarr;</a><a class="link newtab" href="' + tHash(t) + '" target="_blank" rel="noopener" title="Open in a new browser tab">&#8599;</a></div></div>').join('');
       const sections = [];
       list.forEach((g, i) => { let sec = sections.find(x => x.course === g.course); if (!sec) { sec = { course: g.course, rows: [] }; sections.push(sec); } sec.rows.push([g, i]); });
-      body = '<div class="toolbar">' + (list.length > 4 ? '<div class="filters"><select class="in" id="fc"><option value="">All courses</option>' +
-        courses.map(c => '<option' + (c === courseFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' +
-        '<input class="in" id="fq" type="search" placeholder="Search a group or TA" value="' + esc(groupQuery) + '"></div>' : '<div></div>') +
+      if (C) courseFilter = '';
+      body = '<div class="toolbar">' + (list.length > 4 ? '<div class="filters">' + (C ? '' : '<select class="in" id="fc"><option value="">All courses</option>' +
+        courses.map(c => '<option' + (c === courseFilter ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>') +
+        '<input class="in" id="fq" type="search" placeholder="' + (C ? 'Search a group, TA or team' : 'Search a group or TA') + '" value="' + esc(groupQuery) + '"></div>' : '<div></div>') +
         '<div class="acts"><button class="btn" type="button" id="upload">+ Upload an Excel sheet</button><button class="btn ghost" type="button" id="addGroup">Paste one group</button></div></div>' +
         (list.length ? '' : '<div class="empty">No groups yet. Upload the course Excel sheet, or paste one group.</div>') +
         sections.map(sec => {
@@ -3091,7 +3161,7 @@ const BOOT = null;
           const nT = teams.filter(t => t.course === sec.course).length, view = nT && courseView[sec.course] === 'teams' ? 'teams' : 'groups';
           const sw = nT ? '<div class="cview" role="tablist"><button type="button" role="tab" data-cv="' + esc(sec.course) + '|groups" aria-selected="' + (view === 'groups') + '">Groups</button>' +
             '<button type="button" role="tab" data-cv="' + esc(sec.course) + '|teams" aria-selected="' + (view === 'teams') + '">Teams (' + nT + ')</button></div>' : '';
-          const head = '<section class="course" data-course="' + esc(sec.course) + '" data-view="' + view + '"><div class="course-head"><div class="ch-left"><h2>' + esc(sec.course) + '</h2>' + sw + '</div><span>' +
+          const head = '<section class="course" data-course="' + esc(sec.course) + '" data-view="' + view + '"><div class="course-head"><div class="ch-left">' + (C ? '' : '<h2>' + esc(sec.course) + '</h2>') + sw + '</div><span>' +
             (view === 'teams' ? nT + ' teams, ' + teams.filter(t => t.course === sec.course).reduce((n, t) => n + t.count, 0) + ' students'
               : sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') + sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students') + '</span></div>';
           if (view === 'teams') return head + '<div class="letters">' + teamBlocks(sec.course) + '</div></section>';
@@ -3105,10 +3175,31 @@ const BOOT = null;
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
     const top = '<button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
-      ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button><button class="link" id="out">Log out</button>'
-      : '<button class="link" id="out">Log out</button>');
-    app.innerHTML = '<div class="wrap"><div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">' + hello + '</p></div><div class="links" style="margin:0">' + top + '</div></div>' +
-      '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>' + body + '</div>';
+      ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button>' : '');
+    let head;
+    if (C) {
+      /* one course: its summary, its grades (admin), then its groups or teams */
+      const ts = teams.filter(t => t.course === C), n = list.reduce((a, g) => a + g.count, 0), reg = list.reduce((a, g) => a + (g.registered || 0), 0);
+      const live = list.filter(g => g.live).length, tas = new Set(list.map(g => g.ta).filter(Boolean)).size;
+      const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
+      head = '<button class="back" id="home" type="button">&larr; All courses</button>' +
+        '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
+        '<div class="links" style="margin:0"><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
+        '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
+          tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' +
+        (isAdmin ? '<section class="course cset" style="margin-bottom:30px"><div class="course-head"><h2 style="font-size:20px">Grades</h2><span>the same for every group</span></div><div id="cs0"><p class="note" style="padding:16px 0">Loading</p></div></section>' : '');
+    } else {
+      /* home: a button for each course, then the tabs */
+      const cs = [...new Set(groups.map(g => g.course))].sort();
+      head = '<div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">' + hello + '</p></div><div class="links" style="margin:0">' + top + '</div></div>' +
+        (cs.length ? '<div class="ccards">' + cs.map(c => {
+          const gs = groups.filter(g => g.course === c), nt = teams.filter(t => t.course === c).length, lv = gs.filter(g => g.live).length;
+          return '<a class="ccard" href="' + courseHash(c) + '"><span class="cbadge">' + esc(initials(c)) + '</span><span class="cinfo"><b>' + esc(c) + '</b><small>' + gs.length + (gs.length === 1 ? ' group, ' : ' groups, ') +
+            gs.reduce((a, g) => a + g.count, 0) + ' students' + (nt ? ', ' + nt + (nt === 1 ? ' team' : ' teams') : '') + '</small>' + (lv ? '<small class="clive"><i class="odot"></i>' + lv + ' live now</small>' : '') + '</span><span class="go" aria-hidden="true">&rarr;</span></a>';
+        }).join('') + '</div>' : '') +
+        '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
+    }
+    app.innerHTML = '<div class="wrap">' + head + body + '</div>';
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
     on('[data-tab]', b => { tab = b.dataset.tab; dashboard(); });
     on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
@@ -3155,11 +3246,20 @@ const BOOT = null;
     if ($('fq')) $('fq').oninput = () => { groupQuery = $('fq').value.trim(); applyFilter(); };
     applyFilter();
     if ($('addStaff')) $('addStaff').onclick = addStaffDialog;
-    $('out').onclick = logout;
+    if ($('home')) $('home').onclick = () => go('');
+    if (C && isAdmin) courseSettings(C, 0);
+    /* the group dialogs start on this course */
+    if (C) {
+      const preset = (open) => () => { open(); const co = document.querySelector('.overlay #co'); if (co) co.value = C; };
+      if ($('upload')) $('upload').onclick = preset(uploadDialog);
+      if ($('addGroup')) $('addGroup').onclick = preset(addGroupDialog);
+      $('impatt').onclick = preset(importAttendanceDialog);
+    }
+    acct();
     if ($('seeReq')) $('seeReq').onclick = () => { tab = 'staff'; dashboard(); };
     $('regqr').onclick = registrationQrDialog;
     $('final').onclick = downloadFinal;
-    $('impatt').onclick = importAttendanceDialog;
+    if (!C) $('impatt').onclick = importAttendanceDialog;
     if ($('term')) $('term').onclick = termDialog;
     if ($('backup')) $('backup').onclick = downloadBackup;
     if (tab === 'courses') (D.allCourses || []).forEach((c, ci) => courseSettings(c, ci));
@@ -3562,7 +3662,7 @@ const BOOT = null;
     const mates = D.groups.filter(x => x.course === g.course && x.group !== g.group && (D.me.role === 'Admin' || x.ta === D.me.name)).sort((a, b) => numeric(a.group, b.group));
     let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
-    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; Groups</button>' + openBar(g, 'group') +
+    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; ' + esc(g.course) + '</button>' + openBar(g, 'group') +
       '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
       '<div class="links hide-proj" style="margin:0"><button class="link" id="gr">Grades &rarr;</button></div></div>' +
       '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
@@ -3574,7 +3674,7 @@ const BOOT = null;
       '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"></tbody></table></div>' +
       '<h2 style="font-size:18px;margin:26px 0 8px">Flags this week</h2><ul id="fl" class="note"></ul></div></div>';
 
-    $('bk').onclick = () => go('');
+    $('bk').onclick = () => go(courseHash(g.course));
     $('gr').onclick = () => go(pageHash('grades', g));
     bindBar(g, 'group');
     $('wk').onchange = () => { week = $('wk').value === 'all' ? 'all' : Number($('wk').value); lastQr = ''; $('livebox').innerHTML = ''; load(); };
@@ -3756,7 +3856,7 @@ const BOOT = null;
   async function gradesPage(g) {
     stopTimers();
     let V = null; const dirty = {};
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Groups</button>' + openBar(g, 'grades') +
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; ' + esc(g.course) + '</button>' + openBar(g, 'grades') +
       '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks, then press Save. Enter moves to the next student.</p></div></div>' +
       '<div class="links" style="margin:0"><a class="link" href="' + pageHash('group', g) + '">Attendance &rarr;</a><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
       '<div class="gstats" id="gst"></div>' +
@@ -3768,7 +3868,7 @@ const BOOT = null;
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
     leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
-    $('bk').onclick = () => go('');
+    $('bk').onclick = () => go(courseHash(g.course));
     bindBar(g, 'grades');
     $('sr').oninput = () => {
       const q = $('sr').value.trim().toLowerCase();
@@ -3881,7 +3981,7 @@ const BOOT = null;
       '<p class="note" style="margin-top:14px">Each mark is saved in the student\'s own group, so it also shows on that group\'s grades page.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
-    $('bk').onclick = () => { courseView[t.course] = 'teams'; store.sset('tg_cview', JSON.stringify(courseView)); go(''); };
+    $('bk').onclick = () => { courseView[t.course] = 'teams'; store.sset('tg_cview', JSON.stringify(courseView)); go(courseHash(t.course)); };
     $('sr').oninput = () => { const q = $('sr').value.trim().toLowerCase(); $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; }); };
     const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
     const level = (f) => f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
