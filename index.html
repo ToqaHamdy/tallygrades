@@ -437,8 +437,13 @@
   .btn.danger { background: transparent; color: var(--err); border-color: color-mix(in srgb, var(--err) 45%, transparent); }
   .note { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.55; }
   .err { color: var(--err); min-height: 20px; font-size: 14px; font-weight: 500; }
-  .back { background: none; border: 0; color: var(--muted); font-weight: 600; font-size: 14px; padding: 0; margin-bottom: 18px; }
-  .back:hover { color: var(--text); }
+  .back { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; padding: 5px 16px 5px 5px; border-radius: 999px; border: 1px solid var(--line); background: var(--card);
+    color: var(--text); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; box-shadow: var(--shadow); transition: border-color .2s, transform .25s cubic-bezier(.2,1.4,.4,1), box-shadow .2s; max-width: 100%; }
+  .back .bk-ic { flex: 0 0 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--grad2), var(--accent)); position: relative; transition: transform .3s cubic-bezier(.2,1.4,.4,1); }
+  .back .bk-ic::before { content: ""; position: absolute; left: 11px; top: 10px; width: 8px; height: 8px; border: solid #fff; border-width: 0 0 2.5px 2.5px; transform: rotate(45deg); }
+  .back:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: 0 12px 26px -14px var(--accent); }
+  .back:hover .bk-ic { transform: translateX(-3px); }
+  .back:active { transform: scale(.97); }
 
   .overlay { position: fixed; inset: 0; background: rgba(5,5,4,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; z-index: 20; animation: fade .15s ease-out; }
   .overlay .panel { width: min(560px, 100%); max-height: 92vh; overflow: auto; animation: rise .18s ease-out; }
@@ -462,19 +467,62 @@
   .codebox .lbl span + span { text-transform: none; letter-spacing: 0; }
   .codebox .lbl { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-family: var(--mono); font-weight: 700; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
   .digits { font-family: var(--mono); font-weight: 800; font-size: clamp(64px, 9vw, 132px); letter-spacing: .12em; color: var(--ink); line-height: 1.05; margin-top: 8px; }
-  .quick { border: 1px solid var(--line); border-left: 4px solid var(--accent, #d33); border-radius: 18px; background: var(--card); padding: 20px 22px; margin: 0 0 28px; }
-  .q-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
-  .q-head h2 { margin: 4px 0 0; font-size: 22px; }
-  .q-head select { max-width: 320px; }
+  .quick { position: relative; border-radius: 24px; padding: 26px 28px 22px; margin: 0 0 30px; background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; isolation: isolate; }
+  .quick::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(90% 120% at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%), radial-gradient(60% 80% at 0% 100%, color-mix(in srgb, var(--grad2) 9%, transparent), transparent 70%); }
+  .q-top { display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; }
+  .q-title { flex: 1 1 320px; min-width: 0; }
+  .q-title h2 { margin: 6px 0 8px; font-size: clamp(24px, 3vw, 32px); letter-spacing: -.03em; }
   .q-kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-  .q-live { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
-  .q-go { font-size: 17px; padding: 14px 20px; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
-  .q-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-  .q-picks .tg-pick small { color: var(--muted); font-size: 12px; }
-  .q-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-top: 14px; }
-  .q-row .f { flex: 0 1 260px; margin: 0; }
-  .q-open { font-size: 17px; padding: 13px 22px; }
-  .q-note { margin: 12px 0 0; }
+  .q-ai { display: inline-flex; align-items: flex-start; gap: 8px; font-size: 14.5px; color: var(--text); background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); padding: 8px 12px; border-radius: 12px; }
+  .q-ai svg { color: var(--accent); flex: 0 0 auto; margin-top: 2px; } .q-ai.muted { color: var(--muted); background: var(--card2); border-color: var(--line); }
+  .q-start { position: relative; flex: 0 0 auto; width: 168px; height: 168px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; color: #fff;
+    background: radial-gradient(120% 120% at 25% 15%, var(--grad2), var(--accent) 62%); box-shadow: 0 22px 50px -18px var(--accent), inset 0 2px 0 rgba(255,255,255,.3);
+    transition: transform .3s cubic-bezier(.2,1.4,.4,1), box-shadow .3s, filter .2s; }
+  .q-start:hover { transform: scale(1.05); box-shadow: 0 28px 60px -16px var(--accent), inset 0 2px 0 rgba(255,255,255,.3); }
+  .q-start:active { transform: scale(.96); }
+  .q-start:disabled { filter: grayscale(.8) brightness(.7); cursor: default; transform: none; }
+  .q-start:disabled .qs-ring { display: none; }
+  .qs-ring { position: absolute; inset: -8px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: qring 2.4s cubic-bezier(.2,.7,.2,1) infinite; }
+  .qs-ring::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: qring 2.4s cubic-bezier(.2,.7,.2,1) .6s infinite; }
+  @keyframes qring { 0% { transform: scale(.9); opacity: .7; } 100% { transform: scale(1.18); opacity: 0; } }
+  .qs-in { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 14px; }
+  .qs-in b { font-family: var(--display); font-size: 21px; letter-spacing: -.02em; }
+  .qs-in small { font-size: 12px; opacity: .9; font-weight: 600; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .q-start.going .qs-in svg { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+  .q-course { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .q-cbtn { border: 1px solid var(--line); background: var(--card2); color: var(--muted); border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+  .q-cbtn.on { color: var(--text); border-color: var(--accent); background: var(--soft); }
+  .q-letters { display: grid; gap: 10px; margin-top: 20px; }
+  .q-lrow { display: flex; align-items: center; gap: 10px; }
+  .q-letter { flex: 0 0 42px; height: 42px; border-radius: 12px; border: 1px dashed var(--line); background: transparent; color: var(--muted); font-family: var(--display); font-size: 20px; font-weight: 800; cursor: pointer; transition: color .2s, border-color .2s; }
+  .q-letter:hover { color: var(--accent); border-color: var(--accent); }
+  .q-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .q-g { position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 10px 16px 10px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--card2); color: var(--text); font: inherit; cursor: pointer;
+    transition: transform .25s cubic-bezier(.2,1.5,.4,1), border-color .2s, background-color .2s, box-shadow .2s; }
+  .q-g b { font-family: var(--display); font-size: 19px; } .q-g small { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .q-g:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+  .q-g.on { background: linear-gradient(135deg, var(--grad2), var(--accent)); border-color: transparent; color: #fff; box-shadow: 0 10px 22px -12px var(--accent); }
+  .q-g.on small { color: rgba(255,255,255,.85); }
+  .q-tick { position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%; background: var(--ok); border: 2px solid var(--card); transform: scale(0); transition: transform .3s cubic-bezier(.2,1.6,.4,1); }
+  .q-tick::after { content: ""; position: absolute; left: 6px; top: 3px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .q-g.on .q-tick { transform: scale(1); }
+  .q-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--line); }
+  .q-week, .q-mins { display: inline-flex; align-items: center; gap: 10px; }
+  .q-week span, .q-mins > span { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .q-week select { border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 600; }
+  .q-mins button { border: 1px solid var(--line); background: var(--card2); color: var(--muted); padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: -1px; }
+  .q-mins button:nth-of-type(1) { border-radius: 999px 0 0 999px; } .q-mins button:last-child { border-radius: 0 999px 999px 0; }
+  .q-mins button[aria-checked="true"] { background: var(--text); color: var(--bg); border-color: var(--text); position: relative; }
+  .q-note { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+  .q-livebox { display: grid; gap: 8px; margin-bottom: 18px; }
+  .q-liverow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; text-decoration: none; color: var(--text); background: var(--ok-bg); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); transition: transform .2s; }
+  .q-liverow:hover { transform: translateY(-2px); }
+  .q-pulse { width: 14px; height: 14px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: lp 1.6s infinite; flex: 0 0 auto; }
+  @keyframes lp { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }
+  .q-lt { flex: 1 1 auto; } .q-lt b { display: block; } .q-lt small { color: var(--muted); }
+  .q-lgo { font-weight: 700; color: var(--ok); white-space: nowrap; }
+  @media (max-width: 640px) { .quick { padding: 20px 18px; } .q-top { flex-direction: column; align-items: stretch; } .q-title { flex: 0 0 auto; } .q-mins { flex-wrap: wrap; gap: 6px 0; } .q-mins > span { flex-basis: 100%; } .q-mins button { padding: 7px 10px; } .q-start { width: 100%; height: 86px; border-radius: 20px; }
+    .qs-in { flex-direction: row; justify-content: center; gap: 12px; } .qs-in small { max-width: 160px; } .qs-ring { border-radius: 24px; } .qs-ring::after { border-radius: 28px; } }
   .room { display: flex; flex-direction: column; gap: 4px; padding-bottom: 16px; margin-top: 18px; border-bottom: 1px dashed var(--line); }
   .room > span { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
   .room > b { font-family: var(--display); font-size: clamp(72px, 9vw, 128px); line-height: .95; font-weight: 800; letter-spacing: -.05em; color: var(--text); display: inline-block; }
@@ -3247,7 +3295,7 @@ const BOOT = null;
   function registration(fromLanding) {
     const device = phoneId();
     const shell = (inner, withStatus) => {
-      app.innerHTML = '<div class="wrap">' + (fromLanding ? '<div class="stu"><button class="back" id="rbk" type="button">&larr; Back</button></div>' : '') + '<div class="stu panel"' + (fromLanding ? ' style="margin-top:0"' : '') + '>' + inner + '</div></div>';
+      app.innerHTML = '<div class="wrap">' + (fromLanding ? '<div class="stu"><button class="back" id="rbk" type="button"><span class="bk-ic" aria-hidden="true"></span>Back</button></div>' : '') + '<div class="stu panel"' + (fromLanding ? ' style="margin-top:0"' : '') + '>' + inner + '</div></div>';
       if (fromLanding) $('rbk').onclick = landingView;
       if (withStatus) showMyStatus();
     };
@@ -3540,7 +3588,7 @@ const BOOT = null;
       $('pav').innerHTML = avatar(me.name, me.photo, 'prof-av');
       $('phx').hidden = !me.photo;
     };
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Home</button>' +
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>Home</button>' +
       '<div class="top"><div><h1>Settings</h1><p class="sub">Your profile and password, and how the site looks on this device.</p></div></div>' +
       '<div class="setgrid">' +
       '<section class="panel set"><h2>Profile</h2><div class="prof"><div id="pav"></div><div class="prof-t"><b>' + esc(me.name) + '</b><small>' + (me.role === 'Admin' ? 'Admin' : 'TA') + (me.username ? ', username ' + esc(me.username) : '') + '</small>' +
@@ -3612,7 +3660,7 @@ const BOOT = null;
     };
   }
   function loginView(as, pre) {
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">' + (as === 'Admin' ? 'Admin' : 'TA') + '</span><h1 style="font-size:30px;margin-top:14px">Log in</h1>' +
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">' + (as === 'Admin' ? 'Admin' : 'TA') + '</span><h1 style="font-size:30px;margin-top:14px">Log in</h1>' +
       '<form class="form" id="f" style="margin-top:20px">' + loginFields(pre) +
       '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Log in</button></form>' +
       (as === 'Admin' ? '' : '<p class="note" style="margin-top:18px">New TA? <button class="link" id="reg" type="button" style="font-size:15px">Create an account</button></p>') + '</div></div>';
@@ -3631,7 +3679,7 @@ const BOOT = null;
   async function registerView() {
     let courses = [];
     try { courses = await api('courseList'); } catch (e) {}
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">New TA</span><h1 style="font-size:30px;margin-top:14px">Create an account</h1>' +
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>Back</button><div class="panel narrow" style="margin-top:0"><span class="pill">New TA</span><h1 style="font-size:30px;margin-top:14px">Create an account</h1>' +
       '<p class="sub">The admin confirms your account, then you can log in.</p>' +
       '<form class="form" id="f" style="margin-top:20px"><label class="f">Full name<input class="in" id="nm" autocomplete="name"></label>' + loginFields() +
       '<label class="f">Password again<input class="in" id="pw2" type="password" autocomplete="new-password"></label>' +
@@ -3754,7 +3802,7 @@ const BOOT = null;
       const ts = teams.filter(t => t.course === C), n = list.reduce((a, g) => a + g.count, 0), reg = list.reduce((a, g) => a + (g.registered || 0), 0);
       const live = list.filter(g => g.live).length, tas = new Set(list.map(g => g.ta).filter(Boolean)).size;
       const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
-      head = '<button class="back" id="home" type="button">&larr; All courses</button>' +
+      head = '<button class="back" id="home" type="button"><span class="bk-ic" aria-hidden="true"></span>All courses</button>' +
         '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
         '</div>' +
         '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
@@ -4094,7 +4142,7 @@ const BOOT = null;
   }
   async function insightsPage(wantCourse) {
     stopTimers();
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; ' + (wantCourse ? esc(wantCourse) : 'Home') + '</button><div class="top"><div><h1>Dashboard</h1><p class="sub">Attendance, grades, students at risk and teams.</p></div></div><div id="ins"><p class="note">Loading</p></div></div>';
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + (wantCourse ? esc(wantCourse) : 'Home') + '</button><div class="top"><div><h1>Dashboard</h1><p class="sub">Attendance, grades, students at risk and teams.</p></div></div><div id="ins"><p class="note">Loading</p></div></div>';
     $('bk').onclick = () => go(wantCourse ? courseHash(wantCourse) : '');
     let data;
     try { data = await api('askData', PIN); } catch (e) { $('ins').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
@@ -4600,6 +4648,25 @@ const BOOT = null;
     if (C) pool = pool.filter(g => g.course === C);
     return pool.sort((a, b) => numeric(a.course + a.group, b.course + b.group));
   }
+  /* it learns: every check-in you start is remembered on this device with its day and hour,
+     so next time at the same day and time the same groups are already picked */
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  function quickRemember(course, groups) {
+    let h = []; try { h = JSON.parse(store.get('tg_qhist') || '[]'); } catch (e) {}
+    const now = new Date();
+    h.push({ c: course, g: groups.slice().sort(numeric), d: now.getDay(), m: now.getHours() * 60 + now.getMinutes(), t: Date.now() });
+    store.set('tg_qhist', JSON.stringify(h.slice(-80)));
+  }
+  function quickGuess(course, valid) {
+    let h = []; try { h = JSON.parse(store.get('tg_qhist') || '[]'); } catch (e) {}
+    const now = new Date(), d = now.getDay(), m = now.getHours() * 60 + now.getMinutes();
+    const near = h.filter(x => x.c === course && x.d === d && Math.abs(x.m - m) <= 90 && x.g.every(g => valid.indexOf(g) >= 0));
+    if (!near.length) return null;
+    const count = {}; near.forEach(x => { const k = x.g.join('+'); count[k] = (count[k] || 0) + 1 + x.t / 1e14; });
+    const best = Object.keys(count).sort((a, b) => count[b] - count[a])[0];
+    return { groups: best.split('+'), times: near.filter(x => x.g.join('+') === best).length, day: DAYS[d] };
+  }
+  let quickMins = Number(store.get('tg_qmin')) || 15;
   function quickHtml(C) {
     const pool = quickPool(C);
     if (!pool.length) return '';
@@ -4609,35 +4676,59 @@ const BOOT = null;
     if (courses.indexOf(quickCourse) < 0) quickCourse = store.get('tg_quick_course') || '';
     if (courses.indexOf(quickCourse) < 0) quickCourse = courses[0];
     const groupsOf = pool.filter(g => g.course === quickCourse && !g.live);
+    const names = groupsOf.map(g => g.group);
     let saved = []; try { saved = JSON.parse(store.get('tg_quick_' + quickCourse) || '[]'); } catch (e) {}
-    const sel = saved.filter(x => groupsOf.some(g => g.group === x));
-    if (!sel.length && groupsOf.length) sel.push(groupsOf[0].group);
+    const guess = quickGuess(quickCourse, names);
+    let sel = guess ? guess.groups : saved.filter(x => names.indexOf(x) >= 0);
+    if (!sel.length && names.length) sel = [names[0]];
     const wk = D.currentWeek || defaultWeek(groupsOf[0] || pool[0]);
+    const wl = (D.weeks[wk - 1] || [wk, 'Week ' + wk])[1];
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === wk ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
-    return '<section class="quick" id="quick"><div class="q-head"><div><span class="q-kicker">Take attendance</span><h2>' + (lives.length ? 'Check-in is live' : 'Which groups are in front of you?') + '</h2></div>' +
-      (courses.length > 1 && !C ? '<select class="in" id="qc">' + courses.map(c => '<option' + (c === quickCourse ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' : '') + '</div>' +
-      (lives.length ? '<div class="q-live">' + lives.map(s => '<a class="btn q-go" href="' + pageHash('group', s.g) + '"><i class="odot"></i>Show QR: ' + esc(s.g.course) + ', group' + (s.groups.length > 1 ? 's ' : ' ') + s.groups.map(esc).join(' + ') + ' &rarr;</a>').join('') + '</div>' : '') +
-      (groupsOf.length && !lives.length ? '<div class="q-picks">' + groupsOf.map(g => '<label class="tg-pick"><input type="checkbox" class="qg" value="' + esc(g.group) + '"' + (sel.indexOf(g.group) >= 0 ? ' checked' : '') + '><b>' + esc(g.group) + '</b><small>' + g.count + '</small></label>').join('') + '</div>' +
-        '<div class="q-row"><label class="f">Week<select class="in" id="qw">' + weekOpts + '</select></label>' +
-        '<label class="f" style="flex:0 0 110px">Minutes<input class="in" id="qm" type="number" min="1" max="180" value="15"></label>' +
-        '<button class="btn q-open" id="qo" type="button">Show one QR for all</button></div>' +
-        '<p class="note q-note">Tick every group in the room. Students from any other group of ' + esc(quickCourse) + ' can scan the same QR and are marked in their own group. No internet? Type their ID on the QR screen.</p>' : '') +
+    const hint = guess ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z"/></svg>' +
+        '<span>Picked for you: on ' + guess.day + 's at this time you take <b>' + guess.groups.map(esc).join(' + ') + '</b>' + (guess.times > 1 ? ' (' + guess.times + ' times)' : '') + '.</span></span>'
+      : saved.length ? '<span class="q-ai muted">Same groups as last time. Tap to change.</span>' : '<span class="q-ai muted">Tap the groups in the room. Next time at this day and hour they are picked for you.</span>';
+    const letters = [];
+    groupsOf.forEach(g => { const L = (String(g.group).match(/^[A-Za-z]+/) || ['#'])[0].toUpperCase(); let b = letters.find(x => x.L === L); if (!b) { b = { L: L, gs: [] }; letters.push(b); } b.gs.push(g); });
+    const live = lives.length ? '<div class="q-livebox">' + lives.map(s => '<a class="q-liverow" href="' + pageHash('group', s.g) + '"><span class="q-pulse" aria-hidden="true"></span><span class="q-lt"><b>Check-in is live</b><small>' + esc(s.g.course) + ' &middot; group' + (s.groups.length > 1 ? 's ' : ' ') + s.groups.map(esc).join(' + ') + '</small></span><span class="q-lgo">Show QR &rarr;</span></a>').join('') + '</div>' : '';
+    if (!groupsOf.length) return '<section class="quick" id="quick"><div class="q-kicker">Take attendance</div>' + live + '</section>';
+    return '<section class="quick" id="quick">' + live +
+      '<div class="q-top"><div class="q-title"><span class="q-kicker">Take attendance &middot; ' + esc(wl) + '</span><h2>' + (lives.length ? 'Another room?' : 'Start check-in in one tap') + '</h2>' + hint + '</div>' +
+        '<button class="q-start" id="qo" type="button"><span class="qs-ring" aria-hidden="true"></span><span class="qs-in"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg><b>Show QR</b><small id="qsel"></small></span></button></div>' +
+      (courses.length > 1 && !C ? '<div class="q-course">' + courses.map(c => '<button type="button" class="q-cbtn' + (c === quickCourse ? ' on' : '') + '" data-qc="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' : '') +
+      '<div class="q-letters">' + letters.map(b => '<div class="q-lrow"><button type="button" class="q-letter" data-ql="' + esc(b.L) + '" title="Pick every ' + esc(b.L) + ' group">' + esc(b.L) + '</button><div class="q-chips">' +
+        b.gs.map(g => '<button type="button" class="q-g' + (sel.indexOf(g.group) >= 0 ? ' on' : '') + '" data-qg="' + esc(g.group) + '" aria-pressed="' + (sel.indexOf(g.group) >= 0) + '"><b>' + esc(g.group) + '</b><small>' + g.count + '</small><i class="q-tick" aria-hidden="true"></i></button>').join('') + '</div></div>').join('') + '</div>' +
+      '<div class="q-opts"><label class="q-week"><span>Week</span><select id="qw">' + weekOpts + '</select></label>' +
+        '<div class="q-mins" role="radiogroup" aria-label="Minutes open"><span>Open for</span>' + [10, 15, 20, 30].map(n => '<button type="button" role="radio" data-qm="' + n + '" aria-checked="' + (n === quickMins) + '">' + n + ' min</button>').join('') + '</div></div>' +
+      '<p class="q-note">One QR for every group you pick. Students of any other group of ' + esc(quickCourse) + ' can scan it too and are marked in their own group. No internet? Type their ID on the QR screen.</p>' +
       '</section>';
   }
   function bindQuick() {
-    if (!$('quick')) return;
-    const save = () => store.set('tg_quick_' + quickCourse, JSON.stringify([...document.querySelectorAll('.qg:checked')].map(x => x.value)));
-    document.querySelectorAll('.qg').forEach(x => { x.onchange = save; });
-    if ($('qc')) $('qc').onchange = () => { quickCourse = $('qc').value; store.set('tg_quick_course', quickCourse); const box = $('quick'); box.outerHTML = quickHtml(courseOnly); bindQuick(); };
-    if ($('qo')) $('qo').onclick = async () => {
-      const sel = [...document.querySelectorAll('.qg:checked')].map(x => x.value);
-      if (!sel.length) { toast('Tick at least one group.'); return; }
-      save(); $('qo').disabled = true;
-      try {
-        await api('openSession', PIN, quickCourse, sel[0], Number($('qw').value), Number($('qm').value) || 15, false, true, sel.slice(1));
-        go(pageHash('group', D.groups.find(g => g.course === quickCourse && g.group === sel[0])));
-      } catch (e) { toast(errMsg(e)); $('qo').disabled = false; }
+    const box = $('quick'); if (!box) return;
+    const picked = () => [...box.querySelectorAll('.q-g.on')].map(x => x.dataset.qg);
+    const paint = () => {
+      const sel = picked(), n = sel.reduce((t, g) => t + ((D.groups.find(x => x.course === quickCourse && x.group === g) || {}).count || 0), 0);
+      if ($('qsel')) $('qsel').textContent = sel.length ? sel.join(' + ') + ' · ' + n + ' students' : 'pick a group';
+      if ($('qo')) $('qo').disabled = !sel.length;
+      store.set('tg_quick_' + quickCourse, JSON.stringify(sel));
     };
+    box.querySelectorAll('.q-g').forEach(b => b.onclick = () => { b.classList.toggle('on'); b.setAttribute('aria-pressed', String(b.classList.contains('on'))); paint(); });
+    box.querySelectorAll('.q-letter').forEach(b => b.onclick = () => {
+      const row = [...b.parentNode.querySelectorAll('.q-g')], on = !row.every(x => x.classList.contains('on'));
+      row.forEach(x => { x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); paint();
+    });
+    box.querySelectorAll('[data-qm]').forEach(b => b.onclick = () => { quickMins = Number(b.dataset.qm); store.set('tg_qmin', String(quickMins)); box.querySelectorAll('[data-qm]').forEach(x => x.setAttribute('aria-checked', String(x === b))); });
+    box.querySelectorAll('[data-qc]').forEach(b => b.onclick = () => { quickCourse = b.dataset.qc; store.set('tg_quick_course', quickCourse); box.outerHTML = quickHtml(courseOnly); bindQuick(); });
+    if ($('qo')) $('qo').onclick = async () => {
+      const sel = picked();
+      if (!sel.length) return;
+      $('qo').disabled = true; $('qo').classList.add('going');
+      try {
+        await api('openSession', PIN, quickCourse, sel[0], Number($('qw').value), quickMins, false, true, sel.slice(1));
+        quickRemember(quickCourse, sel);
+        go(pageHash('group', D.groups.find(g => g.course === quickCourse && g.group === sel[0])));
+      } catch (e) { toast(errMsg(e)); $('qo').disabled = false; $('qo').classList.remove('going'); }
+    };
+    paint();
   }
 
   /* ----- group page: week first, then its QR, live count and list ----- */
@@ -4654,7 +4745,7 @@ const BOOT = null;
     let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
     let sel = {}; /* All weeks page: the chosen cells, student ID -> set of week numbers */
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
-    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; ' + esc(g.course) + '</button>' + openBar(g, 'group') +
+    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'group') +
       '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
       '<div class="links hide-proj" style="margin:0"><button class="link" id="gr">Grades &rarr;</button></div></div>' +
       '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
@@ -4773,7 +4864,7 @@ const BOOT = null;
       $('open').onclick = async () => {
         $('open').disabled = true;
         const also = [...document.querySelectorAll('.also:checked')].map(x => x.value);
-        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked, also); await load(); }
+        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked, also); quickRemember(g.course, [g.group].concat(also)); await load(); }
         catch (e) { toast(errMsg(e)); $('open').disabled = false; }
       };
     }
@@ -4910,7 +5001,7 @@ const BOOT = null;
   async function gradesPage(g) {
     stopTimers();
     let V = null; const dirty = {};
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; ' + esc(g.course) + '</button>' + openBar(g, 'grades') +
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'grades') +
       '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks, then press Save. Enter moves to the next student.</p></div></div>' +
       '<div class="links" style="margin:0"><a class="link" href="' + pageHash('group', g) + '">Attendance &rarr;</a><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
       '<div class="gstats" id="gst"></div>' +
@@ -5033,7 +5124,7 @@ const BOOT = null;
     stopTimers();
     let V = null; const dirty = {};
     const unsaved = () => Object.keys(dirty).length;
-    app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button">&larr; ' + esc(t.course) + '</button>' +
+    app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(t.course) + '</button>' +
       '<div class="top"><div class="gtitle"><span class="gbadge team-badge">T' + t.num + '</span><div><h1>' + esc(t.name) + '</h1><p class="sub">Team ' + t.num + ' of ' + esc(t.course) + ', ' + t.count + ' students from ' +
       (t.groups || []).map(esc).join(', ') + '. Type a mark in the <b>Whole team</b> row to give it to everyone, change any student after that, then press Save.</p></div></div></div>' +
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID"><span class="note">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></span></div>' +
