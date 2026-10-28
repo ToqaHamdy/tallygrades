@@ -2666,7 +2666,7 @@ const BOOT = null;
     groupSummary: ['group_summary', ['p_pin', 'p_course', 'p_group']], mark: ['mark', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id', 'p_status']],
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
-    saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], exportAll: ['export_all', ['p_pin']]
+    saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']], exportAll: ['export_all', ['p_pin']]
   };
   async function api(fn, ...args) {
     const [name, params] = RPC[fn];
@@ -2958,7 +2958,7 @@ const BOOT = null;
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
-    const top = '<button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
+    const top = '<button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
       ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button><button class="link" id="out">Log out</button>'
       : '<button class="link" id="out">Log out</button>');
     app.innerHTML = '<div class="wrap"><div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">' + hello + '</p></div><div class="links" style="margin:0">' + top + '</div></div>' +
@@ -3006,6 +3006,7 @@ const BOOT = null;
     if ($('seeReq')) $('seeReq').onclick = () => { tab = 'staff'; dashboard(); };
     $('regqr').onclick = registrationQrDialog;
     $('final').onclick = downloadFinal;
+    $('impatt').onclick = importAttendanceDialog;
     if ($('term')) $('term').onclick = termDialog;
     if ($('backup')) $('backup').onclick = downloadBackup;
     if (tab === 'courses') (D.allCourses || []).forEach((c, ci) => courseSettings(c, ci));
@@ -3210,6 +3211,87 @@ const BOOT = null;
       else { byName[g.group] = g; out.push(g); }
     });
     return out.sort((a, b) => numeric(a.group, b.group));
+  }
+  /** Attendance Excel: every tab with an "ID" column and "Week 1".."Week 14" (or W1..W14) columns. P or 1 = present, E = excused; anything else is ignored. */
+  function parseAttendance(wb) {
+    const sheets = [];
+    for (const name of wb.SheetNames) {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: '' });
+      let idCol = -1, weekCols = [], start = -1;
+      for (let r = 0; r < Math.min(12, rows.length) && start < 0; r++) {
+        const cells = (rows[r] || []).map(v => String(v).trim().toLowerCase());
+        const wc = [];
+        cells.forEach((t, c) => { const m = t.match(/^(?:week|w)\s*(\d{1,2})\b/); if (m && +m[1] >= 1 && +m[1] <= 14) wc.push([c, +m[1]]); });
+        const ic = cells.findIndex(t => t === 'id' || t === 'student id');
+        if (wc.length && ic >= 0) { idCol = ic; weekCols = wc; start = r + 1; }
+      }
+      if (start < 0) continue;
+      const marks = [];
+      let students = 0;
+      for (const row of rows.slice(start)) {
+        const id = String(row[idCol] == null ? '' : row[idCol]).trim().replace(/\.0+$/, '').replace(/\D/g, '');
+        if (!/^\d{6,12}$/.test(id)) continue;
+        students++;
+        weekCols.forEach(([c, w]) => {
+          const v = String(row[c] == null ? '' : row[c]).trim().toUpperCase();
+          const st = v === 'P' || v === '1' ? 'P' : v === 'E' ? 'E' : '';
+          if (st) marks.push({ id: id, week: w, status: st });
+        });
+      }
+      if (students) sheets.push({ name: name, students: students, marks: marks });
+    }
+    return sheets;
+  }
+  function importAttendanceDialog() {
+    const courses = [...new Set(D.groups.map(g => g.course))].sort();
+    let S = [];
+    dialog('<h1 style="font-size:26px;margin:0">Import attendance</h1>' +
+      '<p class="sub">An Excel file with one tab per group: an <b>ID</b> column and <b>Week 1</b> to <b>Week 14</b> columns. P (or 1) is present, E is excused. Absent is not recorded, so it stays empty. Students already present are left as they are.</p>' +
+      '<div class="form" style="margin-top:18px"><label class="f">Excel file<input class="in" id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv"></label>' +
+      '<label class="f">Course<select class="in" id="co">' + courses.map(c => '<option>' + esc(c) + '</option>').join('') + '</select></label>' +
+      '<div id="pv"></div><div class="err" id="er"></div>' +
+      '<div class="row"><button class="btn" id="go" type="button" disabled>Import</button><button class="btn ghost" data-close type="button">Close</button></div></div>',
+      (o, close) => {
+        const q = (x) => o.querySelector(x);
+        o.querySelector('.panel').classList.add('wide');
+        const picked = () => { const ws = [...o.querySelectorAll('.iwk:checked')].map(x => +x.value); return S.flatMap(s => s.marks.filter(m => ws.indexOf(m.week) >= 0)); };
+        const count = () => { const n = picked().length; q('#sum').textContent = n + ' marks to import.'; q('#go').disabled = !n; };
+        q('#file').onchange = async () => {
+          const f = q('#file').files[0]; q('#er').textContent = ''; q('#pv').innerHTML = ''; q('#go').disabled = true;
+          if (!f) return;
+          q('#pv').innerHTML = '<p class="note">Reading the file</p>';
+          try { await loadXlsx(); S = parseAttendance(XLSX.read(await f.arrayBuffer(), { type: 'array' })); }
+          catch (e) { q('#pv').innerHTML = ''; q('#er').textContent = errMsg(e) || 'Could not read this file.'; return; }
+          if (!S.length) { q('#pv').innerHTML = ''; q('#er').textContent = 'No attendance found. Each tab needs an ID column and Week 1, Week 2... columns.'; return; }
+          /* pick the course whose group codes appear in the tab names (A3_Toqa is group A3) */
+          const score = (c) => D.groups.filter(g => g.course === c && S.some(s => s.name.toUpperCase().startsWith(String(g.group).toUpperCase()))).length;
+          const best = courses.slice().sort((a, b) => score(b) - score(a))[0];
+          if (best && score(best)) q('#co').value = best;
+          const weeks = [...new Set(S.flatMap(s => s.marks.map(m => m.week)))].sort((a, b) => a - b);
+          q('#pv').innerHTML = '<div class="f" style="font-size:12px;color:var(--muted);font-weight:700;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase">Weeks to import</div>' +
+            '<div class="together" style="border:0;margin:0;padding:6px 0 4px">' + weeks.map(w => '<label class="tg-pick"><input type="checkbox" class="iwk" value="' + w + '" checked><b>W' + w + '</b></label>').join('') + '</div>' +
+            '<div class="picks" style="margin-top:10px">' + S.map(s => '<div class="pick"><span><b>' + esc(s.name) + '</b><br>' + s.students + ' students, ' + s.marks.length + ' marks</span></div>').join('') + '</div>' +
+            '<p class="note" id="sum" style="margin-top:10px"></p>';
+          o.querySelectorAll('.iwk').forEach(x => { x.onchange = count; });
+          count();
+        };
+        q('#go').onclick = async () => {
+          const rows = picked();
+          q('#go').disabled = true; q('#go').textContent = 'Importing'; q('#er').textContent = '';
+          try {
+            const r = await api('importAttendance', PIN, q('#co').value, rows);
+            q('#pv').innerHTML = '<div class="gstats" style="margin:4px 0 0">' +
+              '<div class="gstat"><b>' + r.saved + '</b><span>marked present now</span></div>' +
+              '<div class="gstat"><b>' + r.already + '</b><span>were already present</span></div>' +
+              (r.missing.length ? '<div class="gstat"><b>' + r.missing.length + '</b><span>students not in this course</span></div>' : '') +
+              (r.notYours ? '<div class="gstat"><b>' + r.notYours + '</b><span>marks in other TAs\' groups, skipped</span></div>' : '') + '</div>' +
+              (r.missing.length ? '<p class="note" style="margin-top:10px">Not found in ' + esc(q('#co').value) + ': ' + r.missing.map(esc).join(', ') + '. Add them to their group, then import again.</p>' : '');
+            q('#go').hidden = true; q('#file').value = '';
+            toast('Attendance imported.');
+          } catch (e) { q('#er').textContent = errMsg(e); q('#go').disabled = false; }
+          q('#go').textContent = 'Import';
+        };
+      });
   }
   function uploadDialog() {
     const isAdmin = D.me.role === 'Admin';
