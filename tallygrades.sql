@@ -351,6 +351,20 @@ begin
 end $$;
 
 -- a student sees their own attendance and team, only from a phone that registered or checked in as them (never grades)
+-- one student's marks in one course: what the student sees on their own phone
+create or replace function tg.student_grade(c text, g text, v_sid text, v_pct numeric) returns jsonb language sql stable as $$
+  with att as (select coalesce((select max from tg.items where course = c and kind = 'Attendance'), 0) as mx),
+  it as (select i.item, i.max, i.ord,
+           (select gr.score from tg.grades gr where gr.course = c and gr.grp = g and gr.sid = v_sid and gr.key = i.key order by gr.id desc limit 1) as score
+         from tg.items i where i.course = c and i.kind <> 'Attendance')
+  select case when att.mx = 0 and not exists (select 1 from it) then null else jsonb_build_object(
+    'attMax', att.mx,
+    'attGrade', case when att.mx > 0 and v_pct is not null then to_jsonb(round(v_pct * att.mx, 2)) else '""'::jsonb end,
+    'items', coalesce((select jsonb_agg(jsonb_build_object('item', it.item, 'max', it.max, 'score', coalesce(to_jsonb(it.score), '""'::jsonb)) order by it.ord) from it), '[]'),
+    'total', round(coalesce((select sum(it.score) from it), 0) + case when att.mx > 0 and v_pct is not null then round(v_pct * att.mx, 2) else 0 end, 2),
+    'max', att.mx + coalesce((select sum(it.max) from it where it.item !~* '^\s*bonus\M'), 0)) end
+  from att $$;
+
 create or replace function public.student_status(p jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare v_id text := tg.norm_id(p->>'id'); v_dev text := left(regexp_replace(coalesce(p->>'device', ''), '[^\w-]', '', 'g'), 80); v_out jsonb;
 begin
@@ -362,7 +376,8 @@ begin
       'team', (select jsonb_build_object('num', t.num, 'name', t.name,
                  'leader', coalesce((select s2.name from tg.students s2 where s2.course = t.course and s2.sid = t.leader order by s2.ord limit 1), ''))
                from tg.team_members m join tg.teams t on t.course = m.course and t.num = m.num where m.course = st.course and m.sid = st.sid),
-      'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb)) order by st.course, st.grp), '[]')
+      'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb),
+      'grade', tg.student_grade(st.course, st.grp, st.sid, mx.pct)) order by st.course, st.grp), '[]')
     into v_out
   from tg.students st cross join lateral (select * from tg.matrix(st.course, st.grp) x where x.sid = st.sid limit 1) mx
   where st.sid = v_id;
@@ -370,6 +385,15 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------- staff API
+-- every student this staff member can see, with attendance and grades: the page answers questions from it
+create or replace function public.ask_data(p_pin text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin);
+begin
+  return jsonb_build_object('currentWeek', tg.current_week(), 'courses', coalesce((
+    select jsonb_agg(jsonb_build_object('course', c.course, 'rows', tg.grade_rows(c.course, null, case when me.role = 'Admin' then null else me.name end)) || tg.items_json(c.course) order by c.course)
+    from (select distinct st.course from tg.students st where me.role = 'Admin' or st.ta = me.name) c), '[]'));
+end $$;
+
 create or replace function public.app_state() returns jsonb language sql security definer set search_path = tg, public, extensions as $$
   select jsonb_build_object('setup', exists (select 1 from tg.staff)) $$;
 
@@ -856,7 +880,7 @@ begin
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'session_mark(text,text,text)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
-    'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)',
+    'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
     'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
