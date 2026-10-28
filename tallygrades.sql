@@ -700,6 +700,22 @@ begin
   insert into tg.log (course, grp, week, sid, name, status, method, by_ta) values (p_course, p_group, p_week, st.sid, st.name, p_status, 'Manual', me.name);
   return tg.week_view(p_course, p_group, p_week);
 end $$;
+-- mark many weeks of many students of one group at once, from the All weeks page: p_items = [{"id": "...", "weeks": [2, 3, 5]}]
+create or replace function public.mark_weeks(p_pin text, p_course text, p_group text, p_items jsonb, p_status text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); x jsonb; st tg.students; w int;
+begin
+  perform tg.can_manage(me, p_course, p_group);
+  if p_status not in ('P', 'A', 'E') then raise exception 'Status must be P, A or E.'; end if;
+  for x in select value from jsonb_array_elements(coalesce(p_items, '[]')) loop
+    select * into st from tg.students where course = p_course and grp = p_group and sid = tg.norm_id(x->>'id');
+    if not found then raise exception 'Student % is not in group %.', x->>'id', p_group; end if;
+    for w in select distinct (value #>> '{}')::int from jsonb_array_elements(coalesce(x->'weeks', '[]')) loop
+      if w < 1 or w > 14 then raise exception 'Week % does not exist.', w; end if;
+      insert into tg.log (course, grp, week, sid, name, status, method, by_ta) values (p_course, p_group, w, st.sid, st.name, p_status, 'Manual', me.name);
+    end loop;
+  end loop;
+  return public.group_summary(p_pin, p_course, p_group);
+end $$;
 create or replace function public.mark_all(p_pin text, p_course text, p_group text, p_week int) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin); v jsonb;
 begin
@@ -884,7 +900,7 @@ begin
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'session_mark(text,text,text)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
-    'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
+    'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'mark_weeks(text,text,text,jsonb,text)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
     'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
