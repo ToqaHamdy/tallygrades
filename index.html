@@ -139,6 +139,19 @@
   .tg-pick { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; cursor: pointer; background: var(--card2); }
   .tg-pick:has(input:checked) { border-color: var(--ink); background: var(--soft); }
   .tg-pick b { font-family: var(--display); font-size: 17px; }
+  .obar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -4px 0 22px; }
+  .obar > span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-right: 4px; }
+  .ochip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text); text-decoration: none; max-width: 260px; }
+  .ochip:hover { border-color: var(--muted); }
+  .ochip.on { border-color: var(--ink); background: var(--soft); padding-right: 12px; }
+  .ochip b { font-family: var(--display); font-size: 16px; }
+  .ochip small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .odot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; animation: pulse 1.6s infinite; }
+  .ox { background: none; border: 0; color: var(--muted); font-size: 17px; line-height: 1; padding: 0 2px; }
+  .ox:hover { color: var(--err); }
+  a.link { cursor: pointer; }
+  .newtab { font-size: 16px !important; padding: 0 2px !important; color: var(--muted) !important; }
+  .newtab:hover { color: var(--ink) !important; text-decoration: none !important; }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2805,10 +2818,55 @@ const BOOT = null;
 
   /* =============== STAFF =============== */
   let PIN = store.get('tg_token') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
+  /* ----- addresses: #group/<course>/<group> and #grades/<course>/<group>, so each group can open in its own browser tab ----- */
+  const pageHash = (kind, g) => '#' + kind + '/' + encodeURIComponent(g.course) + '/' + encodeURIComponent(g.group);
+  let leaveGuard = null, lastHash = location.hash, opened = [];
+  try { opened = JSON.parse(store.sget('tg_open') || '[]'); } catch (e) {}
+  function remember(g) {
+    opened = [{ c: g.course, g: g.group }].concat(opened.filter(x => !(x.c === g.course && x.g === g.group))).slice(0, 8);
+    store.sset('tg_open', JSON.stringify(opened));
+  }
+  /* the groups opened in this tab, one click apart; on the grades page each chip opens that group's grades */
+  function openBar(g, kind) {
+    const chips = opened.map(x => {
+      const gg = D.groups.find(y => y.course === x.c && y.group === x.g);
+      if (!gg) return '';
+      const on = x.c === g.course && x.g === g.group;
+      return '<a class="ochip' + (on ? ' on' : '') + '" href="' + pageHash(kind, gg) + '" title="' + esc(x.c + ', group ' + x.g) + '">' + (gg.live ? '<i class="odot" title="Check-in is open"></i>' : '') +
+        '<b>' + esc(x.g) + '</b><small>' + esc(x.c) + '</small>' + (on ? '' : '<button class="ox" type="button" data-ox="' + esc(x.c + '|' + x.g) + '" aria-label="Remove from the bar">&times;</button>') + '</a>';
+    }).filter(Boolean);
+    return chips.length > 1 ? '<div class="obar hide-proj"><span>Open groups</span>' + chips.join('') + '</div>' : '';
+  }
+  function bindBar(g, kind) {
+    app.querySelectorAll('[data-ox]').forEach(b => b.onclick = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const [c, gr] = b.dataset.ox.split('|');
+      opened = opened.filter(x => !(x.c === c && x.g === gr)); store.sset('tg_open', JSON.stringify(opened));
+      const bar = app.querySelector('.obar'); if (bar) { bar.outerHTML = openBar(g, kind); bindBar(g, kind); }
+    });
+  }
+  const go = (h) => { if ((location.hash || '#') === (h || '#')) route(); else location.hash = h; };
+  async function route(fresh) {
+    if (!D || !PIN) return;
+    if (leaveGuard && !leaveGuard()) { history.replaceState(null, '', lastHash || location.pathname + location.search); return; }
+    leaveGuard = null; window.onbeforeunload = null; lastHash = location.hash;
+    const m = location.hash.match(/^#(group|grades)\/([^/]*)\/([^/]*)$/);
+    if (m) {
+      const c = decodeURIComponent(m[2]), gr = decodeURIComponent(m[3]);
+      const g = D.groups.find(x => x.course === c && x.group === gr);
+      if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); return m[1] === 'grades' ? gradesPage(g) : groupPage(g); }
+      toast('This group is not one of yours.');
+      history.replaceState(null, '', location.pathname + location.search); lastHash = '';
+    }
+    stopTimers();
+    if (!fresh) { try { D = await api('whoami', PIN); } catch (e) {} }
+    dashboard();
+  }
+  window.addEventListener('hashchange', () => route());
   const stopTimers = () => { timers.forEach(t => clearInterval(t)); timers = []; document.body.classList.remove('projector'); };
 
   async function startStaff() {
-    if (PIN) { try { D = await api('whoami', PIN); return dashboard(); } catch (e) { PIN = ''; store.set('tg_token', ''); } }
+    if (PIN) { try { D = await api('whoami', PIN); return route(true); } catch (e) { PIN = ''; store.set('tg_token', ''); } }
     let state = { setup: true };
     try { state = await api('appState'); } catch (e) { app.innerHTML = '<div class="loading">Could not connect. Refresh the page.</div>'; return; }
     state.setup ? landingView() : setupView();
@@ -2824,7 +2882,7 @@ const BOOT = null;
     $('asTa').onclick = () => loginView('TA');
     $('asAdmin').onclick = () => loginView('Admin');
   }
-  function signedIn(r) { D = r.dash; PIN = r.token; store.set('tg_token', PIN); tab = 'mine'; dashboard(); }
+  function signedIn(r) { D = r.dash; PIN = r.token; store.set('tg_token', PIN); tab = 'mine'; route(true); }
   function loggedOut() { PIN = ''; store.set('tg_token', ''); stopTimers(); document.querySelectorAll('.overlay').forEach(o => o.remove()); landingView(); toast('Please log in again.'); }
   const loginFields = (pre) => '<label class="f">Username<input class="in" id="us" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(pre || '') + '"></label>' +
     '<label class="f">Password<input class="in" id="pw" type="password" autocomplete="current-password"></label>';
@@ -2884,7 +2942,7 @@ const BOOT = null;
       } catch (err) { $('er').textContent = errMsg(err); $('go').disabled = false; }
     };
   }
-  function logout() { if (PIN) api('logout', PIN).catch(() => {}); PIN = ''; store.set('tg_token', ''); stopTimers(); landingView(); }
+  function logout() { if (PIN) api('logout', PIN).catch(() => {}); PIN = ''; store.set('tg_token', ''); store.sset('tg_open', null); opened = []; stopTimers(); history.replaceState(null, '', location.pathname + location.search); landingView(); }
 
   /* ----- dashboard ----- */
   function dashboard() {
@@ -2924,7 +2982,8 @@ const BOOT = null;
         const can = isAdmin || g.ta === D.me.name;
         let links = '';
         if (can) {
-          links = '<button class="link" data-open="' + i + '">' + (g.live ? 'Show check-in' : 'Open') + ' &rarr;</button><button class="link" data-grades="' + i + '">Grades &rarr;</button>';
+          links = '<a class="link" href="' + pageHash('group', g) + '">' + (g.live ? 'Show check-in' : 'Open') + ' &rarr;</a><a class="link" href="' + pageHash('grades', g) + '">Grades &rarr;</a>' +
+            '<a class="link newtab" href="' + pageHash('group', g) + '" target="_blank" rel="noopener" title="Open in a new browser tab" aria-label="Open group ' + esc(g.group) + ' in a new tab">&#8599;</a>';
           if (isAdmin) links += '<button class="link" data-ta="' + i + '">Change TA</button><button class="link danger" data-del="' + i + '">Delete</button>';
         } else if (!g.ta) {
           links = '<button class="link" data-claim="' + i + '">This is my group &rarr;</button>';
@@ -2965,8 +3024,6 @@ const BOOT = null;
       '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>' + body + '</div>';
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
     on('[data-tab]', b => { tab = b.dataset.tab; dashboard(); });
-    on('[data-open]', b => groupPage(list[b.dataset.open]));
-    on('[data-grades]', b => gradesPage(list[b.dataset.grades]));
     on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
     on('[data-claim]', async b => {
       const g = list[b.dataset.claim];
@@ -3409,7 +3466,7 @@ const BOOT = null;
     const mates = D.groups.filter(x => x.course === g.course && x.group !== g.group && (D.me.role === 'Admin' || x.ta === D.me.name)).sort((a, b) => numeric(a.group, b.group));
     let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
-    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; Groups</button>' +
+    app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; Groups</button>' + openBar(g, 'group') +
       '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
       '<div class="links hide-proj" style="margin:0"><button class="link" id="gr">Grades &rarr;</button></div></div>' +
       '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
@@ -3421,8 +3478,9 @@ const BOOT = null;
       '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"></tbody></table></div>' +
       '<h2 style="font-size:18px;margin:26px 0 8px">Flags this week</h2><ul id="fl" class="note"></ul></div></div>';
 
-    $('bk').onclick = async () => { stopTimers(); try { D = await api('whoami', PIN); } catch (e) {} dashboard(); };
-    $('gr').onclick = () => { stopTimers(); gradesPage(g); };
+    $('bk').onclick = () => go('');
+    $('gr').onclick = () => go(pageHash('grades', g));
+    bindBar(g, 'group');
     $('wk').onchange = () => { week = $('wk').value === 'all' ? 'all' : Number($('wk').value); lastQr = ''; $('livebox').innerHTML = ''; load(); };
     $('sr').oninput = () => { q = $('sr').value.trim().toLowerCase(); renderList(); };
     $('guest').onclick = () => {
@@ -3602,9 +3660,9 @@ const BOOT = null;
   async function gradesPage(g) {
     stopTimers();
     let V = null; const dirty = {};
-    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Groups</button>' +
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Groups</button>' + openBar(g, 'grades') +
       '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks, then press Save. Enter moves to the next student.</p></div></div>' +
-      '<div class="links" style="margin:0"><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
+      '<div class="links" style="margin:0"><a class="link" href="' + pageHash('group', g) + '">Attendance &rarr;</a><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
       '<div class="gstats" id="gst"></div>' +
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID">' +
       '<div class="seg"><span>Copy</span><button type="button" id="cpsec">Section attendance (W1 to W12)</button><button type="button" id="cpgr">Grades</button><button type="button" id="cpall">Whole table</button></div></div>' +
@@ -3613,10 +3671,9 @@ const BOOT = null;
       '<p class="note wklegend"><i class="P"></i>Present <i class="A"></i>Absent <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
-    $('bk').onclick = async () => {
-      if (unsaved() && !confirm('You have marks that are not saved. Leave anyway?')) return;
-      try { D = await api('whoami', PIN); } catch (e) {} dashboard();
-    };
+    leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
+    $('bk').onclick = () => go('');
+    bindBar(g, 'grades');
     $('sr').oninput = () => {
       const q = $('sr').value.trim().toLowerCase();
       $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; });
@@ -3631,6 +3688,7 @@ const BOOT = null;
       const n = unsaved(), bad = !!$('rows').querySelector('.cell.bad');
       $('save').disabled = !n || bad;
       $('sbar').classList.toggle('dirty', n > 0);
+      window.onbeforeunload = n ? (e) => { e.preventDefault(); e.returnValue = ''; } : null;
       $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
     };
     function stats() {
