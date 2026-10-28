@@ -877,7 +877,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .h-tool b { font-size: 15px; } .h-tool small { color: var(--muted); font-size: 13px; line-height: 1.45; }
   @media (max-width: 900px) { .h-grid { grid-template-columns: 1fr; } .h-tools { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 480px) { .h-today a { grid-template-columns: 1fr auto; } .h-time { grid-column: 1 / -1; } }
-  .h-more { margin-left: auto; font-size: 14px; }
+  .h-more { margin-left: auto; font-size: 14px; } .h-date { font-family: var(--body, inherit); font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 4px; }
   .h-todayline { margin: 0 0 12px; color: var(--muted); } .h-todayline b { color: var(--text); }
   .cal-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
   .cal { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 640px; }
@@ -3727,7 +3727,7 @@ const BOOT = null;
     const courses = [...new Set((isAdmin ? (D.allCourses || []) : []).concat(D.groups.map(g => g.course)))].sort();
     /* your sections: from the schedule (groups taught together at the same time), or your groups */
     const n = new Date(), today = n.getDay(), mins = n.getHours() * 60 + n.getMinutes();
-    const mineSched = (D.schedule || []).filter(x => x.ta === me && D.groups.some(g => g.course === x.course && g.group === x.group));
+    const mineSched = (D.schedule || []).filter(x => isTaRow(x, me) && D.groups.some(g => g.course === x.course && g.group === x.group));
     const secs = [];
     mineSched.forEach(x => { const k = x.course + '|' + x.day + '|' + x.start; let sct = secs.find(y => y.k === k); if (!sct) { sct = { k: k, course: x.course, day: x.day, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sct); } sct.gs.push(x.group); });
     secs.sort((a, b) => ((a.day - today + 7) % 7) - ((b.day - today + 7) % 7) || toMin(a.start) - toMin(b.start));
@@ -3966,11 +3966,11 @@ const BOOT = null;
     (n === 'users' ? '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>' : TB_ICONS[n]) + '</svg>';
   /* the week of one TA from the schedule: days across, sections down; today is marked, each of today's sections says Done, Now, Live or Next */
   function calendarHtml(ta, compact) {
-    const rows = (D.schedule || []).filter(x => x.ta === ta);
+    const rows = (D.schedule || []).filter(x => isTaRow(x, ta));
     const n = new Date(), today = n.getDay(), mins = n.getHours() * 60 + n.getMinutes();
     if (!rows.length) return '<p class="note">No sections for ' + esc(ta) + ' in the schedule yet.</p>';
     const slots = [...new Set(rows.map(x => x.start + '|' + x.end))].sort((a, b) => toMin(a.split('|')[0]) - toMin(b.split('|')[0]));
-    const days = [...new Set([0, 1, 2, 3, 4].concat(rows.map(x => x.day)))].sort((a, b) => a - b);
+    const days = [...new Set([0, 1, 2, 3, 4, today].concat(rows.map(x => x.day)))].sort((a, b) => a - b);
     const sunday = new Date(n); sunday.setHours(0, 0, 0, 0); sunday.setDate(n.getDate() - today);
     const dateOf = (d) => { const x = new Date(sunday); x.setDate(sunday.getDate() + d); return x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
     const cell = (d, slot) => {
@@ -3995,7 +3995,7 @@ const BOOT = null;
   /* one line on how today is going */
   function todayLine(ta) {
     const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes();
-    const secs = []; (D.schedule || []).filter(x => x.ta === ta && x.day === d).forEach(x => { const k = x.course + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
+    const secs = []; (D.schedule || []).filter(x => isTaRow(x, ta) && x.day === d).forEach(x => { const k = x.course + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
     if (!secs.length) return 'No sections today.';
     secs.sort((a, b) => toMin(a.start) - toMin(b.start));
     const done = secs.filter(x => m > toMin(x.end)).length, now = secs.find(x => m >= toMin(x.start) - 20 && m <= toMin(x.end)), next = secs.find(x => toMin(x.start) - 20 > m);
@@ -4007,8 +4007,8 @@ const BOOT = null;
     const studs = pool.reduce((t, g) => t + g.count, 0), reg = pool.reduce((t, g) => t + (g.registered || 0), 0), liveN = pool.filter(g => g.live).length;
     const glance = '<div class="h-glance"><div><b>' + pool.length + '</b><span>' + (mine.length ? 'my groups' : 'groups') + '</span></div><div><b>' + studs + '</b><span>students</span></div>' +
       '<div><b>' + (studs ? Math.round(100 * reg / studs) : 0) + '%</b><span>phones registered</span></div><div' + (liveN ? ' class="ok"' : '') + '><b>' + liveN + '</b><span>check-ins live now</span></div></div>';
-    const hasSched = (D.schedule || []).some(x => x.ta === me);
-    return '<h2 class="h-sec">' + homeIcon('calendar') + 'My week <a class="link h-more" href="#calendar">Open the calendar &rarr;</a></h2>' +
+    const hasSched = (D.schedule || []).some(x => isTaRow(x, me));
+    return '<h2 class="h-sec">' + homeIcon('calendar') + 'My week <span class="h-date">' + todayLong() + '</span><a class="link h-more" href="#calendar">Open the calendar &rarr;</a></h2>' +
       (hasSched ? '<p class="h-todayline">' + todayLine(me) + '</p>' + calendarHtml(me, true) : '<p class="note">Your sections are not in the schedule yet.</p>') + glance;
   }
   /* My week page: the calendar of any TA (the admin can pick one) */
@@ -4019,7 +4019,7 @@ const BOOT = null;
     let ta = isAdmin && tas.indexOf(wantTa) >= 0 ? wantTa : D.me.name;
     const draw = () => {
       app.innerHTML = '<div class="wrap"><div class="top"><div class="gtitle"><span class="gbadge q-ic" style="width:56px;height:56px">' + homeIcon('calendar') + '</span><div><h1>' + (ta === D.me.name ? 'My week' : esc(ta)) + '</h1><p class="sub">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') + '</p></div></div>' +
-        (isAdmin && tas.length ? '<label class="f" style="min-width:260px;margin:0">TA<select class="in" id="calTa">' + [D.me.name].concat(tas.filter(x => x !== D.me.name)).map(x => '<option' + (x === ta ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label>' : '') + '</div>' +
+        (isAdmin && tas.length ? '<label class="f" style="min-width:260px;margin:0">TA<select class="in" id="calTa">' + [D.me.name].concat(tas.filter(x => !sameTa(x, D.me.name))).map(x => '<option' + (x === ta ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label>' : '') + '</div>' +
         '<p class="h-todayline">' + todayLine(ta) + '</p>' + calendarHtml(ta, false) +
         '<p class="note" style="margin-top:12px">From the schedule. Press a section to open its group. Today\'s sections say Done, Now, Live (check-in open) or Next.</p></div>';
       if ($('calTa')) $('calTa').onchange = () => { ta = $('calTa').value; history.replaceState(null, '', '#calendar' + (ta === D.me.name ? '' : '/' + encodeURIComponent(ta))); lastHash = location.hash; draw(); };
@@ -4447,15 +4447,74 @@ const BOOT = null;
     }
     return sheets;
   }
+  /* ----- marks save themselves: a second after you stop typing, when you leave a box, when the tab is hidden,
+     and when the internet comes back. Until the database has them they are also kept on this device, so a
+     closed tab or a dead laptop loses nothing: the next time the page opens they are saved. ----- */
+  let curSaver = null;
+  function makeSaver(o) {
+    if (curSaver) curSaver.stop();
+    const key = 'tg_draft_' + ((D && D.me && D.me.name) || '') + '_' + o.id;
+    const S = { state: 'idle', saving: false, lastErr: '', timer: null, retry: null, again: false };
+    const persist = () => { try { const d = {}; Object.keys(o.dirty).forEach(k => { d[k] = o.dirty[k]; }); if (Object.keys(d).length) localStorage.setItem(key, JSON.stringify(d)); else localStorage.removeItem(key); } catch (e) {} };
+    S.kick = (delay) => { persist(); clearTimeout(S.timer); S.timer = setTimeout(S.flush, delay == null ? 1200 : delay); o.onState(); };
+    S.flush = async () => {
+      clearTimeout(S.timer);
+      if (S.saving) { S.again = true; return; }
+      const snap = {}; Object.keys(o.dirty).forEach(k => { if (o.valid(k, o.dirty[k])) snap[k] = o.dirty[k]; });
+      if (!Object.keys(snap).length) { o.onState(); return; }
+      S.saving = true; S.state = 'saving'; o.onState();
+      try {
+        const res = await o.send(snap);
+        Object.keys(snap).forEach(k => { if (o.dirty[k] === snap[k]) delete o.dirty[k]; });
+        S.state = 'saved'; S.lastErr = ''; o.applied(snap, res);
+      } catch (e) { S.state = 'error'; S.lastErr = errMsg(e); clearTimeout(S.retry); S.retry = setTimeout(S.flush, 8000); }
+      finally { S.saving = false; persist(); o.onState(); if (S.again) { S.again = false; S.kick(300); } }
+    };
+    S.restore = () => { let d = null; try { d = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {} let n = 0; if (d) Object.keys(d).forEach(k => { if (!(k in o.dirty)) { o.dirty[k] = d[k]; n++; } }); return n; };
+    S.text = (n, bad) => bad ? 'A mark is out of range. Fix the red cell.'
+      : S.state === 'saving' ? 'Saving...'
+      : S.state === 'error' && n ? n + (n > 1 ? ' marks' : ' mark') + ' not saved yet (' + S.lastErr + '). They are kept on this device and saved when it works again.'
+      : n ? n + (n > 1 ? ' marks' : ' mark') + ' saving in a moment...'
+      : S.state === 'saved' ? 'All marks saved automatically ✓' : 'All marks saved';
+    const online = () => S.flush(), hidden = () => { if (document.visibilityState === 'hidden') S.flush(); };
+    window.addEventListener('online', online); document.addEventListener('visibilitychange', hidden);
+    S.stop = () => { window.removeEventListener('online', online); document.removeEventListener('visibilitychange', hidden); clearTimeout(S.timer); clearTimeout(S.retry); };
+    curSaver = S;
+    return S;
+  }
+  const markOk = (max, v) => { if (v === '' || v == null) return true; const n = Number(String(v).replace(',', '.')); return !isNaN(n) && n >= 0 && n <= Number(max); };
+
   /* ----- Enter marks: one item (Midterm, Final, a quiz...) for many groups at once ----- */
   async function marksPage(wantCourse) {
     stopTimers();
     const dirty = {};
     let data = null, course = '', key = '', picked = [], q = '';
+    const rowOf = (k) => { const [c, id, gr] = k.split('|'), cc = (data && data.courses.find(x => x.course === c)); return cc ? cc.rows.find(r => r.id === id && r.group === gr) : null; };
+    const saver = makeSaver({ id: 'marks', dirty,
+      valid: (k, v) => { const [c, , , ky] = k.split('|'), cc = data && data.courses.find(x => x.course === c), it = cc && cc.items.find(x => x.key === ky); return !!it && markOk(it.max, v); },
+      send: async (snap) => {
+        const by = {};
+        Object.keys(snap).forEach(k => { const [c, id, gr, ky] = k.split('|'); (by[c + '|' + gr] = by[c + '|' + gr] || []).push({ id: id, key: ky, score: snap[k] }); });
+        const failed = [];
+        for (const cg of Object.keys(by)) { const [c, gr] = cg.split('|'); try { await api('saveScores', PIN, c, gr, by[cg]); } catch (e) { failed.push(gr + ': ' + errMsg(e)); by[cg].forEach(x => { delete snap[c + '|' + x.id + '|' + gr + '|' + x.key]; }); } }
+        if (failed.length) { Object.keys(snap).forEach(k => { if (dirty[k] === snap[k]) delete dirty[k]; }); applyLocal(snap); throw new Error(failed.join('; ')); }
+      },
+      applied: (snap) => applyLocal(snap),
+      onState: () => { if ($('st')) status(); } });
+    /* a saved mark becomes the row's mark, so the stats and the colors follow */
+    function applyLocal(snap) {
+      Object.keys(snap).forEach(k => {
+        const r = rowOf(k), ky = k.split('|')[3]; if (!r) return;
+        if (snap[k] === '') delete r.scores[ky]; else r.scores[ky] = Number(String(snap[k]).replace(',', '.'));
+        if (!(k in dirty) && $('mkb')) { const inp = $('mkb').querySelector('.mk-table .cell[data-i="' + C().rows.indexOf(r) + '"]'); if (inp && k.split('|')[0] === course && ky === key) inp.classList.remove('dirty'); }
+      });
+    }
     app.innerHTML = '<div class="wrap" id="mk"><div class="top"><div><h1>Enter marks</h1><p class="sub">Choose what you are marking and the groups, then type the marks. Enter moves to the next student.</p></div></div><div id="mkb"><p class="note">Loading</p></div></div>';
     const unsaved = () => Object.keys(dirty).length;
-    leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
+    leaveGuard = () => { if (unsaved()) saver.flush(); return true; };
     try { data = await api('askData', PIN); } catch (e) { $('mkb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
+    const restored = saver.restore();
+    if (restored) { toast(restored + (restored > 1 ? ' marks' : ' mark') + ' from last time were not saved. Saving them now.'); setTimeout(() => saver.kick(300), 500); }
     if (!$('mk')) return;
     /* every course is listed, ready: one without grade items or students yet says what to add */
     const courses = data.courses.slice();
@@ -4480,7 +4539,7 @@ const BOOT = null;
       if (!picked.length) picked = mineOf().length ? mineOf() : groupsOf();
     };
     setCourse(course);
-    const val = (r) => { const k = r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
+    const val = (r) => { const k = course + '|' + r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
     const shown = () => C().rows.filter(r => picked.indexOf(r.group) >= 0).sort((a, b) => numeric(a.group, b.group) || 0);
     function draw() {
       const courseRow = '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips">' + courses.map(c => '<button type="button" class="mk-chip' + (c.course === course ? ' on' : '') + '" data-mc="' + esc(c.course) + '"><b>' + esc(c.course) + '</b><small>' +
@@ -4515,7 +4574,7 @@ const BOOT = null;
         '<p class="mk-stat"><b>' + filled.length + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(it.item) + '</b>' + (nums.length && !it.check ? ' &middot; average <b>' + Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 + '</b> of ' + it.max : '') + '</p>' +
         '<div class="table-wrap"><table class="mk-table"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th><th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th></tr></thead><tbody>' +
           (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
-            '<td class="num">' + markCell(it, (r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td></tr>').join('')
+            '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td></tr>').join('')
             : '<tr><td colspan="5" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
         '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
       bind(); status();
@@ -4523,14 +4582,14 @@ const BOOT = null;
     function status() {
       const n = unsaved(), bad = !!$('mkb').querySelector('.cell.bad');
       $('save').disabled = !n || bad; $('sbar').classList.toggle('dirty', n > 0);
-      window.onbeforeunload = n ? (e) => { e.preventDefault(); e.returnValue = ''; } : null;
-      $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
+      window.onbeforeunload = n ? () => { saver.flush(); } : null;
+      $('st').textContent = saver.text(n, bad);
     }
     function setMark(inp, raw) {
-      const r = C().rows[inp.dataset.i], k = r.id + '|' + r.group + '|' + key, orig = r.scores[key] == null ? '' : String(r.scores[key]);
+      const r = C().rows[inp.dataset.i], k = course + '|' + r.id + '|' + r.group + '|' + key, orig = r.scores[key] == null ? '' : String(r.scores[key]);
       const n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(item().max)));
       if (raw === orig) delete dirty[k]; else dirty[k] = raw;
-      inp.classList.toggle('dirty', k in dirty); status();
+      inp.classList.toggle('dirty', k in dirty); status(); saver.kick();
     }
     function bind() {
       const box = $('mkb');
@@ -4582,24 +4641,11 @@ const BOOT = null;
               inp.oninput(); ok++;
             });
             if (!ok && !miss.length) { o.querySelector('#pe').textContent = 'Nothing to fill. Each line needs an ID and a mark.'; return; }
-            close(); toast(ok + (ok === 1 ? ' mark filled' : ' marks filled') + (miss.length ? '. Not shown or not found: ' + miss.slice(0, 6).join(', ') + (miss.length > 6 ? '...' : '') : '') + '. Press Save.');
+            close(); toast(ok + (ok === 1 ? ' mark filled' : ' marks filled') + (miss.length ? '. Not shown or not found: ' + miss.slice(0, 6).join(', ') + (miss.length > 6 ? '...' : '') : '') + '. They save on their own.');
           };
         });
-      $('save').onclick = async () => {
-        const byGroup = {};
-        Object.keys(dirty).forEach(k => { const [id, g, ky] = k.split('|'); (byGroup[g] = byGroup[g] || []).push({ id: id, key: ky, score: dirty[k] }); });
-        $('save').disabled = true; $('save').textContent = 'Saving';
-        const failed = [];
-        for (const g of Object.keys(byGroup)) {
-          try { await api('saveScores', PIN, course, g, byGroup[g]); Object.keys(dirty).filter(k => k.split('|')[1] === g).forEach(k => delete dirty[k]); }
-          catch (e) { failed.push(g + ': ' + errMsg(e)); }
-        }
-        try { data = await api('askData', PIN); } catch (e) {}
-        $('save').textContent = 'Save';
-        if (!$('mk')) return;
-        draw();
-        toast(failed.length ? 'Not saved for ' + failed.join('; ') : 'Saved.');
-      };
+      $('save').onclick = () => saver.flush();
+      box.querySelectorAll('.mk-table .cell').forEach(inp => inp.addEventListener('blur', () => { if (unsaved()) saver.flush(); }));
     }
     draw();
   }
@@ -5141,6 +5187,17 @@ const BOOT = null;
   const DAY3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const toMin = (hm) => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
   const t12 = (hm) => { const [h, m] = String(hm).split(':').map(Number); return ((h + 11) % 12 + 1) + ':' + String(m).padStart(2, '0'); };
+  /* is this schedule row the TA's? Same name, or one name is the start of the other ("Toqa" and "Toqa Hamdy"),
+     or (for yourself) the group is one of your groups in the site */
+  const sameTa = (a, b) => {
+    const x = String(a || '').toLowerCase().trim().split(/\s+/), y = String(b || '').toLowerCase().trim().split(/\s+/);
+    if (!x[0] || !y[0]) return false;
+    const n = Math.min(x.length, y.length); for (let i = 0; i < n; i++) if (x[i] !== y[i]) return false;
+    if (n >= 2 || x.length === y.length) return true;
+    /* one word only ("Toqa"): it counts only when a single TA in the schedule has that first name */
+    return new Set((D && D.schedule || []).map(r => String(r.ta || '').toLowerCase().trim()).filter(t => t.split(/\s+/)[0] === x[0])).size <= 1;
+  };
+  const isTaRow = (x, ta) => sameTa(x.ta, ta) || (D && D.me && ta === D.me.name && D.groups.some(g => g.course === x.course && g.group === x.group && g.ta === ta));
   const slotsOf = (course, group) => (D.schedule || []).filter(x => x.course === course && x.group === group);
   function slotsNow(course) {
     const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes();
@@ -5173,7 +5230,7 @@ const BOOT = null;
     const groupsOf = pool.filter(g => g.course === quickCourse && !g.live);
     const names = groupsOf.map(g => g.group);
     /* first the schedule (the groups whose section is now), then what you usually take at this hour, then last time */
-    const myName = D.me.name, minePick = (x) => x.ta === myName || (!(D.schedule || []).some(y => y.ta === myName) && D.groups.some(g => g.course === x.course && g.group === x.group && g.ta === myName));
+    const myName = D.me.name, minePick = (x) => isTaRow(x, myName) || (!(D.schedule || []).some(y => isTaRow(y, myName)) && D.groups.some(g => g.course === x.course && g.group === x.group && g.ta === myName));
     let now = slotsNow(quickCourse).filter(x => names.indexOf(x.group) >= 0);
     if (now.some(minePick)) now = now.filter(minePick); else if (!isAdminView()) now = [];
     const next = slotsNext(quickCourse, x => minePick(x) && names.indexOf(x.group) >= 0);
@@ -5510,8 +5567,13 @@ const BOOT = null;
   async function gradesPage(g) {
     stopTimers();
     let V = null; const dirty = {};
+    const saver = makeSaver({ id: 'grades_' + g.course + '_' + g.group, dirty,
+      valid: (k, v) => { const it = V && V.items.find(x => x.key === k.split('|')[1]); return !!it && markOk(it.max, v); },
+      send: (snap) => api('saveScores', PIN, g.course, g.group, Object.keys(snap).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: snap[k] }; })),
+      applied: (snap, res) => { if (res) V = res; Object.keys(snap).forEach(k => { if (k in dirty) return; const [id, key] = k.split('|'), i = V.rows.findIndex(r => r.id === id); const inp = $('rows') && $('rows').querySelector('.cell[data-i="' + i + '"][data-k="' + CSS.escape(key) + '"]'); if (inp) inp.classList.remove('dirty'); }); },
+      onState: () => { if ($('st')) status(); } });
     app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'grades') +
-      '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks, then press Save. Enter moves to the next student.</p></div></div>' +
+      '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks: they save on their own. Enter moves to the next student.</p></div></div>' +
       '<div class="links" style="margin:0"><a class="link" href="' + pageHash('group', g) + '">Attendance &rarr;</a><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
       '<div class="gstats" id="gst"></div>' +
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID">' +
@@ -5521,7 +5583,7 @@ const BOOT = null;
       '<p class="note wklegend"><i class="P"></i>Present <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
-    leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
+    leaveGuard = () => { if (unsaved()) saver.flush(); return true; };
     $('bk').onclick = () => go(courseHash(g.course));
     bindBar(g, 'grades');
     $('sr').oninput = () => {
@@ -5538,8 +5600,8 @@ const BOOT = null;
       const n = unsaved(), bad = !!$('rows').querySelector('.cell.bad');
       $('save').disabled = !n || bad;
       $('sbar').classList.toggle('dirty', n > 0);
-      window.onbeforeunload = n ? (e) => { e.preventDefault(); e.returnValue = ''; } : null;
-      $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
+      window.onbeforeunload = n ? () => { saver.flush(); } : null;
+      $('st').textContent = saver.text(n, bad);
     };
     function stats() {
       const rows = V.rows, mt = maxTotal(), att = rows.filter(r => r.pct !== '');
@@ -5587,8 +5649,9 @@ const BOOT = null;
           V.items.forEach(it => { const kk = r.id + '|' + it.key; const v = kk in dirty ? Number(dirty[kk]) : r.scores[it.key]; if (v !== undefined && v !== '' && !isNaN(v)) sum += Number(v); });
           $('tot' + inp.dataset.i).textContent = Math.round(sum * 100) / 100;
           paintBar($('totb' + inp.dataset.i), sum, mt);
-          status();
+          status(); saver.kick();
         };
+        inp.addEventListener('blur', () => { if (unsaved()) saver.flush(); });
         /* Enter or the arrow keys move up and down the same column, skipping rows hidden by the search */
         inp.onkeydown = (e) => {
           const step = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
@@ -5607,15 +5670,9 @@ const BOOT = null;
       status();
     }
     async function load() {
-      try { V = await api('gradesView', PIN, g.course, g.group); render(); } catch (e) { toast(errMsg(e)); }
+      try { V = await api('gradesView', PIN, g.course, g.group); const n = saver.restore(); render(); if (n) { toast(n + (n > 1 ? ' marks' : ' mark') + ' from last time were not saved. Saving them now.'); saver.kick(300); } } catch (e) { toast(errMsg(e)); }
     }
-    $('save').onclick = async () => {
-      const changes = Object.keys(dirty).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: dirty[k] }; });
-      $('save').disabled = true; $('save').textContent = 'Saving';
-      try { V = await api('saveScores', PIN, g.course, g.group, changes); Object.keys(dirty).forEach(k => delete dirty[k]); render(); toast('Saved.'); }
-      catch (e) { toast(errMsg(e)); $('save').disabled = false; }
-      $('save').textContent = 'Save';
-    };
+    $('save').onclick = () => saver.flush();
     $('items').onclick = () => itemsDialog(g.course, V, load);
     /* absent stays empty (not 0), so pasting with Skip blanks never overwrites another TA's mark */
     $('cpsec').onclick = () => { if (V) copyText(V.rows.map(r => r.section.map(v => Number(v) === 1 ? 1 : '').join('\t')).join('\n'), 'Copied. In Excel: first student\'s W1 cell, Paste Special, tick Skip blanks.'); };
@@ -5632,15 +5689,20 @@ const BOOT = null;
   async function teamPage(t) {
     stopTimers();
     let V = null; const dirty = {};
+    const saver = makeSaver({ id: 'team_' + t.course + '_' + t.num, dirty,
+      valid: (k, v) => { const it = V && V.items.find(x => x.key === k.split('|')[1]); return !!it && markOk(it.max, v); },
+      send: (snap) => api('saveTeamScores', PIN, t.course, t.num, Object.keys(snap).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: snap[k] }; })),
+      applied: (snap, res) => { if (res) V = res; Object.keys(snap).forEach(k => { if (k in dirty) return; const [id, key] = k.split('|'), i = V.rows.findIndex(r => r.id === id); const inp = $('rows') && $('rows').querySelector('.mcell[data-i="' + i + '"][data-k="' + CSS.escape(key) + '"]'); if (inp) inp.classList.remove('dirty'); }); },
+      onState: () => { if ($('st')) status(); } });
     const unsaved = () => Object.keys(dirty).length;
     app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(t.course) + '</button>' +
       '<div class="top"><div class="gtitle"><span class="gbadge team-badge">T' + t.num + '</span><div><h1>' + esc(t.name) + '</h1><p class="sub">Team ' + t.num + ' of ' + esc(t.course) + ', ' + t.count + ' students from ' +
-      (t.groups || []).map(esc).join(', ') + '. Type a mark in the <b>Whole team</b> row to give it to everyone, change any student after that, then press Save.</p></div></div></div>' +
+      (t.groups || []).map(esc).join(', ') + '. Type a mark in the <b>Whole team</b> row to give it to everyone, change any student after that. Marks save on their own.</p></div></div></div>' +
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID"><span class="note">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></span></div>' +
       '<div class="table-wrap gtable"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
       '<p class="note" style="margin-top:14px">Each mark is saved in the student\'s own group, so it also shows on that group\'s grades page.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
-    leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
+    leaveGuard = () => { if (unsaved()) saver.flush(); return true; };
     $('bk').onclick = () => { courseView[t.course] = 'teams'; store.sset('tg_cview', JSON.stringify(courseView)); go(courseHash(t.course)); };
     $('sr').oninput = () => { const q = $('sr').value.trim().toLowerCase(); $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; }); };
     const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
@@ -5649,8 +5711,8 @@ const BOOT = null;
       const n = unsaved(), bad = !!$('rows').querySelector('.cell.bad');
       $('save').disabled = !n || bad;
       $('sbar').classList.toggle('dirty', n > 0);
-      window.onbeforeunload = n ? (e) => { e.preventDefault(); e.returnValue = ''; } : null;
-      $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
+      window.onbeforeunload = n ? () => { saver.flush(); } : null;
+      $('st').textContent = saver.text(n, bad);
     };
     function render() {
       if (!V.items.length) {
@@ -5683,8 +5745,9 @@ const BOOT = null;
         const orig = r.scores[inp.dataset.k] === undefined ? '' : String(r.scores[inp.dataset.k]);
         if (raw === orig) delete dirty[k]; else dirty[k] = raw;
         inp.classList.toggle('dirty', k in dirty);
-        recalc(Number(inp.dataset.i)); status();
+        recalc(Number(inp.dataset.i)); status(); saver.kick();
       });
+      $('rows').querySelectorAll('.mcell').forEach(inp => inp.addEventListener('blur', () => { if (unsaved()) saver.flush(); }));
       /* the Whole team row writes its mark into every member this user can edit */
       $('rows').querySelectorAll('.tcell').forEach(inp => inp.oninput = () => {
         check(inp);
@@ -5700,14 +5763,8 @@ const BOOT = null;
       });
       status();
     }
-    async function load() { try { V = await api('teamView', PIN, t.course, t.num); render(); } catch (e) { toast(errMsg(e)); } }
-    $('save').onclick = async () => {
-      const changes = Object.keys(dirty).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: dirty[k] }; });
-      $('save').disabled = true; $('save').textContent = 'Saving';
-      try { V = await api('saveTeamScores', PIN, t.course, t.num, changes); Object.keys(dirty).forEach(k => delete dirty[k]); render(); toast('Saved for team ' + t.num + '.'); }
-      catch (e) { toast(errMsg(e)); $('save').disabled = false; }
-      $('save').textContent = 'Save';
-    };
+    async function load() { try { V = await api('teamView', PIN, t.course, t.num); const n = saver.restore(); render(); if (n) { toast(n + (n > 1 ? ' marks' : ' mark') + ' from last time were not saved. Saving them now.'); saver.kick(300); } } catch (e) { toast(errMsg(e)); } }
+    $('save').onclick = () => saver.flush();
     load();
   }
   function itemsDialog(course, V, reload) {
