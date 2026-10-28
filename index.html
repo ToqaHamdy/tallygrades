@@ -4079,6 +4079,7 @@ const BOOT = null;
   const BOT_SAMPLES_AR = ['ملخص الحضور', 'مين في خطر في الحضور؟', 'مين غاب 2 أسابيع ورا بعض؟', 'مين غاب الأسبوع ده؟', 'أعلى 10 درجات', 'مين ملوش درجة Project؟', 'خد الحضور'];
   const BOT_SAMPLES_EN = ['Attendance summary', 'Who is at risk?', 'Absent 2 weeks in a row', 'Who was absent this week?', 'Top 10 grades', 'Open the dashboard'];
   const botNorm = (q) => String(q).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[؟?!.,،]/g, ' ').toLowerCase().replace(/\s+/g, ' ').trim();
+  const idq0 = (t) => t.match(/\d{5,}/);
   function botAnswer(q, data, ctx) {
     const ar = /[؀-ۿ]/.test(q), T = (en, a) => ar ? a : en;
     const t = ' ' + botNorm(q) + ' ', has = (re) => re.test(t);
@@ -4105,8 +4106,8 @@ const BOOT = null;
     if (has(/^ (hi|hello|hey|ازيك|اهلا|السلام|صباح|مساء|هاي|ها|يا) /) && t.trim().split(' ').length <= 4)
       return say(T('Hi ' + esc(D.me.name.split(' ')[0]) + '! Ask me about attendance, grades, groups, teams or one student. Try a question below.', 'أهلًا يا ' + esc(D.me.name.split(' ')[0]) + '! اسأليني عن الحضور أو الدرجات أو الجروبات أو التيمز أو أي طالب. جربي سؤال من اللي تحت.'), { chips: true });
     if (has(/help|ساعدني|تعملي ايه|بتعرف|بتعمل ايه|اسال ايه|تقدر|تقدري|مساعده/))
-      return say(T('I can answer:<ul><li>Attendance summary, for a course or a group</li><li>Who is at risk, absent in a row, absent in a week, most absent, never absent</li><li>Top or lowest grades, grades below a number, who has no mark for an item</li><li>A team, a student name or ID</li><li>Take me to: dashboard, settings, a group, take attendance</li></ul>Name a group to narrow it, for example "in P1". Then ask "and P2?".',
-        'أقدر أجاوب على:<ul><li>ملخص الحضور لكورس أو جروب</li><li>مين في خطر، مين غاب ورا بعض، مين غاب في أسبوع، مين أكتر غياب، مين مغابش خالص</li><li>أعلى أو أقل درجات، مين درجته أقل من رقم، مين ملوش درجة في حاجة</li><li>تيم، أو اسم طالب أو الـ ID بتاعه</li><li>أوديكي: الـ dashboard، الإعدادات، جروب، أخد الحضور</li></ul>اكتبي اسم الجروب عشان أضيّق، مثلًا "في P1"، وبعدها اسألي "وP2؟".'), { chips: true });
+      return say(T('I can answer:<ul><li>Attendance summary, for a course or a group</li><li>Who is at risk, absent in a row, absent in a week, most absent, never absent</li><li>Top or lowest grades, grades below a number, who has no mark for an item</li><li>A team by number or by its project name, a student name or ID</li><li>Take me to: dashboard, settings, a group, take attendance</li></ul>Name a group to narrow it, for example "in P1". Then ask "and P2?".',
+        'أقدر أجاوب على:<ul><li>ملخص الحضور لكورس أو جروب</li><li>مين في خطر، مين غاب ورا بعض، مين غاب في أسبوع، مين أكتر غياب، مين مغابش خالص</li><li>أعلى أو أقل درجات، مين درجته أقل من رقم، مين ملوش درجة في حاجة</li><li>تيم برقمه أو باسم فكرته (مثلًا fire fighting)، أو اسم طالب أو الـ ID بتاعه</li><li>أوديكي: الـ dashboard، الإعدادات، جروب، أخد الحضور</li></ul>اكتبي اسم الجروب عشان أضيّق، مثلًا "في P1"، وبعدها اسألي "وP2؟".'), { chips: true });
     if (has(/شكرا|thank|تسلم|حبيبي|جميل|تمام /) && t.trim().split(' ').length <= 3) return say(T('Any time!', 'العفو! أي وقت 🌷'));
     /* take me somewhere */
     if (has(/dashboard|داشبورد|داش بورد|لوحه التحكم|رسومات|charts/)) return say(T('Opening the dashboard' + (courses.length === 1 ? ' of ' + esc(courses[0].course) : '') + '.', 'هفتحلك الـ dashboard' + (courses.length === 1 ? ' بتاع ' + esc(courses[0].course) : '') + '.'), { go: courses.length === 1 ? '#insights/' + encodeURIComponent(courses[0].course) : '#insights' });
@@ -4120,9 +4121,31 @@ const BOOT = null;
       if (g) return say(T('Opening group ' + esc(g.group) + '.', 'هفتحلك جروب ' + esc(g.group) + '.'), { go: has(/درج|grade/) ? pageHash('grades', g) : pageHash('group', g) });
     }
     /* one student by ID */
-    const idq = t.match(/\d{5,}/);
+    const idq = idq0(t);
     if (idq) { const f = rows.filter(r => r.id.indexOf(idq[0]) >= 0); return f.length === 1 ? say('', { student: f[0] }) : list(T('Students with an ID containing ' + idq[0], 'طلبة الـ ID بتاعهم فيه ' + idq[0]), f); }
-    if (has(/team|تيم|فريق/) && nums.length) { const n = nums[0], tm = teamOf(courses[0] && courses[0].course, n); return list(T('Team ' + n, 'تيم ' + n) + (tm ? ': ' + esc(tm.name) : ''), rows.filter(r => Number(r.team) === n), null, { teamGo: tm ? '#team/' + encodeURIComponent(tm.course) + '/' + n : '' }); }
+    const teamWord = has(/team|تيم|فريق|فرقه|مشروع|بروجكت|بروجيكت|فكره|project idea/);
+    const teamAnswer = (tm) => {
+      const rs = rows.concat([]).filter(r => r.course === tm.course && Number(r.team) === Number(tm.num)).sort((a, b) => (b.name === tm.leader) - (a.name === tm.leader));
+      return list(T('Team ' + tm.num + ': ' + esc(tm.name), 'تيم ' + tm.num + ': ' + esc(tm.name)), rs, [T('Role', 'الدور'), r => r.name === tm.leader ? T('Leader', 'الليدر') : ''],
+        { teamGo: '#team/' + encodeURIComponent(tm.course) + '/' + tm.num, grp: [] });
+    };
+    const teamsHere = (D.teams || []).filter(tm => courses.some(c => c.course === tm.course));
+    if (teamWord && nums.length) { const tm = teamsHere.find(x => Number(x.num) === nums[0]); if (tm) return teamAnswer(tm); }
+    /* a team by its project name, even with a small typo: "fire fighting", "تيم الـ solar" */
+    const lev = (a, b) => { if (Math.abs(a.length - b.length) > 1) return 2; const d = Array.from({ length: a.length + 1 }, (_, i) => [i]); for (let j = 1; j <= b.length; j++) d[0][j] = j;
+      for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) { d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); } return d[a.length][b.length]; };
+    const latin = (t.match(/[a-z][a-z-]{2,}/g) || []).filter(w => !/^(team|the|and|of|who|in|is|are|members|names|students|project|idea|group|send|me|show|list)$/.test(w));
+    const wordHit = (w, tw) => tw === w || (w.length >= 4 && (tw.startsWith(w) || w.startsWith(tw) && tw.length >= 4)) || (w.length >= 5 && lev(w, tw) <= 1);
+    const scored = latin.length ? teamsHere.map(tm => { const tws = tm.name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); return { tm: tm, n: latin.filter(w => tws.some(tw => wordHit(w, tw))).length }; }).filter(x => x.n).sort((a, b) => b.n - a.n) : [];
+    const nameHits = latin.length ? rows.filter(r => latin.every(w => r.name.toLowerCase().indexOf(w) >= 0)).length : 0;
+    if (scored.length && (teamWord || (!nameHits && scored[0].n === latin.length))) {
+      const best = scored.filter(x => x.n === scored[0].n);
+      if (best.length === 1) return teamAnswer(best[0].tm);
+      return say(T('More than one team matches. Which one?', 'فيه أكتر من تيم بالاسم ده، تقصدي أنهي؟'), { follow: best.map(x => T('team ', 'تيم ') + x.tm.num) , teamPick: best.map(x => x.tm) });
+    }
+    if (teamWord && !idq0(t) && !nums.length && teamsHere.length && !has(/درج|grade|mark|score/)) {
+      return say(T('I did not find a team with this name. The teams are:', 'ملقتش تيم بالاسم ده. التيمز هي:') + '<ul>' + teamsHere.map(tm => '<li><b>' + tm.num + '</b> ' + esc(tm.name) + '</li>').join('') + '</ul>', { follow: teamsHere.slice(0, 12).map(tm => T('team ', 'تيم ') + tm.num) });
+    }
     if (absentWord && has(/ورا بعض|متتالي|متتاليه|ورا بعضها|in a row|consecutive|straight/)) {
       const n = nums.find(x => x >= 1 && x <= 14) || 2;
       return list(T('Absent ' + n + ' weeks or more in a row', 'غابوا ' + n + ' أسابيع أو أكتر ورا بعض'), rows.filter(r => absStreak(r) >= n).sort((a, b) => absStreak(b) - absStreak(a)), [T('In a row', 'ورا بعض'), absStreak]);
