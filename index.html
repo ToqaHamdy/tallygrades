@@ -10,7 +10,7 @@
    then moves the visitor there with what this device remembers (student ID, phone ID, login, theme), keeping the same link.
    If the check fails, the old address simply keeps working. */
 (function () {
-  var PRIMARY = 'https://tallygrades.vercel.app', KEYS = ['att_id', 'att_name', 'att_groups', 'att_device', 'tg_token', 'tg_theme', 'tg_qhist', 'tg_qmin'];
+  var PRIMARY = 'https://tallygrades.vercel.app', KEYS = ['att_id', 'att_name', 'att_groups', 'att_device', 'tg_token', 'tg_theme', 'tg_qmin', 'tg_qstrict'];
   try {
     var m = location.hash.match(/^#tgmove=([^&]*)(?:&to=(.*))?$/);
     if (m) {
@@ -552,6 +552,13 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .q-mins button { border: 1px solid var(--line); background: var(--card2); color: var(--muted); padding: 7px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: -1px; }
   .q-mins button:nth-of-type(1) { border-radius: 999px 0 0 999px; } .q-mins button:last-child { border-radius: 0 999px 999px 0; }
   .q-mins button[aria-checked="true"] { background: var(--text); color: var(--bg); border-color: var(--text); position: relative; }
+  .q-strict { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .q-strict input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .q-sw { width: 40px; height: 22px; border-radius: 999px; background: var(--line); position: relative; transition: background-color .2s; flex: 0 0 auto; }
+  .q-sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .25s cubic-bezier(.2,1.4,.4,1); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+  .q-strict input:checked + .q-sw { background: var(--accent); } .q-strict input:checked + .q-sw::after { transform: translateX(18px); }
+  .q-strict input:focus-visible + .q-sw { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .q-strict small { color: var(--muted); font-weight: 500; font-size: 12.5px; }
   .q-note { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
   .q-livebox { display: grid; gap: 8px; margin-bottom: 18px; }
   .q-liverow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; text-decoration: none; color: var(--text); background: var(--ok-bg); border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent); transition: transform .2s; }
@@ -4705,26 +4712,7 @@ const BOOT = null;
     if (C) pool = pool.filter(g => g.course === C);
     return pool.sort((a, b) => numeric(a.course + a.group, b.course + b.group));
   }
-  /* it learns: every check-in you start is remembered on this device with its day and hour,
-     so next time at the same day and time the same groups are already picked */
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  function quickRemember(course, groups) {
-    let h = []; try { h = JSON.parse(store.get('tg_qhist') || '[]'); } catch (e) {}
-    const now = new Date();
-    h.push({ c: course, g: groups.slice().sort(numeric), d: now.getDay(), m: now.getHours() * 60 + now.getMinutes(), t: Date.now() });
-    store.set('tg_qhist', JSON.stringify(h.slice(-80)));
-  }
-  function quickGuess(course, valid) {
-    /* the check-ins saved in the database (every device); this device's own list only when the database has none yet */
-    let h = (D && D.habits || []).map(x => ({ c: x.c, g: x.g.slice().sort(numeric), d: x.d, m: x.m, t: x.t }));
-    if (!h.length) { try { h = JSON.parse(store.get('tg_qhist') || '[]'); } catch (e) {} }
-    const now = new Date(), d = now.getDay(), m = now.getHours() * 60 + now.getMinutes();
-    const near = h.filter(x => x.c === course && x.d === d && Math.abs(x.m - m) <= 90 && x.g.every(g => valid.indexOf(g) >= 0));
-    if (!near.length) return null;
-    const count = {}; near.forEach(x => { const k = x.g.join('+'); count[k] = (count[k] || 0) + 1 + x.t / 1e14; });
-    const best = Object.keys(count).sort((a, b) => count[b] - count[a])[0];
-    return { groups: best.split('+'), times: near.filter(x => x.g.join('+') === best).length, day: DAYS[d] };
-  }
   let quickMins = Number(store.get('tg_qmin')) || 15;
   const isAdminView = () => D.me.role === 'Admin' && quickAll;
   function quickHtml(C) {
@@ -4737,15 +4725,13 @@ const BOOT = null;
     if (courses.indexOf(quickCourse) < 0) quickCourse = courses[0];
     const groupsOf = pool.filter(g => g.course === quickCourse && !g.live);
     const names = groupsOf.map(g => g.group);
-    let saved = []; try { saved = JSON.parse(store.get('tg_quick_' + quickCourse) || '[]'); } catch (e) {}
     /* first the schedule (the groups whose section is now), then what you usually take at this hour, then last time */
     const myName = D.me.name, minePick = (x) => x.ta === myName || (!(D.schedule || []).some(y => y.ta === myName) && D.groups.some(g => g.course === x.course && g.group === x.group && g.ta === myName));
     let now = slotsNow(quickCourse).filter(x => names.indexOf(x.group) >= 0);
     if (now.some(minePick)) now = now.filter(minePick); else if (!isAdminView()) now = [];
     const next = slotsNext(quickCourse, x => minePick(x) && names.indexOf(x.group) >= 0);
-    const guess = now.length ? null : quickGuess(quickCourse, names);
-    let sel = now.length ? [...new Set(now.map(x => x.group))] : guess ? guess.groups : saved.filter(x => names.indexOf(x) >= 0);
-    if (!sel.length && names.length) sel = [names[0]];
+    /* only the schedule picks groups by itself; otherwise nothing is picked until you tap */
+    let sel = now.length ? [...new Set(now.map(x => x.group))] : [];
     const wk = D.currentWeek || defaultWeek(groupsOf[0] || pool[0]);
     const wl = (D.weeks[wk - 1] || [wk, 'Week ' + wk])[1];
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === wk ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
@@ -4753,9 +4739,7 @@ const BOOT = null;
     const nextTxt = next.length ? '<span class="q-next">Next today: <b>' + [...new Set(next.map(x => x.group))].map(esc).join(' + ') + '</b> at ' + t12(next[0].start) + (next[0].room ? ' in ' + esc(next[0].room) : '') + '</span>' : '';
     const hint = now.length ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
         '<span>From the schedule, now (' + DAYS[new Date().getDay()] + ' ' + t12(now[0].start) + '&ndash;' + t12(now[0].end) + '): <b>' + [...new Set(now.map(x => x.group))].map(esc).join(' + ') + '</b>' + (rooms.length ? ' in Room <b>' + rooms.map(esc).join(', ') + '</b>' : '') + '.</span></span>' + nextTxt
-      : guess ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z"/></svg>' +
-        '<span>Picked for you: on ' + guess.day + 's at this time you take <b>' + guess.groups.map(esc).join(' + ') + '</b>' + (guess.times > 1 ? ' (' + guess.times + ' times)' : '') + '.</span></span>'
-      : (saved.length ? '<span class="q-ai muted">Same groups as last time. Tap to change.</span>' : '<span class="q-ai muted">Tap the groups in the room. Next time at this day and hour they are picked for you.</span>') + nextTxt;
+      : '<span class="q-ai muted">No section of yours now in the schedule. Tap the groups in the room.</span>' + nextTxt;
     const canAll = D.me.role === 'Admin' && D.groups.some(g => g.ta === D.me.name);
     const allBtn = canAll ? '<button type="button" class="q-allbtn" id="qall">' + (quickAll ? 'Only my groups' : 'Show every group of ' + esc(quickCourse)) + '</button>' : '';
     const letters = [];
@@ -4772,7 +4756,8 @@ const BOOT = null;
           return '<button type="button" class="q-g' + (sel.indexOf(g.group) >= 0 ? ' on' : '') + (isNow ? ' now' : '') + '" data-qg="' + esc(g.group) + '" aria-pressed="' + (sel.indexOf(g.group) >= 0) + '"' +
             (sl.length ? ' title="' + esc(lab + (sl[0].ta ? ' · ' + sl[0].ta : '')) + '"' : '') + '><span class="q-gt"><b>' + esc(g.group) + '</b><small>' + g.count + '</small></span>' + (lab ? '<em>' + esc(lab) + '</em>' : '') + (gta && gta !== D.me.name ? '<em class="q-ta">' + esc(gta) + '</em>' : '') + '<i class="q-tick" aria-hidden="true"></i></button>'; }).join('') + '</div></div>').join('') + '</div>' + allBtn +
       '<div class="q-opts"><label class="q-week"><span>Week</span><select id="qw">' + weekOpts + '</select></label>' +
-        '<div class="q-mins" role="radiogroup" aria-label="Minutes open"><span>Open for</span>' + [10, 15, 20, 30].map(n => '<button type="button" role="radio" data-qm="' + n + '" aria-checked="' + (n === quickMins) + '">' + n + ' min</button>').join('') + '</div></div>' +
+        '<div class="q-mins" role="radiogroup" aria-label="Minutes open"><span>Open for</span>' + [10, 15, 20, 30].map(n => '<button type="button" role="radio" data-qm="' + n + '" aria-checked="' + (n === quickMins) + '">' + n + ' min</button>').join('') + '</div>' +
+        '<label class="q-strict" title="The code on the screen changes every few seconds, so only students in the room can check in."><input type="checkbox" id="qst"' + (store.get('tg_qstrict') === '1' ? ' checked' : '') + '><span class="q-sw" aria-hidden="true"></span><span>Strict mode</span><small>code changes every few seconds</small></label></div>' +
       '<p class="q-note">One QR for every group you pick. Students of any other group of ' + esc(quickCourse) + ' can scan it too and are marked in their own group. No internet? Type their ID on the QR screen.</p>' +
       '</section>';
   }
@@ -4783,7 +4768,6 @@ const BOOT = null;
       const sel = picked(), n = sel.reduce((t, g) => t + ((D.groups.find(x => x.course === quickCourse && x.group === g) || {}).count || 0), 0);
       if ($('qsel')) $('qsel').textContent = sel.length ? sel.join(' + ') + ' · ' + n + ' students' : 'pick a group';
       if ($('qo')) $('qo').disabled = !sel.length;
-      store.set('tg_quick_' + quickCourse, JSON.stringify(sel));
     };
     box.querySelectorAll('.q-g').forEach(b => b.onclick = () => { b.classList.toggle('on'); b.setAttribute('aria-pressed', String(b.classList.contains('on'))); paint(); });
     box.querySelectorAll('.q-letter').forEach(b => b.onclick = () => {
@@ -4791,6 +4775,7 @@ const BOOT = null;
       row.forEach(x => { x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); paint();
     });
     box.querySelectorAll('[data-qm]').forEach(b => b.onclick = () => { quickMins = Number(b.dataset.qm); store.set('tg_qmin', String(quickMins)); box.querySelectorAll('[data-qm]').forEach(x => x.setAttribute('aria-checked', String(x === b))); });
+    if ($('qst')) $('qst').onchange = () => store.set('tg_qstrict', $('qst').checked ? '1' : '0');
     if ($('qall')) $('qall').onclick = () => { quickAll = !quickAll; store.set('tg_qall', quickAll ? '1' : '0'); box.outerHTML = quickHtml(courseOnly); bindQuick(); };
     box.querySelectorAll('[data-qc]').forEach(b => b.onclick = () => { quickCourse = b.dataset.qc; store.set('tg_quick_course', quickCourse); box.outerHTML = quickHtml(courseOnly); bindQuick(); });
     if ($('qo')) $('qo').onclick = async () => {
@@ -4798,8 +4783,7 @@ const BOOT = null;
       if (!sel.length) return;
       $('qo').disabled = true; $('qo').classList.add('going');
       try {
-        await api('openSession', PIN, quickCourse, sel[0], Number($('qw').value), quickMins, false, true, sel.slice(1));
-        quickRemember(quickCourse, sel);
+        await api('openSession', PIN, quickCourse, sel[0], Number($('qw').value), quickMins, $('qst').checked, true, sel.slice(1));
         go(pageHash('group', D.groups.find(g => g.course === quickCourse && g.group === sel[0])));
       } catch (e) { toast(errMsg(e)); $('qo').disabled = false; $('qo').classList.remove('going'); }
     };
@@ -4939,7 +4923,7 @@ const BOOT = null;
       $('open').onclick = async () => {
         $('open').disabled = true;
         const also = [...document.querySelectorAll('.also:checked')].map(x => x.value);
-        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked, also); quickRemember(g.course, [g.group].concat(also)); await load(); }
+        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked, also); await load(); }
         catch (e) { toast(errMsg(e)); $('open').disabled = false; }
       };
     }
