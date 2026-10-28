@@ -2692,6 +2692,8 @@ const BOOT = null;
     }
     throw new Error('Could not reach the server. Check your internet.');
   }
+  /* an item named Bonus adds to the student's total but not to the total it is out of */
+  const isBonus = (it) => /^bonus\b/i.test(String(it.item || '').trim());
   const errMsg = (e) => String((e && e.message) || e);
   const numeric = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
   const mmss = (s) => { s = Math.max(0, s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
@@ -3015,13 +3017,13 @@ const BOOT = null;
     let V;
     try { V = await api('gradesView', PIN, course, ''); } catch (e) { box.innerHTML = '<p class="err" style="padding:16px 0">' + esc(errMsg(e)) + '</p>'; return; }
     if (!$('cs' + ci)) return;
-    const parts = (V.attendanceMax ? [{ item: 'Attendance', max: Number(V.attendanceMax), auto: true }] : []).concat(V.items.map(it => ({ item: it.item, max: Number(it.max) })));
-    const total = parts.reduce((t, x) => t + x.max, 0);
+    const parts = (V.attendanceMax ? [{ item: 'Attendance', max: Number(V.attendanceMax), auto: true }] : []).concat(V.items.map(it => ({ item: it.item, max: Number(it.max), bonus: isBonus(it) })));
+    const total = parts.reduce((t, x) => t + (x.bonus ? 0 : x.max), 0), extra = parts.reduce((t, x) => t + (x.bonus ? x.max : 0), 0);
     box.innerHTML = (parts.length
       ? '<div class="dbar">' + parts.map((x, i) => '<i class="d' + (i % 4) + '" style="flex:' + x.max + '" title="' + esc(x.item) + ': ' + x.max + '"></i>').join('') + '</div>' +
-        '<div class="dist">' + parts.map((x, i) => '<div class="dchip"><span class="dot d' + (i % 4) + '"></span><b>' + x.max + '</b><span>' + esc(x.item) + (x.auto ? '<small>from attendance %</small>' : '') + '</span></div>').join('') + '</div>'
+        '<div class="dist">' + parts.map((x, i) => '<div class="dchip"><span class="dot d' + (i % 4) + '"></span><b>' + x.max + '</b><span>' + esc(x.item) + (x.auto ? '<small>from attendance %</small>' : x.bonus ? '<small>extra, not in the total</small>' : '') + '</span></div>').join('') + '</div>'
       : '<p class="note" style="padding:16px 0 4px">No grades set for this course yet.</p>') +
-      '<div class="dist-foot"><span>Total <b>' + total + '</b></span><button class="btn" type="button" id="ce' + ci + '">' + (parts.length ? 'Edit grades' : 'Set grades') + '</button></div>';
+      '<div class="dist-foot"><span>Total <b>' + total + '</b>' + (extra ? ' + ' + extra + ' bonus' : '') + '</span><button class="btn" type="button" id="ce' + ci + '">' + (parts.length ? 'Edit grades' : 'Set grades') + '</button></div>';
     $('ce' + ci).onclick = () => itemsDialog(course, V, () => courseSettings(course, ci));
   }
   /** End of term: one Excel file, one tab per course, one row per student with every week, attendance %, every grade and the total. */
@@ -3538,7 +3540,7 @@ const BOOT = null;
       $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; });
     };
     const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
-    const maxTotal = () => (V.attendanceMax || 0) + V.items.reduce((t, it) => t + Number(it.max), 0);
+    const maxTotal = () => (V.attendanceMax || 0) + V.items.reduce((t, it) => t + (isBonus(it) ? 0 : Number(it.max)), 0);
     /* green from 75%, orange from 50%, red below */
     const level = (f) => f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
     const paintBar = (el, part, whole) => { const f = whole > 0 ? Math.max(0, Math.min(1, part / whole)) : 0; el.className = 'mbar ' + level(f); el.firstChild.style.width = Math.round(f * 100) + '%'; };
@@ -3573,7 +3575,7 @@ const BOOT = null;
       const weekName = (n) => 'Week ' + (n + 1) + (n === 6 ? ' (Midterm)' : n === 13 ? ' (Final)' : '');
       const weekNums = Array.from({ length: 14 }, (x, n) => '<i>' + (n + 1) + '</i>').join('');
       $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance<div class="wk wkh">' + weekNums + '</div></th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
-        V.items.map(it => '<th class="num">' + esc(it.item) + '<small>out of ' + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
+        V.items.map(it => '<th class="num">' + esc(it.item) + '<small>' + (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max + '</small></th>').join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
       $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td class="sx">' + (i + 1) + '</td>' +
         '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
         '<td><div class="attc"><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b><span>' + r.p + ' P, ' + r.a + ' A, ' + r.e + ' E</span></div>' +
