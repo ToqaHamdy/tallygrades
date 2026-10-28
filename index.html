@@ -388,7 +388,13 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .tn { display: flex; align-items: center; gap: 4px; flex: 1 1 auto; min-width: 0; margin-right: 8px; }
   .tn > .tn-a > svg:first-child, .tn > .tn-dd > .tn-a > svg:first-child { display: none; }
   .tn-take { margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 0; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap; box-shadow: 0 8px 22px -10px var(--accent); }
-  .tn-take:hover { filter: brightness(1.08); } .tn-take:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tn-take:hover { filter: brightness(1.08); }
+  .tn-take.alt { background: transparent; color: var(--text); border: 1.5px solid var(--accent); box-shadow: none; text-decoration: none; padding: 8.5px 16px; } .tn-take.alt svg { color: var(--accent); }
+  .tn-take.alt:hover, .tn-take.alt.on { background: color-mix(in srgb, var(--accent) 14%, transparent); filter: none; } .tn-take + .tn-take { margin-left: 8px; }
+  .hist-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 16px 0 12px; } .hist-tools .in { flex: 1 1 220px; }
+  #hk button.on { background: var(--soft); color: var(--ink); }
+  .hist-wrap { max-height: 55vh; overflow: auto; } .hist-id { display: block; color: var(--muted); font-family: var(--mono); font-size: 11.5px; }
+  .hist-k { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-right: 4px; } .hist-k.mk { background: var(--soft); color: var(--ink); } .hist-k.at { background: var(--ok-bg); color: var(--ok); } .tn-take:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .tn-h { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 12px 4px; } .tn-h:not(:first-child) { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
   .tn-a { display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
   .tn-a:hover, .tn-a[aria-expanded="true"] { background: var(--soft); color: var(--text); }
@@ -3409,7 +3415,7 @@ const BOOT = null;
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], markWeeks: ['mark_weeks', ['p_pin', 'p_course', 'p_group', 'p_items', 'p_status']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
     saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']],
-    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']]
+    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']]
   };
   async function api(fn, ...args) {
     const [name, params] = RPC[fn];
@@ -3764,12 +3770,12 @@ const BOOT = null;
     const dd = (key, icon, label, body, active) => '<div class="tn-dd"><button type="button" title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" data-dd="' + key + '" aria-haspopup="true" aria-expanded="false">' + svg(icon) + '<span>' + label + '</span><svg class="tn-car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="tn-menu" hidden>' + body + '</div></div>';
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
     const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
-    /* a calm bar: four pages in words, everything else under More, and Take attendance as the one big button */
+    /* a calm bar: three pages in words, everything else under More, then the two jobs as big buttons: Enter marks and Take attendance */
     const moreBody = (courses.length ? '<div class="tn-h">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join('') : '') + '<div class="tn-h">Tools</div>' + toolsBody;
     $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) +
-      tnItem('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
       tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
       dd('more', 'archive', 'More', moreBody, courses.some(x => h === courseHash(x))) +
+      '<a class="tn-take alt' + (h.indexOf('#marks') === 0 ? ' on' : '') + '" title="Type quiz, assignment and exam marks" href="#marks' + (c ? '/' + encodeURIComponent(c) : '') + '">' + svg('pen') + '<span>Enter marks</span></a>' +
       '<button type="button" class="tn-take" title="Open a check-in with a QR code" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>';
     $('topnav').hidden = false; $('tnBrand').hidden = false;
     const closeDd = () => $('topnav').querySelectorAll('.tn-menu').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
@@ -4389,6 +4395,30 @@ const BOOT = null;
     o.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
     onReady(o, close);
   }
+  /* who changed what: every mark and attendance change of a group (or a whole course), newest first */
+  function historyDialog(course, group) {
+    const ST = { P: 'Present', E: 'Excused', A: 'Empty', '': 'Empty' };
+    dialog('<span class="pill">' + esc(course) + (group ? ' &middot; group ' + esc(group) : '') + '</span><h1 style="font-size:26px;margin-top:12px">History</h1>' +
+      '<p class="sub">Every mark and attendance change, with the TA who made it. Newest first.</p>' +
+      '<div class="hist-tools"><input class="in" id="hq" type="search" placeholder="Search a student, an ID or a TA"><div class="seg" id="hk"><button type="button" class="on" data-k="">All</button><button type="button" data-k="Mark">Marks</button><button type="button" data-k="Attendance">Attendance</button></div></div>' +
+      '<div class="table-wrap hist-wrap"><table><thead><tr><th>When</th><th>By</th><th>Student</th>' + (group ? '' : '<th>Group</th>') + '<th>Change</th></tr></thead><tbody id="hrows"><tr><td colspan="5" style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
+      '<div class="row" style="margin-top:16px"><button class="btn ghost" data-close type="button">Close</button></div>',
+      async (o) => {
+        o.querySelector('.panel').classList.add('wide');
+        let rows = [], kind = '', q = '';
+        const val = (x, v) => x.kind === 'Attendance' ? ST[v] || v : v === '' ? '&ndash;' : esc(v);
+        const paint = () => {
+          const shown = rows.filter(x => (!kind || x.kind === kind) && (!q || (x.name + ' ' + x.id + ' ' + x.by + ' ' + x.what).toLowerCase().indexOf(q) >= 0));
+          o.querySelector('#hrows').innerHTML = shown.length ? shown.map(x => '<tr><td class="mono" style="white-space:nowrap">' + esc(x.t) + '</td><td><b>' + esc(x.by || 'Unknown') + '</b></td><td>' + esc(x.name) + '<small class="hist-id">' + esc(x.id) + '</small></td>' + (group ? '' : '<td>' + esc(x.group) + '</td>') +
+            '<td><span class="hist-k ' + (x.kind === 'Mark' ? 'mk' : 'at') + '">' + esc(x.what) + '</span> ' + val(x, x.from) + ' &rarr; <b>' + val(x, x.to) + '</b></td></tr>').join('')
+            : '<tr><td colspan="5" style="color:var(--muted)">' + (rows.length ? 'Nothing matches.' : 'No changes yet.') + '</td></tr>';
+        };
+        o.querySelector('#hq').oninput = (e) => { q = e.target.value.trim().toLowerCase(); paint(); };
+        o.querySelectorAll('#hk [data-k]').forEach(b => b.onclick = () => { kind = b.dataset.k; o.querySelectorAll('#hk button').forEach(x => x.classList.toggle('on', x === b)); paint(); });
+        try { rows = await api('changeHistory', PIN, course, group || null); paint(); }
+        catch (e) { o.querySelector('#hrows').innerHTML = '<tr><td colspan="5" class="err">' + esc(errMsg(e)) + '</td></tr>'; }
+      });
+  }
   function parseList(text) {
     const out = [], seen = {};
     for (const line of String(text).split(/\r?\n/)) {
@@ -4633,7 +4663,7 @@ const BOOT = null;
           gs.map(g => '<button type="button" class="mk-chip sm' + (picked.indexOf(g) >= 0 ? ' on' : '') + '" data-mg="' + esc(g) + '">' + esc(g) + '</button>').join('') + '</div></div>' +
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
-          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button>' + (it.check ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done</button>' : '') + '</div>' +
+          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button><button class="btn ghost" id="mkhist" type="button">History</button>' + (it.check ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done</button>' : '') + '</div>' +
         '<p class="mk-stat"><b>' + filled.length + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(it.item) + '</b>' + (nums.length && !it.check ? ' &middot; average <b>' + Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 + '</b> of ' + it.max : '') + '</p>' +
         '<div class="table-wrap"><table class="mk-table"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th><th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th></tr></thead><tbody>' +
           (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
@@ -4691,6 +4721,7 @@ const BOOT = null;
         if (inp.type === 'checkbox') { inp.checked = true; inp.oninput(); $('mkid').focus(); } else { inp.focus(); inp.select(); }
       };
       if ($('mkalldone')) $('mkalldone').onclick = () => box.querySelectorAll('.mk-table tr:not([hidden]) .ck').forEach(x => { x.checked = true; x.oninput(); });
+      $('mkhist').onclick = () => historyDialog(course, picked.length === 1 ? picked[0] : null);
       $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy two columns from Excel, the student ID and the mark of <b>' + esc(item().item) + '</b>, and paste them here. One student on each line.</p>' +
         '<textarea class="in" id="pt" rows="10" style="width:100%;margin-top:12px;font-family:var(--mono)" placeholder="692601451&#9;14&#10;692601452&#9;17"></textarea><div class="err" id="pe"></div>' +
         '<div class="row" style="margin-top:12px"><button class="btn" id="pgo" type="button">Fill the marks</button><button class="btn ghost" data-close type="button">Cancel</button></div>', (o, close) => {
@@ -5379,7 +5410,7 @@ const BOOT = null;
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
     app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'group') +
       '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span>' + (taOf(g.group) ? '<span class="pill sched">TA ' + esc(taOf(g.group)) + '</span>' : '') + slotsOf(g.course, g.group).map(x => '<span class="pill sched">' + DAY3[x.day] + ' ' + t12(x.start) + '&ndash;' + t12(x.end) + (x.room ? ' &middot; Room ' + esc(x.room) : '') + '</span>').join('') + '<span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
-      '<div class="links hide-proj" style="margin:0"><button class="link" id="gr">Grades &rarr;</button></div></div>' +
+      '<div class="links hide-proj" style="margin:0"><button class="link" id="hist" type="button">History</button><button class="link" id="gr">Grades &rarr;</button></div></div>' +
       '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
       '<label class="f" style="flex:0 1 320px">Week<select class="in" id="wk">' + weekOpts + '<option value="all">All weeks (summary)</option></select></label>' +
       '<div id="startbox" class="row" style="align-items:flex-end;flex:1 1 380px"></div></div></div>' +
@@ -5391,6 +5422,7 @@ const BOOT = null;
 
     $('bk').onclick = () => go(courseHash(g.course));
     $('gr').onclick = () => go(pageHash('grades', g));
+    $('hist').onclick = () => historyDialog(g.course, g.group);
     bindBar(g, 'group');
     $('wk').onchange = () => { week = $('wk').value === 'all' ? 'all' : Number($('wk').value); lastQr = ''; $('livebox').innerHTML = ''; load(); };
     $('sr').oninput = () => { q = $('sr').value.trim().toLowerCase(); renderList(); };
@@ -5655,7 +5687,7 @@ const BOOT = null;
       onState: () => { if ($('st')) status(); } });
     app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'grades') +
       '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks: they save on their own. Enter moves to the next student.</p></div></div>' +
-      '<div class="links" style="margin:0"><a class="link" href="' + pageHash('group', g) + '">Attendance &rarr;</a><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
+      '<div class="links" style="margin:0"><button class="link" id="hist" type="button">History</button><a class="link" href="' + pageHash('group', g) + '">Attendance &rarr;</a><button class="btn ghost" id="items" type="button" hidden>Grade items</button></div></div>' +
       '<div class="gstats" id="gst"></div>' +
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID">' +
       '<div class="seg"><span>Copy</span><button type="button" id="cpsec">Section attendance (W1 to W12)</button><button type="button" id="cpgr">Grades</button><button type="button" id="cpall">Whole table</button></div></div>' +
@@ -5667,6 +5699,7 @@ const BOOT = null;
     leaveGuard = () => { if (unsaved()) saver.flush(); return true; };
     $('bk').onclick = () => go(courseHash(g.course));
     bindBar(g, 'grades');
+    $('hist').onclick = () => historyDialog(g.course, g.group);
     $('sr').oninput = () => {
       const q = $('sr').value.trim().toLowerCase();
       $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; });
