@@ -814,6 +814,37 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   @keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
   html.vt-theme::view-transition-old(root), html.vt-theme::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  /* calmer home, account menu */
+  .acct-menu { display: grid; gap: 2px; margin-top: 10px; }
+  .acct-item { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; align-items: center; width: 100%; padding: 10px; border-radius: 10px; border: 0; background: none; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
+  .acct-item svg { color: var(--muted); } .acct-item small { grid-column: 2; color: var(--muted); font-weight: 500; font-size: 12px; }
+  .acct-item:hover { background: var(--soft); } .acct-item:hover svg { color: var(--accent); }
+  .acct-item.out, .acct-item.out svg { color: var(--err); }
+  .home-top { border-bottom: 0; margin-bottom: 18px; padding-bottom: 0; }
+  .home-top h1 { font-size: clamp(28px, 3.4vw, 40px); }
+  .glist { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 2px 18px; margin-top: 14px; }
+  .glist .grow { grid-template-columns: 54px minmax(0, 1fr) auto; padding: 12px 2px; }
+  .glist .gcode { font-size: 22px; }
+  .glist .gbar { display: none; }
+  .glist .grow .links, .glist .grow .owner { grid-column: 3; grid-row: 1; margin: 0; justify-content: flex-end; gap: 4px 16px; max-width: 380px; }
+  .acct-panel { background: var(--card) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; z-index: 40; }
+  .q-letters { display: flex; flex-wrap: wrap; gap: 10px 18px; }
+  .q-lrow { gap: 6px; }
+  .glist .gta { font-size: 15px; }
+  @media (max-width: 640px) { .glist { padding: 2px 12px; } .glist .grow { grid-template-columns: 44px minmax(0, 1fr); } .glist .grow .links, .glist .grow .owner { grid-column: 2; grid-row: auto; justify-content: flex-start; } }
+  .quick::before { display: none; }
+  .quick { padding: 22px 24px; border-radius: 20px; }
+  .q-title h2 { font-size: clamp(22px, 2.4vw, 26px); }
+  .qs-ring { display: none; }
+  .q-start { width: 170px; height: 118px; border-radius: 18px; background: var(--accent); box-shadow: 0 12px 28px -16px var(--accent); }
+  .q-start:hover { transform: translateY(-2px); box-shadow: 0 16px 32px -16px var(--accent); }
+  .q-ai { background: var(--card2); border-color: var(--line); }
+  .q-letter { flex: 0 0 22px; height: auto; border: 0; font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--muted); }
+  .q-letters { gap: 8px; }
+  .q-g.on { background: var(--accent); box-shadow: none; }
+  .q-tick { display: none; }
+  .q-opts { border-top: 0; padding-top: 4px; }
+  @media (max-width: 640px) { .q-start { width: 100%; height: 76px; border-radius: 16px; } .qs-in small { max-width: 50vw; } }
 </style>
 </head>
 <body>
@@ -3634,8 +3665,7 @@ const BOOT = null;
       tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
       (courses.length ? dd('courses', 'book', 'Courses', courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join(''), courses.some(x => h === courseHash(x))) : '') +
       (secHtml ? dd('secs', 'clock', 'My sections', secHtml, /^#(group|grades)\//.test(h)) : '') +
-      dd('tools', 'archive', 'Tools', toolsBody, false) +
-      '<button type="button" class="tn-a" title="Ask the assistant" data-sd="ask">' + svg('spark') + '<span>Ask</span></button>' + tnItem('#settings', 'gear', 'Settings', h === '#settings');
+      dd('tools', 'archive', 'Tools', toolsBody, false);
     $('topnav').hidden = false; $('tnBrand').hidden = false;
     const closeDd = () => $('topnav').querySelectorAll('.tn-menu').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
     $('topnav').querySelectorAll('[data-dd]').forEach(b => b.onclick = (e) => { e.stopPropagation(); const m = b.nextElementSibling, open = m.hidden; closeDd(); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); });
@@ -3661,6 +3691,8 @@ const BOOT = null;
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('side-open')) close(); });
     }
   }
+  const accIcon = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    ({ gear: TB_ICONS.gear, users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>', out: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>' })[n] + '</svg>';
   function acct() {
     botFab(true);
     sideNav();
@@ -3683,14 +3715,11 @@ const BOOT = null;
     el.innerHTML = '<button class="acct-btn' + (me.photo ? ' has-photo' : '') + '" id="acctb" type="button" aria-haspopup="true" aria-expanded="false" title="' + esc(me.name) + '">' + (me.photo ? '<img class="av-img" src="' + esc(me.photo) + '" alt="">' : esc(initials(me.name))) + '</button>' +
       '<div class="acct-panel" id="acctp" hidden role="dialog" aria-label="Account">' +
         '<div class="acct-me">' + avatar(me.name, me.photo, 'acct-av') + '<div><b>' + esc(me.name) + '</b><small>' + (isAdmin ? 'Admin' : 'TA') + ((me.username || (myStaff && myStaff.username)) ? ', username ' + esc(me.username || myStaff.username) : '') + '</small></div>' +
-          '<a class="acct-set" href="#settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a></div>' +
-        '<div class="acct-sec"><h4>Courses</h4>' + (courses.length ? courses.map(c => '<a class="acct-row" href="' + courseHash(c) + '"><span>' + esc(c) + '</span><small>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</small></a>').join('') : '<p class="note">No courses yet.</p>') + '</div>' +
-        '<div class="acct-sec"><h4>My groups (' + mine.length + ')</h4>' + (mine.length ? mine.map(g => '<a class="acct-row" href="' + pageHash('group', g) + '"><span>' + (g.live ? '<i class="odot"></i>' : '') + '<b>' + esc(g.group) + '</b> ' + esc(g.course) + '</span><small>' + g.count + ' students</small></a>').join('')
-          : '<p class="note">' + (isAdmin ? 'No groups of your own. You see every group.' : 'No groups yet. Open a course and press This is my group.') + '</p>') + '</div>' +
-        (isAdmin ? '<div class="acct-sec"><h4>TAs (' + tas.length + ')</h4>' + (tas.length ? tas.map(t => { const gs = D.groups.filter(g => g.ta === t.name);
-            return '<div class="acct-row static"><span>' + avatar(t.name, t.photo, 'mini-av') + '<b>' + esc(t.name) + '</b><small class="acct-sub">' + (gs.length ? gs.map(g => esc(g.group)).join(', ') : 'no groups') + '</small></span><small>' + gs.length + '</small></div>'; }).join('') : '<p class="note">No TAs yet.</p>') +
-          '<button class="link" id="acctTas" type="button" style="margin-top:8px">Manage TAs &rarr;</button></div>' : '') +
-        '<a class="btn ghost acct-btn2" href="#settings">Settings</a><button class="btn ghost acct-out" id="acctOut" type="button">Log out</button></div>';
+          '</div>' +
+        '<nav class="acct-menu">' +
+          '<a class="acct-item" href="#settings">' + accIcon('gear') + '<span>Settings</span><small>photo, password, theme</small></a>' +
+          (isAdmin ? '<button class="acct-item" id="acctTas" type="button">' + accIcon('users') + '<span>Manage TAs</span><small>' + tas.length + ' TAs' + ((D.staff || []).some(x => x.status === 'pending') ? ', ' + (D.staff || []).filter(x => x.status === 'pending').length + ' waiting' : '') + '</small></button>' : '') +
+          '<button class="acct-item out" id="acctOut" type="button">' + accIcon('out') + '<span>Log out</span></button></nav></div>';
     const p = $('acctp'), b = $('acctb');
     b.onclick = (e) => { e.stopPropagation(); p.hidden = !p.hidden; b.setAttribute('aria-expanded', String(!p.hidden)); };
     p.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { p.hidden = true; }));
@@ -3920,10 +3949,7 @@ const BOOT = null;
             (view === 'teams' ? nT + ' project teams, ' + teams.filter(t => t.course === sec.course).reduce((n, t) => n + t.count, 0) + ' students'
               : sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') + sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students') + '</span></div>';
           if (view === 'teams') return head + '<div class="letters">' + teamBlocks(sec.course) + '</div></section>';
-          return head + '<div class="letters">' +
-            letters.map(b => '<div class="letter"><div class="letter-head"><span class="letter-big">' + esc(b.L) + '</span><span class="letter-meta">Group ' + esc(b.L) + '<br>' +
-              b.rows.length + (b.rows.length > 1 ? ' groups, ' : ' group, ') + b.rows.reduce((t, [g]) => t + g.count, 0) + ' students</span></div>' + b.rows.map(([g, i]) => groupRow(g, i)).join('') + '</div>').join('') +
-            '</div></section>';
+          return head + '<div class="glist">' + sec.rows.map(([g, i]) => groupRow(g, i)).join('') + '</div></section>';
         }).join('');
     }
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
@@ -3946,12 +3972,10 @@ const BOOT = null;
       /* home: a button for each course, then the tabs */
       const cs = [...new Set(groups.map(g => g.course))].sort();
       const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-      head = '<div class="top"><div><h1>' + greet + ', ' + esc(D.me.name.split(' ')[0]) + '</h1><p class="sub">' + hello + '</p></div>' + top + '</div>' +
-        (cs.length ? '<div class="ccards">' + cs.map(c => {
-          const gs = groups.filter(g => g.course === c), nt = teams.filter(t => t.course === c).length, lv = gs.filter(g => g.live).length;
-          return '<a class="ccard" href="' + courseHash(c) + '"><span class="cbadge">' + esc(initials(c)) + '</span><span class="cinfo"><b>' + esc(c) + '</b><small>' + gs.length + (gs.length === 1 ? ' group, ' : ' groups, ') +
-            gs.reduce((a, g) => a + g.count, 0) + ' students' + (nt ? ', ' + nt + (nt === 1 ? ' project team' : ' project teams') : '') + '</small>' + (lv ? '<small class="clive"><i class="odot"></i>' + lv + ' live now</small>' : '') + '</span><span class="go" aria-hidden="true">&rarr;</span></a>';
-        }).join('') + '</div>' : '') + quickHtml(null) +
+      /* home stays calm: a short greeting, Take attendance, then the groups (courses are in the menu at the top) */
+      const dayLine = DAYS[new Date().getDay()] + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') +
+        (isAdmin && waiting.length && tab !== 'staff' ? ' &middot; <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' &rarr;</button>' : '');
+      head = '<div class="top home-top"><div><h1>' + greet + ', ' + esc(D.me.name.split(' ')[0]) + '</h1><p class="sub">' + dayLine + '</p></div></div>' + quickHtml(null) +
         '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
     }
     app.innerHTML = '<div class="wrap">' + head + body + '</div>';
@@ -4844,7 +4868,7 @@ const BOOT = null;
       '<div class="q-opts"><label class="q-week"><span>Week</span><select id="qw">' + weekOpts + '</select></label>' +
         '<div class="q-mins" role="radiogroup" aria-label="Minutes open"><span>Open for</span>' + [10, 15, 20, 30].map(n => '<button type="button" role="radio" data-qm="' + n + '" aria-checked="' + (n === quickMins) + '">' + n + ' min</button>').join('') + '</div>' +
         '<label class="q-strict" title="The code on the screen changes every few seconds, so only students in the room can check in."><input type="checkbox" id="qst"' + (store.get('tg_qstrict') === '1' ? ' checked' : '') + '><span class="q-sw" aria-hidden="true"></span><span>Strict mode</span><small>code changes every few seconds</small></label></div>' +
-      '<p class="q-note">One QR for every group you pick. Students of any other group of ' + esc(quickCourse) + ' can scan it too and are marked in their own group. No internet? Type their ID on the QR screen.</p>' +
+      '<p class="q-note">One QR for all the groups you pick. Students of other groups can scan it too.</p>' +
       '</section>';
   }
   function bindQuick() {
