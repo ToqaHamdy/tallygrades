@@ -299,6 +299,36 @@
   .codebox .lbl span + span { text-transform: none; letter-spacing: 0; }
   .codebox .lbl { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-family: var(--mono); font-weight: 700; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
   .digits { font-family: var(--mono); font-weight: 800; font-size: clamp(64px, 9vw, 132px); letter-spacing: .12em; color: var(--ink); line-height: 1.05; margin-top: 8px; }
+  .quick { border: 1px solid var(--line); border-left: 4px solid var(--accent, #d33); border-radius: 18px; background: var(--card); padding: 20px 22px; margin: 0 0 28px; }
+  .q-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .q-head h2 { margin: 4px 0 0; font-size: 22px; }
+  .q-head select { max-width: 320px; }
+  .q-kicker { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .q-live { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .q-go { font-size: 17px; padding: 14px 20px; display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+  .q-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .q-picks .tg-pick small { color: var(--muted); font-size: 12px; }
+  .q-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-top: 14px; }
+  .q-row .f { flex: 0 1 260px; margin: 0; }
+  .q-open { font-size: 17px; padding: 13px 22px; }
+  .q-note { margin: 12px 0 0; }
+  .room { display: flex; flex-direction: column; gap: 4px; padding-bottom: 16px; margin-top: 18px; border-bottom: 1px dashed var(--line); }
+  .room > span { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .room > b { font-family: var(--display); font-size: clamp(72px, 9vw, 128px); line-height: .95; font-weight: 800; letter-spacing: -.05em; color: var(--text); display: inline-block; }
+  .room-by { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 14px; }
+  .room-by b { color: var(--text); }
+  .room + .tally { margin-top: 12px; font-size: 16px; }
+  .room + .tally b { font-size: clamp(30px, 3vw, 44px); }
+  .nonet { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
+  .nonet .f { margin: 0; }
+  .nonet .row { gap: 8px; margin-top: 6px; }
+  .nonet .in { flex: 1 1 auto; min-width: 0; }
+  .nchoose { display: flex; flex-direction: column; gap: 6px; }
+  .nchoose small { color: var(--muted); margin-left: 6px; }
+  .nok { color: var(--ok, #1a7f45); font-weight: 600; margin: 8px 0 0; }
+  .nonet .err { margin: 8px 0 0; }
+  .qr small { color: inherit; opacity: .8; font-size: 14px; font-weight: 600; }
+  .nonet .btn { white-space: nowrap; flex: 0 0 auto; }
   .tally { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; font-size: 20px; margin-top: 22px; color: var(--muted); font-weight: 600; }
   .tally b { font-family: var(--display); font-size: clamp(54px, 6vw, 88px); color: var(--text); font-weight: 800; line-height: 1; letter-spacing: -.04em; }
   .left { color: var(--muted); margin-top: 8px; font-weight: 600; font-size: 15px; }
@@ -2908,7 +2938,7 @@ const BOOT = null;
     setTermStart: ['set_term_start', ['p_pin', 'p_date']],
     openSession: ['open_session', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_minutes', 'p_strict', 'p_guests', 'p_also']],
     extendSession: ['extend_session', ['p_pin', 'p_id', 'p_minutes']], closeSession: ['close_session', ['p_pin', 'p_id']],
-    randomCheck: ['random_check', ['p_pin', 'p_id', 'p_n']], groupState: ['group_state', ['p_pin', 'p_course', 'p_group', 'p_week']],
+    randomCheck: ['random_check', ['p_pin', 'p_id', 'p_n']], sessionMark: ['session_mark', ['p_pin', 'p_id', 'p_sid']], groupState: ['group_state', ['p_pin', 'p_course', 'p_group', 'p_week']],
     groupSummary: ['group_summary', ['p_pin', 'p_course', 'p_group']], mark: ['mark', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id', 'p_status']],
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
@@ -3450,7 +3480,7 @@ const BOOT = null;
         '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
         '<div class="links" style="margin:0"><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
         '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
-          tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' +
+          tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' + quickHtml(C) +
         (isAdmin ? '<section class="course cset" style="margin-bottom:30px"><div class="course-head"><h2 style="font-size:20px">Grades</h2><span>the same for every group</span></div><div id="cs0"><p class="note" style="padding:16px 0">Loading</p></div></section>' : '');
     } else {
       /* home: a button for each course, then the tabs */
@@ -3460,7 +3490,7 @@ const BOOT = null;
           const gs = groups.filter(g => g.course === c), nt = teams.filter(t => t.course === c).length, lv = gs.filter(g => g.live).length;
           return '<a class="ccard" href="' + courseHash(c) + '"><span class="cbadge">' + esc(initials(c)) + '</span><span class="cinfo"><b>' + esc(c) + '</b><small>' + gs.length + (gs.length === 1 ? ' group, ' : ' groups, ') +
             gs.reduce((a, g) => a + g.count, 0) + ' students' + (nt ? ', ' + nt + (nt === 1 ? ' team' : ' teams') : '') + '</small>' + (lv ? '<small class="clive"><i class="odot"></i>' + lv + ' live now</small>' : '') + '</span><span class="go" aria-hidden="true">&rarr;</span></a>';
-        }).join('') + '</div>' : '') +
+        }).join('') + '</div>' : '') + quickHtml(null) +
         '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
     }
     app.innerHTML = '<div class="wrap">' + head + body + '</div>';
@@ -3513,6 +3543,7 @@ const BOOT = null;
     if ($('home')) $('home').onclick = () => go('');
     if (C && isAdmin) courseSettings(C, 0);
     if (C) countUp();
+    bindQuick();
     /* the group dialogs start on this course */
     if (C) {
       const preset = (open) => () => { open(); const co = document.querySelector('.overlay #co'); if (co) co.value = C; };
@@ -3914,6 +3945,55 @@ const BOOT = null;
       });
   }
 
+  /* ----- Take attendance: the groups in front of you, one press to the QR ----- */
+  let quickCourse = '';
+  function quickPool(C) {
+    const isAdmin = D.me.role === 'Admin';
+    let pool = D.groups.filter(g => g.ta === D.me.name);
+    if (isAdmin && !pool.length) pool = D.groups.slice();
+    if (C) pool = pool.filter(g => g.course === C);
+    return pool.sort((a, b) => numeric(a.course + a.group, b.course + b.group));
+  }
+  function quickHtml(C) {
+    const pool = quickPool(C);
+    if (!pool.length) return '';
+    const lives = [];
+    pool.filter(g => g.live).forEach(g => { let s = lives.find(x => x.id === g.live); if (!s) { s = { id: g.live, g: g, groups: [] }; lives.push(s); } s.groups.push(g.group); });
+    const courses = [...new Set(pool.map(g => g.course))];
+    if (courses.indexOf(quickCourse) < 0) quickCourse = store.get('tg_quick_course') || '';
+    if (courses.indexOf(quickCourse) < 0) quickCourse = courses[0];
+    const groupsOf = pool.filter(g => g.course === quickCourse && !g.live);
+    let saved = []; try { saved = JSON.parse(store.get('tg_quick_' + quickCourse) || '[]'); } catch (e) {}
+    const sel = saved.filter(x => groupsOf.some(g => g.group === x));
+    if (!sel.length && groupsOf.length) sel.push(groupsOf[0].group);
+    const wk = D.currentWeek || defaultWeek(groupsOf[0] || pool[0]);
+    const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === wk ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
+    return '<section class="quick" id="quick"><div class="q-head"><div><span class="q-kicker">Take attendance</span><h2>' + (lives.length ? 'Check-in is live' : 'Which groups are in front of you?') + '</h2></div>' +
+      (courses.length > 1 && !C ? '<select class="in" id="qc">' + courses.map(c => '<option' + (c === quickCourse ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select>' : '') + '</div>' +
+      (lives.length ? '<div class="q-live">' + lives.map(s => '<a class="btn q-go" href="' + pageHash('group', s.g) + '"><i class="odot"></i>Show QR: ' + esc(s.g.course) + ', group' + (s.groups.length > 1 ? 's ' : ' ') + s.groups.map(esc).join(' + ') + ' &rarr;</a>').join('') + '</div>' : '') +
+      (groupsOf.length && !lives.length ? '<div class="q-picks">' + groupsOf.map(g => '<label class="tg-pick"><input type="checkbox" class="qg" value="' + esc(g.group) + '"' + (sel.indexOf(g.group) >= 0 ? ' checked' : '') + '><b>' + esc(g.group) + '</b><small>' + g.count + '</small></label>').join('') + '</div>' +
+        '<div class="q-row"><label class="f">Week<select class="in" id="qw">' + weekOpts + '</select></label>' +
+        '<label class="f" style="flex:0 0 110px">Minutes<input class="in" id="qm" type="number" min="1" max="180" value="15"></label>' +
+        '<button class="btn q-open" id="qo" type="button">Show one QR for all</button></div>' +
+        '<p class="note q-note">Tick every group in the room. Students from any other group of ' + esc(quickCourse) + ' can scan the same QR and are marked in their own group. No internet? Type their ID on the QR screen.</p>' : '') +
+      '</section>';
+  }
+  function bindQuick() {
+    if (!$('quick')) return;
+    const save = () => store.set('tg_quick_' + quickCourse, JSON.stringify([...document.querySelectorAll('.qg:checked')].map(x => x.value)));
+    document.querySelectorAll('.qg').forEach(x => { x.onchange = save; });
+    if ($('qc')) $('qc').onchange = () => { quickCourse = $('qc').value; store.set('tg_quick_course', quickCourse); const box = $('quick'); box.outerHTML = quickHtml(courseOnly); bindQuick(); };
+    if ($('qo')) $('qo').onclick = async () => {
+      const sel = [...document.querySelectorAll('.qg:checked')].map(x => x.value);
+      if (!sel.length) { toast('Tick at least one group.'); return; }
+      save(); $('qo').disabled = true;
+      try {
+        await api('openSession', PIN, quickCourse, sel[0], Number($('qw').value), Number($('qm').value) || 15, false, true, sel.slice(1));
+        go(pageHash('group', D.groups.find(g => g.course === quickCourse && g.group === sel[0])));
+      } catch (e) { toast(errMsg(e)); $('qo').disabled = false; }
+    };
+  }
+
   /* ----- group page: week first, then its QR, live count and list ----- */
   function defaultWeek(g) {
     if (g.live && g.liveWeek) return g.liveWeek;
@@ -4032,9 +4112,11 @@ const BOOT = null;
       if (!$('qrsvg')) {
         box.innerHTML = '<div class="links hide-proj" style="margin:0 0 16px"><button class="link" id="rnd">Random check</button><button class="link" id="ext">+5 minutes</button>' +
           '<button class="link" id="prj">Projector view</button><button class="link danger" id="cls">Close check-in</button></div>' +
-          '<div class="live"><div class="qr"><div id="qrsvg"></div><p>Scan to check in</p></div>' +
+          '<div class="live"><div class="qr"><div id="qrsvg"></div><p>Scan to check in<br><small>No internet? Tell your TA your ID</small></p></div>' +
           '<div class="card"><div class="codebox"><div class="lbl"><span>' + esc(L.weekLabel) + ' code</span><span id="ctm"></span></div><div class="digits" id="dg"></div></div>' +
-          '<div class="tally"><b id="cn">0</b><span>of</span><b id="tt">0</b><span>checked in</span></div><div class="left" id="gs"></div><div class="left" id="lf"></div></div>' +
+          '<div class="room"><span>In the room</span><b id="rm">0</b><div class="room-by" id="rby"></div></div>' +
+          '<div class="tally"><b id="cn">0</b><span>of</span><b id="tt">0</b><span>checked in</span></div><div class="left" id="gs"></div><div class="left" id="lf"></div>' +
+          '<form class="nonet hide-proj" id="nf"><label class="f">No internet? Type the student\'s ID<span class="row" style="flex-wrap:nowrap"><input class="in" id="nid" inputmode="numeric" maxlength="12" placeholder="Full ID or its last digits" autocomplete="off"><button class="btn" type="submit">Mark present</button></span></label><div id="nres"></div></form></div>' +
           '<div class="side"><div class="card random" id="rb" hidden></div><h2>Just checked in</h2><ol id="rc"></ol><div id="gl"></div></div></div>' +
           '<button class="link" id="prjx" type="button" style="margin-top:18px" hidden>Exit projector view</button>';
         const proj = (on) => {
@@ -4049,6 +4131,22 @@ const BOOT = null;
           if (!confirm('Close check-in now? Students who did not check in will be absent.')) return;
           try { await api('closeSession', PIN, L.id); toast('Check-in closed.'); load(); } catch (e) { toast(errMsg(e)); }
         };
+        const nid = $('nid');
+        nid.oninput = () => { nid.value = nid.value.replace(/\D/g, ''); };
+        const markId = async (v) => {
+          const res = $('nres');
+          try {
+            const r = await api('sessionMark', PIN, L.id, v);
+            if (r.choose) {
+              res.innerHTML = '<p class="note">More than one student ends in ' + esc(v) + '. Who is it?</p><div class="nchoose">' + r.choose.map(c => '<button type="button" class="btn ghost" data-sid="' + esc(c.id) + '">' + esc(c.name) + ' <small>' + esc(c.group) + ', ' + esc(c.id) + '</small></button>').join('') + '</div>';
+              res.querySelectorAll('[data-sid]').forEach(b => b.onclick = () => markId(b.dataset.sid));
+              return;
+            }
+            res.innerHTML = '<p class="nok">' + (r.already ? '&#10003; ' + esc(r.name) + ' (' + esc(r.group) + ') was already present.' : '&#10003; ' + esc(r.name) + ' (' + esc(r.group) + ') is marked present.') + '</p>';
+            nid.value = ''; nid.focus(); refresh();
+          } catch (e) { res.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; }
+        };
+        $('nf').onsubmit = (e) => { e.preventDefault(); const v = nid.value.trim(); if (v.length < 3) { $('nres').innerHTML = '<p class="err">Type at least 3 digits.</p>'; return; } markId(v); };
         $('rnd').onclick = async () => {
           try {
             const picks = await api('randomCheck', PIN, L.id, 3);
@@ -4066,7 +4164,11 @@ const BOOT = null;
       if (url !== lastQr) { lastQr = url; const qq = qrcode(0, 'M'); qq.addData(url); qq.make(); $('qrsvg').innerHTML = qq.createSvgTag({ cellSize: 8, margin: 2, scalable: true }); }
       if ($('cn').textContent !== String(L.count) && $('cn').textContent !== '0') { $('cn').classList.remove('bump'); void $('cn').offsetWidth; $('cn').classList.add('bump'); }
       $('cn').textContent = L.count; $('tt').textContent = L.total;
-      $('gs').textContent = L.guests ? '+ ' + L.guests + ' from other groups (counted in their own groups)' : (L.guestsAllowed === false ? '' : '');
+      const room = L.room != null ? L.room : L.count + (L.guests || 0);
+      if ($('rm').textContent !== String(room) && $('rm').textContent !== '0') { $('rm').classList.remove('bump'); void $('rm').offsetWidth; $('rm').classList.add('bump'); }
+      $('rm').textContent = room;
+      $('rby').innerHTML = ((L.byGroup || []).length > 1 ? L.byGroup.map(x => '<span><b>' + esc(x.group) + '</b> ' + x.count + ' of ' + x.total + '</span>').join('') : '') + (L.guests ? '<span><b>+' + L.guests + '</b> other groups</span>' : '');
+      $('gs').textContent = L.guests ? 'Students from other groups are counted in their own groups.' : '';
       $('gl').innerHTML = L.guests ? '<h2>From other groups</h2><ol>' + L.guestNames.map(n => '<li>' + esc(n) + '</li>').join('') + '</ol>' : '';
       $('rc').innerHTML = L.recent.length ? L.recent.map(n => '<li>' + esc(n) + '</li>').join('') : '<li style="color:var(--muted)">Waiting for students</li>';
       left = L.secondsLeft; codeLeft = L.codeLeft; paintTimers();
