@@ -98,14 +98,10 @@ begin
 end $$;
 create or replace function tg.group_ta(c text, g text) returns text language sql stable as $$
   select coalesce((select ta from tg.students where course = c and grp = g and ta <> '' order by ord limit 1), '') $$;
+-- every TA works on every group of their courses: students move between groups, so any TA of the course can take attendance and marks
 create or replace function tg.can_manage(me tg.staff, c text, g text) returns void language plpgsql as $$
-declare t text;
 begin
-  if me.role = 'Admin' then return; end if;
-  t := tg.group_ta(c, g);
-  if t = me.name then return; end if;
-  if t <> '' then raise exception 'This group belongs to %.', t; end if;
-  raise exception 'This group has no TA yet. Press "This is my group" first.';
+  perform tg.in_course(me, c);
 end $$;
 create or replace function tg.courses_arr(j jsonb) returns text[] language sql immutable as $$
   select coalesce(array(select distinct tg.clean(x) from jsonb_array_elements_text(coalesce(j, '[]')) x where tg.clean(x) <> ''), '{}') $$;
@@ -408,8 +404,8 @@ create or replace function public.ask_data(p_pin text) returns jsonb language pl
 declare me tg.staff := tg.who(p_pin);
 begin
   return jsonb_build_object('currentWeek', tg.current_week(), 'courses', coalesce((
-    select jsonb_agg(jsonb_build_object('course', c.course, 'rows', tg.grade_rows(c.course, null, case when me.role = 'Admin' then null else me.name end)) || tg.items_json(c.course) order by c.course)
-    from (select distinct st.course from tg.students st where me.role = 'Admin' or st.ta = me.name) c), '[]'));
+    select jsonb_agg(jsonb_build_object('course', c.course, 'rows', tg.grade_rows(c.course, null, null)) || tg.items_json(c.course) order by c.course)
+    from (select distinct st.course from tg.students st where me.role = 'Admin' or cardinality(me.courses) = 0 or st.course = any(me.courses)) c), '[]'));
 end $$;
 
 create or replace function public.app_state() returns jsonb language sql security definer set search_path = tg, public, extensions as $$
@@ -510,7 +506,6 @@ begin
   if c = '' or g = '' then raise exception 'Write the course and the group.'; end if;
   perform tg.in_course(me, c);
   owner := tg.group_ta(c, g);
-  if owner <> '' and owner <> me.name and me.role <> 'Admin' then raise exception 'This group belongs to %.', owner; end if;
   t := case when owner <> '' then owner when me.role = 'Admin' then coalesce(nullif(tg.clean(p_ta), ''), me.name) else me.name end;
   if not exists (select 1 from jsonb_array_elements(coalesce(p_list, '[]')) x where tg.clean(x->>0) <> '' and tg.norm_id(x->>1) <> '') then
     raise exception 'Paste the students first: a name and an ID on each line.';
@@ -534,7 +529,6 @@ begin
   for gr in select value from jsonb_array_elements(p_groups) loop
     g := tg.clean(gr->>'group'); if g = '' then continue; end if;
     owner := tg.group_ta(c, g);
-    if me.role <> 'Admin' and owner <> '' and owner <> me.name then skipped := skipped || to_jsonb(g || ' (' || owner || ')'); continue; end if;
     t := case when owner <> '' then owner when me.role <> 'Admin' then me.name else coalesce(
            (select name from tg.staff where status = 'active' and lower(name) = lower(tg.clean(gr->>'ta')) limit 1),
            (select name from tg.staff where status = 'active' and tg.clean(gr->>'ta') <> '' and lower(split_part(name, ' ', 1)) = lower(split_part(tg.clean(gr->>'ta'), ' ', 1)) limit 1), '') end;
@@ -777,7 +771,7 @@ begin
     where y.week between 1 and 14 and y.status in ('P', 'E') and y.sid <> ''
     order by y.sid, y.week, y.status desc;   -- P wins over E for the same week
   get diagnostics n_marks = row_count;
-  update tg_import i set grp = st.grp, name = st.name, mine = (me.role = 'Admin' or st.ta = me.name)
+  update tg_import i set grp = st.grp, name = st.name, mine = true
     from tg.students st where st.course = c and st.sid = i.sid;
   select array_agg(distinct sid order by sid) into v_missing from tg_import where grp is null;
   select count(*) filter (where mine), count(*) filter (where grp is not null and not mine) into n_ok, n_notyours from tg_import;
@@ -852,7 +846,7 @@ begin
   for g in select distinct st.grp from tg.team_members m join tg.students st on st.course = m.course and st.sid = m.sid where m.course = p_course and m.num = p_num order by 1 loop
     for r in select value from jsonb_array_elements(tg.grade_rows(p_course, g)) loop
       if exists (select 1 from tg.team_members m where m.course = p_course and m.num = p_num and m.sid = r->>'id') then
-        acc := acc || jsonb_build_array(r || jsonb_build_object('leader', r->>'id' = t.leader, 'canEdit', me.role = 'Admin' or r->>'ta' = me.name));
+        acc := acc || jsonb_build_array(r || jsonb_build_object('leader', r->>'id' = t.leader, 'canEdit', true));
       end if;
     end loop;
   end loop;
@@ -888,7 +882,7 @@ declare me tg.staff := tg.who(p_pin); out jsonb := '[]'; cc text; r jsonb;
 begin
   for cc in select distinct course from tg.students order by 1 loop
     if not (me.role = 'Admin' or cardinality(me.courses) = 0 or cc = any(me.courses)) then continue; end if;
-    r := tg.grade_rows(cc, null, case when me.role = 'Admin' then null else me.name end);
+    r := tg.grade_rows(cc, null, null);
     if jsonb_array_length(r) > 0 then
       out := out || jsonb_build_array(jsonb_build_object('course', cc, 'weeks', wk, 'rows', r) || tg.items_json(cc));
     end if;
