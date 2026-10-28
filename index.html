@@ -869,6 +869,12 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .mk-lg { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--card2); } .mk-lg.on, .mk-lg.some { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
   .mk-lg .mk-num { min-width: 28px; height: 28px; padding: 0 6px; font-size: 13px; }
   .mk-L { width: 28px; height: 28px; border-radius: 7px; border: 0; background: var(--soft); color: var(--ink); font: inherit; font-weight: 800; cursor: pointer; } .mk-lg.on .mk-L { background: var(--accent); color: var(--on-accent); }
+  .mk-multi { display: inline-flex; align-items: center; gap: 8px; align-self: center; margin-left: 6px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .mk-multi input { position: absolute; opacity: 0; width: 1px; height: 1px; } .mk-multi .sw { width: 34px; height: 20px; border-radius: 999px; background: var(--line); position: relative; transition: background .15s; }
+  .mk-multi .sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .mk-multi input:checked + .sw { background: var(--accent); } .mk-multi input:checked + .sw::after { transform: translateX(14px); } .mk-multi input:focus-visible + .sw { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .mk-multi:has(input:checked) { color: var(--text); }
+  .mk-st1 { display: inline-block; margin-right: 16px; } .mk-table.multi th.num, .mk-table.multi td.num { min-width: 92px; }
   .mk-cnt { align-self: center; color: var(--muted); font-size: 13px; margin-left: 4px; }
   .mk-all { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 12px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
   .mk-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 10px; }
@@ -4696,7 +4702,7 @@ const BOOT = null;
   async function marksPage(wantCourse) {
     stopTimers();
     const dirty = {};
-    let data = null, course = '', key = '', picked = [], q = '';
+    let data = null, course = '', keys = [], picked = [], q = '', multi = store.get('tg_mk_multi') === '1';
     const rowOf = (k) => { const [c, id, gr] = k.split('|'), cc = (data && data.courses.find(x => x.course === c)); return cc ? cc.rows.find(r => r.id === id && r.group === gr) : null; };
     const saver = makeSaver({ id: 'marks', dirty,
       valid: (k, v) => { const [c, , , ky] = k.split('|'), cc = data && data.courses.find(x => x.course === c), it = cc && cc.items.find(x => x.key === ky); return !!it && markOk(it.max, v); },
@@ -4715,7 +4721,7 @@ const BOOT = null;
         const r = rowOf(k), ky = k.split('|')[3]; if (!r) return;
         if (snap[k] === '') delete r.scores[ky]; else r.scores[ky] = Number(String(snap[k]).replace(',', '.'));
         if (snap[k] === '') { if (r.by) delete r.by[ky]; } else { r.by = r.by || {}; r.by[ky] = { by: D.me.name, t: nowStamp() }; }
-        if (!(k in dirty) && $('mkb')) { const inp = $('mkb').querySelector('.mk-table .cell[data-i="' + C().rows.indexOf(r) + '"]'); if (inp && k.split('|')[0] === course && ky === key) { inp.classList.remove('dirty'); const sm = inp.closest('td').querySelector('.by'), b = r.by && r.by[ky]; if (sm) { sm.textContent = b ? b.by.split(' ')[0] : ''; sm.title = b ? 'Entered by ' + b.by + ', ' + b.t : ''; } } }
+        if (!(k in dirty) && $('mkb')) { const inp = $('mkb').querySelector('.mk-table .cell[data-i="' + C().rows.indexOf(r) + '"][data-k="' + CSS.escape(ky) + '"]'); if (inp && k.split('|')[0] === course) { inp.classList.remove('dirty'); const sm = inp.closest('td').querySelector('.by'), b = r.by && r.by[ky]; if (sm) { sm.textContent = b ? b.by.split(' ')[0] : ''; sm.title = b ? 'Entered by ' + b.by + ', ' + b.t : ''; } } }
       });
     }
     app.innerHTML = '<div class="wrap" id="mk"><div class="top"><div><h1>Enter marks</h1><p class="sub">Choose what you are marking and the groups, then type the marks. Enter moves to the next student.</p></div></div><div id="mkb"><p class="note">Loading</p></div></div>';
@@ -4737,7 +4743,8 @@ const BOOT = null;
     if (!courses.some(c => c.course === course)) course = (courses.find(c => c.items.length && c.rows.length) || courses[0]).course;
     const isAdmin = D.me.role === 'Admin';
     const C = () => courses.find(c => c.course === course);
-    const item = () => C().items.find(it => it.key === key);
+    const its = () => keys.map(k => C().items.find(it => it.key === k)).filter(Boolean);
+    const item = () => its()[0];
     const groupsOf = () => [...new Set(C().rows.map(r => r.group))].sort(numeric);
     const mineOf = () => groupsOf().filter(g => D.groups.some(x => x.course === course && x.group === g && x.ta === D.me.name));
     /* grade items: "Assignment 1" to "Assignment 8" become one row "Assignment 1 2 3 ... 8" */
@@ -4747,10 +4754,10 @@ const BOOT = null;
       const sub = (x) => x.check ? 'done / not done' : (isBonus(x) ? 'extra, up to ' : 'out of ') + x.max;
       return order.map(k => {
         const f = fam[k];
-        if (k.indexOf('i:') === 0) { const x = f.list[0]; return '<button type="button" class="mk-chip' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '"><b>' + esc(x.item) + '</b><small>' + sub(x) + '</small></button>'; }
-        const on = f.list.some(x => x.key === key);
+        if (k.indexOf('i:') === 0) { const x = f.list[0]; return '<button type="button" class="mk-chip' + (keys.indexOf(x.key) >= 0 ? ' on' : '') + '" data-mi="' + esc(x.key) + '"><b>' + esc(x.item) + '</b><small>' + sub(x) + '</small></button>'; }
+        const on = f.list.some(x => keys.indexOf(x.key) >= 0);
         return '<div class="mk-fam' + (on ? ' on' : '') + '"><span class="mk-fam-l"><b>' + esc(f.base) + '</b><small>' + sub(f.list[0]) + '</small></span>' +
-          f.list.map(x => '<button type="button" class="mk-num' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '" title="' + esc(x.item) + '">' + esc(String(x.item).match(/(\d+)$/)[1]) + '</button>').join('') + '</div>';
+          f.list.map(x => '<button type="button" class="mk-num' + (keys.indexOf(x.key) >= 0 ? ' on' : '') + '" data-mi="' + esc(x.key) + '" title="' + esc(x.item) + '">' + esc(String(x.item).match(/(\d+)$/)[1]) + '</button>').join('') + '</div>';
       }).join('');
     };
     /* groups by letter: "A 1 2 3 4"; the letter chooses or clears all of its groups */
@@ -4763,13 +4770,17 @@ const BOOT = null;
     };
     const setCourse = (c) => {
       course = c; store.set('tg_mk_course', c);
-      const its = C().items; key = store.get('tg_mk_item_' + c) || ''; if (!its.some(it => it.key === key)) key = its.length ? its[0].key : '';
+      const all = C().items; let ks = []; try { ks = JSON.parse(store.get('tg_mk_items_' + c) || '[]'); } catch (e) {}
+      if (!Array.isArray(ks) || !ks.length) ks = [store.get('tg_mk_item_' + c) || ''];
+      keys = ks.filter(k => all.some(it => it.key === k)); if (!multi) keys = keys.slice(0, 1);
+      if (!keys.length && all.length) keys = [all[0].key];
       let saved = []; try { saved = JSON.parse(store.get('tg_mk_groups_' + c) || '[]'); } catch (e) {}
       picked = saved.filter(g => groupsOf().indexOf(g) >= 0);
       if (!picked.length) picked = mineOf().length ? mineOf() : groupsOf();
     };
     setCourse(course);
-    const val = (r) => { const k = course + '|' + r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
+    const val = (r, key) => { const k = course + '|' + r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
+    const saveKeys = () => { store.set('tg_mk_items_' + course, JSON.stringify(keys)); store.set('tg_mk_item_' + course, keys[0] || ''); };
     const shown = () => C().rows.filter(r => picked.indexOf(r.group) >= 0).sort((a, b) => numeric(a.group, b.group) || 0);
     function draw() {
       const courseRow = '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips">' + courses.map(c => '<button type="button" class="mk-chip' + (c.course === course ? ' on' : '') + '" data-mc="' + esc(c.course) + '"><b>' + esc(c.course) + '</b><small>' +
@@ -4790,23 +4801,29 @@ const BOOT = null;
         if ($('mkupl')) $('mkupl').onclick = () => { uploadDialog(); const co = document.querySelector('.overlay #co'); if (co) co.value = course; };
         return;
       }
-      const it = item(), rows = shown(), gs = groupsOf(), mine = mineOf();
-      const filled = rows.filter(r => val(r) !== ''), nums = filled.map(r => Number(val(r))).filter(x => !isNaN(x));
+      const IT = its(), rows = shown(), gs = groupsOf(), mine = mineOf(), checks = IT.filter(x => x.check);
+      const statOf = (it) => { const filled = rows.filter(r => val(r, it.key) !== ''), nums = filled.map(r => Number(val(r, it.key))).filter(x => !isNaN(x));
+        return [filled.length, nums.length && !it.check ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 : null]; };
+      const stat = IT.length === 1
+        ? (([n, avg]) => '<b>' + n + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(IT[0].item) + '</b>' + (avg != null ? ' &middot; average <b>' + avg + '</b> of ' + IT[0].max : ''))(statOf(IT[0]))
+        : IT.map(it => { const [n] = statOf(it); return '<span class="mk-st1"><b>' + esc(it.item) + '</b> ' + n + ' of ' + rows.length + '</span>'; }).join('');
       $('mkb').innerHTML =
         courseRow +
-        '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + itemsHtml() + '</div></div>' +
+        '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + itemsHtml() +
+          '<label class="mk-multi" title="Choose several grade items and type them side by side"><input type="checkbox" id="mkmulti"' + (multi ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span>Several at once</label>' +
+          (multi && IT.length > 1 ? '<button type="button" class="mk-all" id="mkone">Only ' + esc(IT[0].item) + '</button>' : '') + '</div></div>' +
         '<div class="mk-row"><span class="mk-lbl">Groups</span><div class="mk-chips">' +
           '<button type="button" class="mk-all" data-mg="*all">All (' + gs.length + ')</button>' + (mine.length && mine.length !== gs.length ? '<button type="button" class="mk-all" data-mg="*mine">My groups (' + mine.length + ')</button>' : '') +
           (picked.length ? '<button type="button" class="mk-all" data-mg="*none">Clear</button>' : '') + '<span class="mk-cnt">' + picked.length + ' of ' + gs.length + ' chosen</span>' +
           '<div class="mk-letters">' + lettersHtml(gs) + '</div></div></div>' +
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
-          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button><button class="btn ghost" id="mkhist" type="button">History</button>' + (it.check ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done</button>' : '') + '</div>' +
-        '<p class="mk-stat"><b>' + filled.length + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(it.item) + '</b>' + (nums.length && !it.check ? ' &middot; average <b>' + Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 + '</b> of ' + it.max : '') + '</p>' +
-        '<div class="table-wrap"><table class="mk-table"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th><th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th></tr></thead><tbody>' +
+          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button><button class="btn ghost" id="mkhist" type="button">History</button>' + (checks.length ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done' + (IT.length > 1 ? ' (' + checks.map(x => esc(x.item)).join(', ') + ')' : '') + '</button>' : '') + '</div>' +
+        '<p class="mk-stat">' + stat + '</p>' +
+        '<div class="table-wrap"><table class="mk-table' + (IT.length > 1 ? ' multi' : '') + '"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th>' + IT.map(it => '<th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th>').join('') + '</tr></thead><tbody>' +
           (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + stuLink(course, r.id, r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
-            '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, key) + '</td></tr>').join('')
-            : '<tr><td colspan="5" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
+            IT.map(it => '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + it.key) in dirty ? 'dirty' : '', val(r, it.key), 'data-i="' + C().rows.indexOf(r) + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, it.key) + '</td>').join('') + '</tr>').join('')
+            : '<tr><td colspan="' + (4 + IT.length) + '" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
         '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
       bind(); status();
     }
@@ -4817,8 +4834,8 @@ const BOOT = null;
       $('st').textContent = saver.text(n, bad);
     }
     function setMark(inp, raw) {
-      const r = C().rows[inp.dataset.i], k = course + '|' + r.id + '|' + r.group + '|' + key, orig = r.scores[key] == null ? '' : String(r.scores[key]);
-      const n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(item().max)));
+      const key = inp.dataset.k, it = C().items.find(x => x.key === key), r = C().rows[inp.dataset.i], k = course + '|' + r.id + '|' + r.group + '|' + key, orig = r.scores[key] == null ? '' : String(r.scores[key]);
+      const n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(it.max)));
       if (raw === orig) delete dirty[k]; else dirty[k] = raw;
       inp.classList.toggle('dirty', k in dirty); status(); saver.kick();
     }
@@ -4826,7 +4843,15 @@ const BOOT = null;
       const box = $('mkb');
       box.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
       $('mknew').onclick = uploadDialog;
-      box.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { key = b.dataset.mi; store.set('tg_mk_item_' + course, key); draw(); });
+      box.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => {
+        const k = b.dataset.mi;
+        if (!multi) keys = [k];
+        else if (keys.indexOf(k) < 0) keys = C().items.map(x => x.key).filter(x => x === k || keys.indexOf(x) >= 0);   /* keep the course order */
+        else if (keys.length > 1) keys = keys.filter(x => x !== k);
+        saveKeys(); draw();
+      });
+      $('mkmulti').onchange = () => { multi = $('mkmulti').checked; store.set('tg_mk_multi', multi ? '1' : '0'); if (!multi) keys = keys.slice(0, 1); saveKeys(); draw(); };
+      if ($('mkone')) $('mkone').onclick = () => { keys = keys.slice(0, 1); saveKeys(); draw(); };
       box.querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
         const mine = groupsOf().filter(g => (String(g).match(/^([A-Za-z]+)/) || ['', '#'])[1].toUpperCase() === b.dataset.ml);
         picked = mine.every(g => picked.indexOf(g) >= 0) ? picked.filter(g => mine.indexOf(g) < 0) : [...new Set(picked.concat(mine))];
@@ -4844,7 +4869,8 @@ const BOOT = null;
         inp.onkeydown = (e) => {
           const step = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
           if (!step) return; e.preventDefault();
-          const vis = cells.filter(x => !x.closest('tr').hidden), next = vis[vis.indexOf(inp) + step];
+          /* down the same column: the next student's mark of the same item */
+          const vis = cells.filter(x => !x.closest('tr').hidden && x.dataset.k === inp.dataset.k), next = vis[vis.indexOf(inp) + step];
           if (next) { next.focus(); if (next.select) next.select(); }
         };
       });
@@ -4863,19 +4889,24 @@ const BOOT = null;
         const inp = tr.querySelector('.cell'); $('mkid').value = '';
         if (inp.type === 'checkbox') { inp.checked = true; inp.oninput(); $('mkid').focus(); } else { inp.focus(); inp.select(); }
       };
-      if ($('mkalldone')) $('mkalldone').onclick = () => box.querySelectorAll('.mk-table tr:not([hidden]) .ck').forEach(x => { x.checked = true; x.oninput(); });
+      if ($('mkalldone')) $('mkalldone').onclick = () => box.querySelectorAll('.mk-table tr:not([hidden]) .ck').forEach(x => { if (!x.checked) { x.checked = true; x.oninput(); } });
       $('mkhist').onclick = () => historyDialog(course, picked.length === 1 ? picked[0] : null);
-      $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy two columns from Excel, the student ID and the mark of <b>' + esc(item().item) + '</b>, and paste them here. One student on each line.</p>' +
-        '<textarea class="in" id="pt" rows="10" style="width:100%;margin-top:12px;font-family:var(--mono)" placeholder="692601451&#9;14&#10;692601452&#9;17"></textarea><div class="err" id="pe"></div>' +
+      const IT = its();
+      $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy from Excel the student ID and then ' + (IT.length > 1 ? 'one column for each of <b>' + IT.map(x => esc(x.item)).join('</b>, <b>') + '</b>, in this order' : 'the mark of <b>' + esc(IT[0].item) + '</b>') + ', and paste them here. One student on each line. An empty cell is left as it is.</p>' +
+        '<textarea class="in" id="pt" rows="10" style="width:100%;margin-top:12px;font-family:var(--mono)" placeholder="692601451&#9;14' + (IT.length > 1 ? '&#9;5' : '') + '&#10;692601452&#9;17' + (IT.length > 1 ? '&#9;4' : '') + '"></textarea><div class="err" id="pe"></div>' +
         '<div class="row" style="margin-top:12px"><button class="btn" id="pgo" type="button">Fill the marks</button><button class="btn ghost" data-close type="button">Cancel</button></div>', (o, close) => {
           o.querySelector('#pgo').onclick = () => {
             let ok = 0; const miss = [];
             o.querySelector('#pt').value.split(/\r?\n/).forEach(line => {
-              const m = line.trim().match(/^(\d{3,})\D+(\d+(?:[.,]\d+)?)\s*$/); if (!m) return;
-              const tr = box.querySelector('.mk-table tr[data-id="' + m[1] + '"]'); if (!tr) { miss.push(m[1]); return; }
-              const inp = tr.querySelector('.cell'), v = m[2].replace(',', '.');
-              if (inp.type === 'checkbox') inp.checked = Number(v) > 0; else inp.value = v;
-              inp.oninput(); ok++;
+              const cols = (line.indexOf('\t') >= 0 ? line.split('\t') : line.trim().split(/\s+/)).map(x => x.trim());
+              const id = (cols[0] || '').replace(/\D/g, ''); if (id.length < 3) return;
+              const tr = box.querySelector('.mk-table tr[data-id="' + id + '"]'); if (!tr) { miss.push(id); return; }
+              IT.forEach((it, j) => {
+                const v = (cols[j + 1] || '').replace(',', '.'); if (!/^\d+(\.\d+)?$/.test(v)) return;
+                const inp = tr.querySelector('.cell[data-k="' + CSS.escape(it.key) + '"]'); if (!inp) return;
+                if (inp.type === 'checkbox') inp.checked = Number(v) > 0; else inp.value = v;
+                inp.oninput(); ok++;
+              });
             });
             if (!ok && !miss.length) { o.querySelector('#pe').textContent = 'Nothing to fill. Each line needs an ID and a mark.'; return; }
             close(); toast(ok + (ok === 1 ? ' mark filled' : ' marks filled') + (miss.length ? '. Not shown or not found: ' + miss.slice(0, 6).join(', ') + (miss.length > 6 ? '...' : '') : '') + '. They save on their own.');
