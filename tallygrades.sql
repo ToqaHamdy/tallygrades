@@ -894,6 +894,36 @@ begin
   ) u order by u.ts desc, u.id desc limit 600) v), '[]');
 end $$;
 
+-- one student: group, TA, team, every mark with who wrote it, every week with who marked it, and the whole history of the student
+create or replace function public.student_profile(p_pin text, p_course text, p_id text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); st tg.students; r jsonb;
+begin
+  select * into st from tg.students where course = p_course and sid = tg.norm_id(p_id) order by ord limit 1;
+  if not found then raise exception 'Student not found.'; end if;
+  perform tg.can_manage(me, p_course, st.grp);
+  select x into r from jsonb_array_elements(tg.grade_rows(p_course, st.grp)) x where x->>'id' = st.sid limit 1;
+  return coalesce(r, '{}'::jsonb) || tg.items_json(p_course) || jsonb_build_object(
+    'course', p_course, 'group', st.grp, 'name', st.name, 'id', st.sid,
+    'ta', coalesce(nullif(tg.group_ta(p_course, st.grp), ''), (select sc.ta from tg.schedule sc where sc.course = p_course and sc.grp = st.grp and sc.ta <> '' limit 1), ''),
+    'teamName', (select t.name from tg.team_members m join tg.teams t on t.course = m.course and t.num = m.num where m.course = p_course and m.sid = st.sid limit 1),
+    'phone', exists (select 1 from tg.devices d where d.sid = st.sid),
+    'weekLog', (select jsonb_agg(jsonb_build_object('week', n, 'label', tg.week_label(n), 'status', coalesce(l.status, ''), 'how', coalesce(l.method, ''),
+                  'by', case when l.method = 'Self' then 'The student (QR)' else coalesce(l.by_ta, '') end, 'note', coalesce(l.note, ''),
+                  't', coalesce(to_char(l.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), '')) order by n)
+                from generate_series(1, 14) n left join lateral (select * from tg.log g where g.course = p_course and g.grp = st.grp and g.sid = st.sid and g.week = n order by g.id desc limit 1) l on true),
+    'history', coalesce((select jsonb_agg(v.j order by v.ts desc, v.id desc) from (
+        select y.ts, y.id, jsonb_build_object('t', to_char(y.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Mark', 'group', y.grp, 'id', y.sid, 'name', y.name,
+                 'what', y.item, 'from', coalesce(y.prev::text, ''), 'to', coalesce(y.score::text, ''), 'by', y.by_ta) as j
+        from (select g.*, coalesce(i.item, g.key) as item, lag(g.score) over (partition by g.key order by g.id) as prev, row_number() over (partition by g.key order by g.id) as n
+              from tg.grades g left join tg.items i on i.course = g.course and i.key = g.key where g.course = p_course and g.sid = st.sid) y
+        where y.prev is distinct from y.score and not (y.n = 1 and y.score is null)
+        union all
+        select z.ts, z.id, jsonb_build_object('t', to_char(z.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Attendance', 'group', z.grp, 'id', z.sid, 'name', z.name,
+                 'what', tg.week_label(z.week), 'from', coalesce(z.prev, ''), 'to', z.status, 'how', z.method, 'by', case when z.method = 'Self' then 'The student (QR)' else z.by_ta end) as j
+        from (select l.*, lag(l.status) over (partition by l.grp, l.week order by l.id) as prev from tg.log l where l.course = p_course and l.sid = st.sid) z
+        where z.prev is distinct from z.status and not (z.prev is null and z.status = 'A')) v), '[]'));
+end $$;
+
 -- a project team: every member with attendance and marks, whatever their group, for grading the team together
 create or replace function public.team_view(p_pin text, p_course text, p_num int) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin); t tg.teams; g text; acc jsonb := '[]'; r jsonb;
@@ -970,7 +1000,7 @@ begin
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'session_mark(text,text,text)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'mark_weeks(text,text,text,jsonb,text)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
-    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)'] loop
+    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
