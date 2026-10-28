@@ -93,6 +93,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .card h3 { font-family: var(--display); font-size: 25px; font-weight: 700; letter-spacing: -.02em; margin: 14px 0 6px; line-height: 1.15; }
   .card p { color: var(--muted); margin: 0 0 14px; font-size: 15px; line-height: 1.5; }
   .pill { display: inline-block; background: var(--soft); color: var(--ink); font-family: var(--mono); font-weight: 700; font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 4px 9px; }
+  .pill.sched { margin-left: 6px; background: var(--card2); color: var(--text); }
   .pill.green { background: var(--ok-bg); color: var(--ok); margin-left: 6px; }
   .pill.green::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; animation: pulse 1.6s infinite; }
   @keyframes pulse { 50% { opacity: .25; } }
@@ -526,7 +527,15 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .q-chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .q-g { position: relative; display: inline-flex; align-items: baseline; gap: 6px; padding: 10px 16px 10px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--card2); color: var(--text); font: inherit; cursor: pointer;
     transition: transform .25s cubic-bezier(.2,1.5,.4,1), border-color .2s, background-color .2s, box-shadow .2s; }
+  .q-g { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .q-gt { display: inline-flex; align-items: baseline; gap: 6px; }
   .q-g b { font-family: var(--display); font-size: 19px; } .q-g small { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .q-g em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .q-g.on em { color: rgba(255,255,255,.85); }
+  .q-g.now:not(.on) { border-color: var(--ok); }
+  .q-next { display: block; margin-top: 8px; font-size: 13.5px; color: var(--muted); } .q-next b { color: var(--text); }
+  .q-allbtn { margin-top: 12px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; padding: 0; }
+  .q-allbtn:hover { text-decoration: underline; }
   .q-g:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
   .q-g.on { background: linear-gradient(135deg, var(--grad2), var(--accent)); border-color: transparent; color: #fff; box-shadow: 0 10px 22px -12px var(--accent); }
   .q-g.on small { color: rgba(255,255,255,.85); }
@@ -4668,10 +4677,25 @@ const BOOT = null;
 
   /* ----- Take attendance: the groups in front of you, one press to the QR ----- */
   let quickCourse = '';
+  let quickAll = store.get('tg_qall') === '1';
+  /* the groups of the weekly schedule (Courses get one from the TA schedule sheet) */
+  const DAY3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const toMin = (hm) => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
+  const t12 = (hm) => { const [h, m] = String(hm).split(':').map(Number); return ((h + 11) % 12 + 1) + ':' + String(m).padStart(2, '0'); };
+  const slotsOf = (course, group) => (D.schedule || []).filter(x => x.course === course && x.group === group);
+  function slotsNow(course) {
+    const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes();
+    return (D.schedule || []).filter(x => x.course === course && x.day === d && m >= toMin(x.start) - 20 && m <= toMin(x.end));
+  }
+  function slotsNext(course, mine) {
+    const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes();
+    const later = (D.schedule || []).filter(x => x.course === course && x.day === d && toMin(x.start) - 20 > m && mine(x)).sort((a, b) => toMin(a.start) - toMin(b.start));
+    return later.length ? later.filter(x => x.start === later[0].start) : [];
+  }
   function quickPool(C) {
     const isAdmin = D.me.role === 'Admin';
     let pool = D.groups.filter(g => g.ta === D.me.name);
-    if (isAdmin && !pool.length) pool = D.groups.slice();
+    if (isAdmin && (!pool.length || quickAll)) pool = D.groups.slice();
     if (C) pool = pool.filter(g => g.course === C);
     return pool.sort((a, b) => numeric(a.course + a.group, b.course + b.group));
   }
@@ -4696,6 +4720,7 @@ const BOOT = null;
     return { groups: best.split('+'), times: near.filter(x => x.g.join('+') === best).length, day: DAYS[d] };
   }
   let quickMins = Number(store.get('tg_qmin')) || 15;
+  const isAdminView = () => D.me.role === 'Admin' && quickAll;
   function quickHtml(C) {
     const pool = quickPool(C);
     if (!pool.length) return '';
@@ -4707,15 +4732,26 @@ const BOOT = null;
     const groupsOf = pool.filter(g => g.course === quickCourse && !g.live);
     const names = groupsOf.map(g => g.group);
     let saved = []; try { saved = JSON.parse(store.get('tg_quick_' + quickCourse) || '[]'); } catch (e) {}
-    const guess = quickGuess(quickCourse, names);
-    let sel = guess ? guess.groups : saved.filter(x => names.indexOf(x) >= 0);
+    /* first the schedule (the groups whose section is now), then what you usually take at this hour, then last time */
+    const myName = D.me.name, minePick = (x) => x.ta === myName || (!(D.schedule || []).some(y => y.ta === myName) && D.groups.some(g => g.course === x.course && g.group === x.group && g.ta === myName));
+    let now = slotsNow(quickCourse).filter(x => names.indexOf(x.group) >= 0);
+    if (now.some(minePick)) now = now.filter(minePick); else if (!isAdminView()) now = [];
+    const next = slotsNext(quickCourse, x => minePick(x) && names.indexOf(x.group) >= 0);
+    const guess = now.length ? null : quickGuess(quickCourse, names);
+    let sel = now.length ? [...new Set(now.map(x => x.group))] : guess ? guess.groups : saved.filter(x => names.indexOf(x) >= 0);
     if (!sel.length && names.length) sel = [names[0]];
     const wk = D.currentWeek || defaultWeek(groupsOf[0] || pool[0]);
     const wl = (D.weeks[wk - 1] || [wk, 'Week ' + wk])[1];
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === wk ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
-    const hint = guess ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z"/></svg>' +
+    const rooms = [...new Set(now.map(x => x.room).filter(Boolean))];
+    const nextTxt = next.length ? '<span class="q-next">Next today: <b>' + [...new Set(next.map(x => x.group))].map(esc).join(' + ') + '</b> at ' + t12(next[0].start) + (next[0].room ? ' in ' + esc(next[0].room) : '') + '</span>' : '';
+    const hint = now.length ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
+        '<span>From the schedule, now (' + DAYS[new Date().getDay()] + ' ' + t12(now[0].start) + '&ndash;' + t12(now[0].end) + '): <b>' + [...new Set(now.map(x => x.group))].map(esc).join(' + ') + '</b>' + (rooms.length ? ' in Room <b>' + rooms.map(esc).join(', ') + '</b>' : '') + '.</span></span>' + nextTxt
+      : guess ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L20.5 10l-6.3 2.2L12 18.5l-2.2-6.3L3.5 10l6.3-1.7z"/></svg>' +
         '<span>Picked for you: on ' + guess.day + 's at this time you take <b>' + guess.groups.map(esc).join(' + ') + '</b>' + (guess.times > 1 ? ' (' + guess.times + ' times)' : '') + '.</span></span>'
-      : saved.length ? '<span class="q-ai muted">Same groups as last time. Tap to change.</span>' : '<span class="q-ai muted">Tap the groups in the room. Next time at this day and hour they are picked for you.</span>';
+      : (saved.length ? '<span class="q-ai muted">Same groups as last time. Tap to change.</span>' : '<span class="q-ai muted">Tap the groups in the room. Next time at this day and hour they are picked for you.</span>') + nextTxt;
+    const canAll = D.me.role === 'Admin' && D.groups.some(g => g.ta === D.me.name);
+    const allBtn = canAll ? '<button type="button" class="q-allbtn" id="qall">' + (quickAll ? 'Only my groups' : 'Show every group of ' + esc(quickCourse)) + '</button>' : '';
     const letters = [];
     groupsOf.forEach(g => { const L = (String(g.group).match(/^[A-Za-z]+/) || ['#'])[0].toUpperCase(); let b = letters.find(x => x.L === L); if (!b) { b = { L: L, gs: [] }; letters.push(b); } b.gs.push(g); });
     const live = lives.length ? '<div class="q-livebox">' + lives.map(s => '<a class="q-liverow" href="' + pageHash('group', s.g) + '"><span class="q-pulse" aria-hidden="true"></span><span class="q-lt"><b>Check-in is live</b><small>' + esc(s.g.course) + ' &middot; group' + (s.groups.length > 1 ? 's ' : ' ') + s.groups.map(esc).join(' + ') + '</small></span><span class="q-lgo">Show QR &rarr;</span></a>').join('') + '</div>' : '';
@@ -4725,7 +4761,9 @@ const BOOT = null;
         '<button class="q-start" id="qo" type="button"><span class="qs-ring" aria-hidden="true"></span><span class="qs-in"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg><b>Show QR</b><small id="qsel"></small></span></button></div>' +
       (courses.length > 1 && !C ? '<div class="q-course">' + courses.map(c => '<button type="button" class="q-cbtn' + (c === quickCourse ? ' on' : '') + '" data-qc="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' : '') +
       '<div class="q-letters">' + letters.map(b => '<div class="q-lrow"><button type="button" class="q-letter" data-ql="' + esc(b.L) + '" title="Pick every ' + esc(b.L) + ' group">' + esc(b.L) + '</button><div class="q-chips">' +
-        b.gs.map(g => '<button type="button" class="q-g' + (sel.indexOf(g.group) >= 0 ? ' on' : '') + '" data-qg="' + esc(g.group) + '" aria-pressed="' + (sel.indexOf(g.group) >= 0) + '"><b>' + esc(g.group) + '</b><small>' + g.count + '</small><i class="q-tick" aria-hidden="true"></i></button>').join('') + '</div></div>').join('') + '</div>' +
+        b.gs.map(g => { const sl = slotsOf(g.course, g.group), lab = sl.map(x => DAY3[x.day] + ' ' + t12(x.start) + (x.room ? ' · ' + x.room : '')).join(', '), isNow = now.some(x => x.group === g.group);
+          return '<button type="button" class="q-g' + (sel.indexOf(g.group) >= 0 ? ' on' : '') + (isNow ? ' now' : '') + '" data-qg="' + esc(g.group) + '" aria-pressed="' + (sel.indexOf(g.group) >= 0) + '"' +
+            (sl.length ? ' title="' + esc(lab + (sl[0].ta ? ' · ' + sl[0].ta : '')) + '"' : '') + '><span class="q-gt"><b>' + esc(g.group) + '</b><small>' + g.count + '</small></span>' + (lab ? '<em>' + esc(lab) + '</em>' : '') + '<i class="q-tick" aria-hidden="true"></i></button>'; }).join('') + '</div></div>').join('') + '</div>' + allBtn +
       '<div class="q-opts"><label class="q-week"><span>Week</span><select id="qw">' + weekOpts + '</select></label>' +
         '<div class="q-mins" role="radiogroup" aria-label="Minutes open"><span>Open for</span>' + [10, 15, 20, 30].map(n => '<button type="button" role="radio" data-qm="' + n + '" aria-checked="' + (n === quickMins) + '">' + n + ' min</button>').join('') + '</div></div>' +
       '<p class="q-note">One QR for every group you pick. Students of any other group of ' + esc(quickCourse) + ' can scan it too and are marked in their own group. No internet? Type their ID on the QR screen.</p>' +
@@ -4746,6 +4784,7 @@ const BOOT = null;
       row.forEach(x => { x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); }); paint();
     });
     box.querySelectorAll('[data-qm]').forEach(b => b.onclick = () => { quickMins = Number(b.dataset.qm); store.set('tg_qmin', String(quickMins)); box.querySelectorAll('[data-qm]').forEach(x => x.setAttribute('aria-checked', String(x === b))); });
+    if ($('qall')) $('qall').onclick = () => { quickAll = !quickAll; store.set('tg_qall', quickAll ? '1' : '0'); box.outerHTML = quickHtml(courseOnly); bindQuick(); };
     box.querySelectorAll('[data-qc]').forEach(b => b.onclick = () => { quickCourse = b.dataset.qc; store.set('tg_quick_course', quickCourse); box.outerHTML = quickHtml(courseOnly); bindQuick(); });
     if ($('qo')) $('qo').onclick = async () => {
       const sel = picked();
@@ -4775,7 +4814,7 @@ const BOOT = null;
     let sel = {}; /* All weeks page: the chosen cells, student ID -> set of week numbers */
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
     app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'group') +
-      '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
+      '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span>' + slotsOf(g.course, g.group).map(x => '<span class="pill sched">' + DAY3[x.day] + ' ' + t12(x.start) + '&ndash;' + t12(x.end) + (x.room ? ' &middot; Room ' + esc(x.room) : '') + '</span>').join('') + '<span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
       '<div class="links hide-proj" style="margin:0"><button class="link" id="gr">Grades &rarr;</button></div></div>' +
       '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
       '<label class="f" style="flex:0 1 320px">Week<select class="in" id="wk">' + weekOpts + '<option value="all">All weeks (summary)</option></select></label>' +
