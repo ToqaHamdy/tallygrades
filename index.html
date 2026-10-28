@@ -395,6 +395,22 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   #hk button.on { background: var(--soft); color: var(--ink); }
   .hist-k.ot { background: var(--card2); color: var(--muted); } .hist-av.ot { background: var(--card2); color: var(--text); }
   td .by { display: block; font-size: 10.5px; line-height: 1.2; color: var(--muted); margin-top: 3px; min-height: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin-left: auto; margin-right: auto; cursor: default; }
+  .stu { background: none; border: 0; padding: 0; font: inherit; color: inherit; font-weight: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset: 3px; }
+  .stu:hover { color: var(--ink); text-decoration-color: var(--accent); } .hist-tx .stu { font-weight: 700; }
+  .sp-head { display: flex; gap: 14px; align-items: center; } .sp-av { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--grad2), var(--accent)); color: #fff; font-weight: 800; font-size: 18px; }
+  .sp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 18px 0 6px; }
+  .sp-tiles > div { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; } .sp-tiles b { display: block; font-size: 24px; font-family: var(--display); } .sp-tiles b small { font-size: 13px; color: var(--muted); font-family: inherit; }
+  .sp-tiles span { color: var(--muted); font-size: 12.5px; } .sp-tiles .ok b { color: var(--ok); } .sp-tiles .mid b { color: var(--warn); } .sp-tiles .lo b { color: var(--err); }
+  .sp-h { font-size: 17px; margin: 22px 0 10px; display: flex; gap: 10px; align-items: baseline; } .sp-sub { display: block; color: var(--muted); font-size: 12px; font-weight: 500; } .sp-h .sp-sub { display: inline; }
+  .sp-marks { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .sp-mrow { display: grid; grid-template-columns: minmax(0, 1.3fr) 90px minmax(0, 1.2fr); gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); } .sp-mrow:first-child { border-top: 0; }
+  .sp-mby b { display: block; font-size: 14px; } .sp-mi b { display: block; }
+  @media (max-width: 560px) { .sp-mrow { grid-template-columns: minmax(0, 1fr) auto; } .sp-mby { grid-column: 1 / -1; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; } .sp-mby small, .sp-mby b { display: inline; } }
+  .sp-mark { font-size: 18px; font-weight: 800; } .sp-mark.none { color: var(--muted); font-weight: 500; }
+  .sp-weeks { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .sp-wk { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--card2); } .sp-wk b { display: block; font-size: 12.5px; } .sp-wk .sp-st { display: block; font-weight: 800; font-size: 14px; color: var(--muted); margin: 2px 0; }
+  .sp-wk small { display: block; color: var(--muted); font-size: 11px; line-height: 1.35; } .sp-wk.P { border-color: color-mix(in srgb, var(--ok) 45%, transparent); } .sp-wk.P .sp-st { color: var(--ok); } .sp-wk.E .sp-st { color: var(--warn); } .sp-wk.exam { border-style: dashed; }
+  .sp-feed { max-height: none; }
   .hist-sum { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; } .hist-sum b { color: var(--text); }
   .hist-feed { max-height: 56vh; overflow-y: auto; padding-right: 4px; }
   .hist-day { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
@@ -3424,7 +3440,7 @@ const BOOT = null;
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], markWeeks: ['mark_weeks', ['p_pin', 'p_course', 'p_group', 'p_items', 'p_status']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
     saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']],
-    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']]
+    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']], studentProfile: ['student_profile', ['p_pin', 'p_course', 'p_id']]
   };
   async function api(fn, ...args) {
     const [name, params] = RPC[fn];
@@ -4412,57 +4428,101 @@ const BOOT = null;
     o.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
     onReady(o, close);
   }
-  /* who changed what: every mark and attendance change of a group (or a whole course), newest first, as plain sentences under each day */
+  /* the history as plain sentences under each day: "Sara Ali gave 4 in Quiz 1 for Omar", "Toqa marked present in Week 3" */
+  const H_ST = { P: 'present', E: 'excused' };
+  const hAmpm = (hm) => { const [h, m] = hm.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); };
+  const hDay = (t) => {
+    const d = new Date(t.slice(0, 10) + 'T00:00:00'), today = new Date(); today.setHours(0, 0, 0, 0);
+    const n = Math.round((today - d) / 864e5);
+    return n === 0 ? 'Today' : n === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  };
+  const hWhen = (t) => t ? hDay(t) + ', ' + hAmpm(t.slice(11)) : '';
+  function histFeed(rows, opt) {
+    opt = opt || {};
+    const tag = (x) => '<span class="hist-k ' + (x.kind === 'Mark' ? 'mk' : 'at') + '">' + esc(x.what) + '</span>';
+    const say = (x) => {
+      if (x.kind === 'Mark') {
+        if (x.from === '') return 'gave <b>' + esc(x.to) + '</b> in ' + tag(x);
+        if (x.to === '') return 'removed the mark <b>' + esc(x.from) + '</b> of ' + tag(x);
+        return 'changed ' + tag(x) + ' from <s>' + esc(x.from) + '</s> to <b>' + esc(x.to) + '</b>';
+      }
+      if (x.kind === 'Other') return esc(x.what.charAt(0).toLowerCase() + x.what.slice(1)) + (x.group && !opt.group ? ' <span class="hist-k ot">group ' + esc(x.group) + '</span>' : '');
+      if (x.how === 'Self') return 'checked in with the QR code in ' + tag(x);
+      const was = H_ST[x.from], now = H_ST[x.to];
+      if (!now) return 'removed the attendance of ' + tag(x) + (was ? ' <small>(was ' + was + ')</small>' : '');
+      if (!was) return 'marked <b class="' + x.to + '">' + now + '</b> in ' + tag(x);
+      return 'changed ' + tag(x) + ' from <s>' + was + '</s> to <b class="' + x.to + '">' + now + '</b>';
+    };
+    let day = '', html = '';
+    rows.forEach(x => {
+      const d = hDay(x.t);
+      if (d !== day) { day = d; html += '<h3 class="hist-day">' + esc(d) + '</h3>'; }
+      const self = x.how === 'Self', other = x.kind === 'Other', who = self ? (opt.student ? 'The student' : x.name) : (x.by || 'Unknown');
+      html += '<div class="hist-it"><span class="hist-av' + (self ? ' st' : other ? ' ot' : '') + '">' + esc(initials(who)) + '</span><div class="hist-tx"><p><b>' + esc(who) + '</b> ' + say(x) +
+        (self || other || opt.student ? '' : ' for ' + stuLink(opt.course, x.id, x.name)) + '</p>' +
+        (other || opt.student ? '' : '<small>Group ' + esc(x.group) + ' &middot; ID ' + esc(x.id) + (self ? ' &middot; by the student' : '') + '</small>') + '</div><time>' + hAmpm(x.t.slice(11)) + '</time></div>';
+    });
+    return html;
+  }
+  /* a student's name that opens their profile */
+  const stuLink = (course, id, name) => course && id ? '<button type="button" class="stu" data-spc="' + esc(course) + '" data-spi="' + esc(id) + '" title="Open ' + esc(name) + '">' + esc(name) + '</button>' : '<b>' + esc(name) + '</b>';
+  document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-spi]'); if (!b) return; e.preventDefault(); e.stopPropagation(); studentDialog(b.dataset.spc, b.dataset.spi); }, true);
+  /* who changed what: every change of a group (or a whole course), newest first */
   function historyDialog(course, group) {
-    const ST = { P: 'present', E: 'excused' };
     dialog('<span class="pill">' + esc(course) + (group ? ' &middot; group ' + esc(group) : '') + '</span><h1 style="font-size:26px;margin-top:12px">History</h1>' +
-      '<p class="sub">Everything anyone wrote: marks, attendance, groups, grade items and check-ins, with who did it and when. The newest is at the top.</p>' +
+      '<p class="sub">Everything anyone wrote: marks, attendance, groups, grade items and check-ins, with who did it and when. The newest is at the top. Press a student to see everything about them.</p>' +
       '<div class="hist-tools"><input class="in" id="hq" type="search" placeholder="Search a student, an ID or a TA"><div class="seg" id="hk"><button type="button" class="on" data-k="">All</button><button type="button" data-k="Mark">Marks</button><button type="button" data-k="Attendance">Attendance</button><button type="button" data-k="Other">Groups and setup</button></div></div>' +
       '<p class="hist-sum" id="hsum"></p><div class="hist-feed" id="hrows"><p class="note">Loading</p></div>' +
       '<div class="row" style="margin-top:16px"><button class="btn ghost" data-close type="button">Close</button></div>',
       async (o) => {
         o.querySelector('.panel').classList.add('wide');
         let rows = [], kind = '', q = '';
-        const tag = (x) => '<span class="hist-k ' + (x.kind === 'Mark' ? 'mk' : 'at') + '">' + esc(x.what) + '</span>';
-        /* one change as a sentence: "gave 4 in Quiz 1", "changed Quiz 1 from 4 to 5", "marked present in Week 3" */
-        const say = (x) => {
-          if (x.kind === 'Mark') {
-            if (x.from === '') return 'gave <b>' + esc(x.to) + '</b> in ' + tag(x);
-            if (x.to === '') return 'removed the mark <b>' + esc(x.from) + '</b> of ' + tag(x);
-            return 'changed ' + tag(x) + ' from <s>' + esc(x.from) + '</s> to <b>' + esc(x.to) + '</b>';
-          }
-          if (x.kind === 'Other') return esc(x.what.charAt(0).toLowerCase() + x.what.slice(1)) + (x.group && !group ? ' <span class="hist-k ot">group ' + esc(x.group) + '</span>' : '');
-          if (x.how === 'Self') return 'checked in with the QR code in ' + tag(x);
-          const was = ST[x.from], now = ST[x.to], src = x.how === 'Import' ? ' <small>(from an Excel sheet)</small>' : '';
-          if (!now) return 'removed the attendance of ' + tag(x) + (was ? ' <small>(was ' + was + ')</small>' : '') + src;
-          if (!was) return 'marked <b class="' + x.to + '">' + now + '</b> in ' + tag(x) + src;
-          return 'changed ' + tag(x) + ' from <s>' + was + '</s> to <b class="' + x.to + '">' + now + '</b>' + src;
-        };
-        const ampm = (hm) => { const [h, m] = hm.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); };
-        const dayOf = (t) => {
-          const d = new Date(t.slice(0, 10) + 'T00:00:00'), today = new Date(); today.setHours(0, 0, 0, 0);
-          const n = Math.round((today - d) / 864e5);
-          return n === 0 ? 'Today' : n === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-        };
         const paint = () => {
           const shown = rows.filter(x => (!kind || x.kind === kind) && (!q || (x.name + ' ' + x.id + ' ' + x.by + ' ' + x.what + ' ' + x.group).toLowerCase().indexOf(q) >= 0));
           const tas = new Set(shown.map(x => x.by));
           o.querySelector('#hsum').innerHTML = shown.length ? '<b>' + shown.length + '</b> ' + (shown.length === 1 ? 'change' : 'changes') + ' by <b>' + tas.size + '</b> ' + (tas.size === 1 ? 'person' : 'people') : '';
-          let day = '', html = '';
-          shown.forEach(x => {
-            const d = dayOf(x.t);
-            if (d !== day) { day = d; html += '<h3 class="hist-day">' + esc(d) + '</h3>'; }
-            const self = x.how === 'Self', other = x.kind === 'Other', who = self ? x.name : (x.by || 'Unknown');
-            html += '<div class="hist-it"><span class="hist-av' + (self ? ' st' : other ? ' ot' : '') + '">' + esc(initials(who)) + '</span><div class="hist-tx"><p><b>' + esc(who) + '</b> ' + say(x) + (self || other ? '' : ' for <b>' + esc(x.name) + '</b>') + '</p>' +
-              (other ? '' : '<small>Group ' + esc(x.group) + ' &middot; ID ' + esc(x.id) + (self ? ' &middot; by the student' : '') + '</small>') + '</div><time>' + ampm(x.t.slice(11)) + '</time></div>';
-          });
-          o.querySelector('#hrows').innerHTML = html || '<p class="note">' + (rows.length ? 'Nothing matches.' : 'No changes yet.') + '</p>';
+          o.querySelector('#hrows').innerHTML = histFeed(shown, { course: course, group: group }) || '<p class="note">' + (rows.length ? 'Nothing matches.' : 'No changes yet.') + '</p>';
         };
         o.querySelector('#hq').oninput = (e) => { q = e.target.value.trim().toLowerCase(); paint(); };
         o.querySelectorAll('#hk [data-k]').forEach(b => b.onclick = () => { kind = b.dataset.k; o.querySelectorAll('#hk button').forEach(x => x.classList.toggle('on', x === b)); paint(); });
         try { rows = await api('changeHistory', PIN, course, group || null); paint(); }
         catch (e) { o.querySelector('#hrows').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; }
       });
+  }
+  /* everything about one student: the brief, every mark with who wrote it, every week with who marked it, and their history */
+  function studentDialog(course, id) {
+    document.querySelectorAll('.overlay.stu-o').forEach(x => x.remove());
+    dialog('<div id="spb"><p class="note">Loading</p></div><div class="row" style="margin-top:18px"><button class="btn ghost" data-close type="button">Close</button></div>', async (o) => {
+      o.classList.add('stu-o'); o.querySelector('.panel').classList.add('wide');
+      let S;
+      try { S = await api('studentProfile', PIN, course, id); } catch (e) { o.querySelector('#spb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
+      const items = (S.items || []).filter(it => it.kind !== 'Attendance' && it.key !== 'attendance');
+      const maxTotal = (S.attendanceMax || 0) + items.reduce((t, it) => t + (isBonus(it) ? 0 : Number(it.max)), 0);
+      const pct = S.pct === '' || S.pct == null ? '' : Math.round(S.pct * 100);
+      const lv = pct === '' ? '' : pct >= 75 ? 'ok' : pct >= 50 ? 'mid' : 'lo';
+      const markRow = (it) => {
+        const v = S.scores && S.scores[it.key], b = S.by && S.by[it.key];
+        return '<div class="sp-mrow"><div class="sp-mi"><b>' + esc(it.item) + '</b><small class="sp-sub">' + (it.check ? 'done / not done' : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></div>' +
+          '<span class="sp-mark' + (v == null ? ' none' : '') + '">' + (v == null ? '&ndash;' : it.check ? (Number(v) > 0 ? 'Done' : 'Not done') : esc(String(v))) + '</span>' +
+          '<div class="sp-mby">' + (b && b.by ? '<small class="sp-sub">Written by</small><b>' + esc(b.by) + '</b><small class="sp-sub">' + esc(hWhen(b.t)) + '</small>' : '<span class="sp-sub">No mark yet</span>') + '</div></div>';
+      };
+      const wk = (w) => {
+        const st = w.status === 'P' || w.status === 'E' ? w.status : '';
+        return '<div class="sp-wk' + (st ? ' ' + st : '') + (w.week === 7 || w.week === 14 ? ' exam' : '') + '"><b>' + esc(w.label) + '</b><span class="sp-st">' + (st === 'P' ? 'Present' : st === 'E' ? 'Excused' : '&ndash;') + '</span>' +
+          (st && w.by ? '<small>' + esc(w.by) + '<br>' + esc(hWhen(w.t)) + ((w.note || '').match(/^Attended group (\S+)/) ? '<br>in group ' + esc(w.note.match(/^Attended group (\S+)/)[1]) : '') + '</small>' : '<small>&nbsp;</small>') + '</div>';
+      };
+      o.querySelector('#spb').innerHTML =
+        '<div class="sp-head"><span class="sp-av">' + esc(initials(S.name)) + '</span><div><h1 style="font-size:24px;margin:0">' + esc(S.name) + '</h1>' +
+          '<p class="sub" style="margin:4px 0 0">ID <span class="mono">' + esc(S.id) + '</span> &middot; ' + esc(S.course) + ' &middot; group <b>' + esc(S.group) + '</b>' + (S.ta ? ' &middot; TA ' + esc(S.ta) : '') +
+          (S.team ? ' &middot; team ' + esc(String(S.team)) + (S.teamName ? ' (' + esc(S.teamName) + ')' : '') : '') + ' &middot; ' + (S.phone ? 'phone registered' : 'no phone registered') + '</p></div></div>' +
+        '<div class="sp-tiles"><div class="' + lv + '"><b>' + (pct === '' ? '&ndash;' : pct + '%') + '</b><span>attendance &middot; ' + (S.p || 0) + ' present, ' + (S.e || 0) + ' excused' + (S.a ? ', ' + S.a + ' missed' : '') + '</span></div>' +
+          '<div><b>' + (S.attGrade === '' || S.attGrade == null ? '&ndash;' : esc(String(S.attGrade))) + '<small>/' + (S.attendanceMax || 0) + '</small></b><span>attendance mark</span></div>' +
+          '<div><b>' + esc(String(S.total == null ? 0 : S.total)) + '<small>/' + maxTotal + '</small></b><span>total so far</span></div>' +
+          '<div><b>' + items.filter(it => S.scores && S.scores[it.key] != null).length + '<small>/' + items.length + '</small></b><span>marks entered</span></div></div>' +
+        '<h2 class="sp-h">Marks</h2>' + (items.length ? '<div class="sp-marks">' + items.map(markRow).join('') + '</div>' : '<p class="note">This course has no grade items yet.</p>') +
+        '<h2 class="sp-h">Attendance by week</h2><div class="sp-weeks">' + (S.weekLog || []).map(wk).join('') + '</div>' +
+        '<h2 class="sp-h">History <span class="sp-sub">' + (S.history || []).length + ' changes</span></h2><div class="hist-feed sp-feed">' + (histFeed(S.history || [], { course: course, student: true }) || '<p class="note">No changes yet.</p>') + '</div>';
+    });
   }
   function parseList(text) {
     const out = [], seen = {};
@@ -4712,7 +4772,7 @@ const BOOT = null;
           '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button><button class="btn ghost" id="mkhist" type="button">History</button>' + (it.check ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done</button>' : '') + '</div>' +
         '<p class="mk-stat"><b>' + filled.length + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(it.item) + '</b>' + (nums.length && !it.check ? ' &middot; average <b>' + Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 + '</b> of ' + it.max : '') + '</p>' +
         '<div class="table-wrap"><table class="mk-table"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th><th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th></tr></thead><tbody>' +
-          (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
+          (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + stuLink(course, r.id, r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
             '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, key) + '</td></tr>').join('')
             : '<tr><td colspan="5" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
         '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
@@ -4885,7 +4945,7 @@ const BOOT = null;
           risk.map((r, i) => { const st = absStreak(r), why = [];
             if (r.pct !== '' && r.pct < .75) why.push('<span class="chip A" style="min-width:0">Below 75%</span>');
             if (st >= 2) why.push('<span class="chip E" style="min-width:0">Missed ' + st + ' in a row</span>');
-            return '<tr data-stu="' + esc(r.group) + '"><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td><td><b>' + pctS(r.pct) + '</b></td><td>' + r.a + '</td><td>' + why.join(' ') + '</td></tr>'; }).join('') + '</tbody></table></div>'
+            return '<tr data-stu="' + esc(r.group) + '"><td>' + (i + 1) + '</td><td>' + stuLink(course, r.id, r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td><td><b>' + pctS(r.pct) + '</b></td><td>' + r.a + '</td><td>' + why.join(' ') + '</td></tr>'; }).join('') + '</tbody></table></div>'
           : '<p class="note">Nobody. Every student is at 75% or above.</p>') + '</section>';
       /* teams */
       const nums = [...new Set(rows.map(r => r.team).filter(t => t != null && t !== ''))].sort((a, b) => a - b);
@@ -5662,7 +5722,7 @@ const BOOT = null;
         $('stt').innerHTML = '<span>P = present, E = excused, empty = not present or no check-in that week.</span><span style="color:var(--text);flex-basis:100%">Press week squares to choose them, then mark them all at once. Press a week name to choose that week for everyone.</span>';
         $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th>' + M.weeks.map((w, n) => '<th><button type="button" class="wcol" data-col="' + (n + 1) + '" title="Choose ' + esc(w) + ' for every student shown">' + esc(w) + '</button></th>').join('') + '<th>Present</th><th>Missed</th><th>%</th></tr>';
         $('rows').innerHTML = M.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
-          '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '<button type="button" class="wrow" data-row="' + i + '" title="Choose every week until week ' + nowW + ' that is not present yet">Choose missing weeks</button></td><td class="mono">' + esc(r.id) + '</td>' +
+          '<tr><td>' + (i + 1) + '</td><td>' + stuLink(g.course, r.id, r.name) + '<button type="button" class="wrow" data-row="' + i + '" title="Choose every week until week ' + nowW + ' that is not present yet">Choose missing weeks</button></td><td class="mono">' + esc(r.id) + '</td>' +
           r.weeks.map((v, n) => '<td class="wc' + (isOn(r.id, n + 1) ? ' on' : '') + '" data-r="' + i + '" data-w="' + (n + 1) + '" title="Week ' + (n + 1) + ': press to choose">' + (v ? '<span class="chip ' + v + '" style="min-width:0;padding:3px 9px">' + v + '</span>' : '<span class="wc-e">+</span>') + '</td>').join('') +
           '<td>' + r.p + '</td><td>' + r.a + '</td><td><b>' + (r.pct === '' ? '' : Math.round(r.pct * 100) + '%') + '</b></td></tr>').join('');
         $('fl').innerHTML = '<li>Choose a single week to see flags.</li>';
@@ -5693,7 +5753,7 @@ const BOOT = null;
         const ta = taOf(v.group);
         const head = multi ? '<tr class="gsec"><td colspan="6"><b>Group ' + esc(v.group) + '</b>' + (ta ? '<span>TA ' + esc(ta) + '</span>' : '') + '<span>' + v.present + ' present of ' + v.rows.length + '</span></td></tr>' : '';
         return head + v.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
-          '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + teamChip(v.course, r.team) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
+          '<tr><td>' + (i + 1) + '</td><td>' + stuLink(v.course, r.id, r.name) + teamChip(v.course, r.team) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
           '<td><button type="button" class="chip ' + (waiting(r) ? '' : r.status) + '" data-g="' + k + '" data-i="' + i + '">' + (waiting(r) ? 'Not yet' : ({ P: 'Present', E: 'Excused' }[r.status] || '&ndash;')) + '</button></td></tr>').join('');
       }).join('');
       $('rows').querySelectorAll('[data-i]').forEach(b => b.onclick = async () => {
@@ -5790,7 +5850,7 @@ const BOOT = null;
       $('th').innerHTML = '<tr><th class="sx">#</th><th class="sn">Student</th><th>Attendance<div class="wk wkh">' + weekNums + '</div></th>' + (V.attendanceMax ? '<th class="num">Attendance<small>out of ' + V.attendanceMax + '</small></th>' : '') +
         V.items.map(itemHead).join('') + '<th class="num tot">Total<small>out of ' + mt + '</small></th></tr>';
       $('rows').innerHTML = V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '"><td class="sx">' + (i + 1) + '</td>' +
-        '<td class="sn"><div class="stn">' + esc(r.name) + '</div><div class="sid">' + esc(r.id) + teamChip(V.course, r.team) + '</div></td>' +
+        '<td class="sn"><div class="stn">' + stuLink(V.course, r.id, r.name) + '</div><div class="sid">' + esc(r.id) + teamChip(V.course, r.team) + '</div></td>' +
         '<td><div class="attc"><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b><span>' + r.p + ' P, ' + r.a + ' A, ' + r.e + ' E</span></div>' +
           '<div class="wk">' + (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="' + weekName(n) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></div></td>' +
         (V.attendanceMax ? '<td class="num mono">' + (r.attGrade === '' ? '&ndash;' : r.attGrade) + '</td>' : '') +
@@ -5887,7 +5947,7 @@ const BOOT = null;
       $('rows').innerHTML = (editable ? '<tr class="teamrow"><td class="sx"></td><td class="sn"><div class="stn">Whole team</div><div class="sid">Type here to give the same mark to everyone</div></td><td></td><td></td>' +
           V.items.map(it => '<td class="num">' + markCell(it, 'tcell', '', 'data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ' for the whole team') + '"') + '</td>').join('') + '<td class="tot"></td></tr>' : '') +
         V.rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id + ' ' + r.group).toLowerCase()) + '"' + (r.leader ? ' class="leader"' : '') + '><td class="sx">' + (i + 1) + '</td>' +
-          '<td class="sn"><div class="stn">' + esc(r.name) + (r.leader ? ' <span class="lead">Leader</span>' : '') + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
+          '<td class="sn"><div class="stn">' + stuLink(V.course, r.id, r.name) + (r.leader ? ' <span class="lead">Leader</span>' : '') + '</div><div class="sid">' + esc(r.id) + '</div></td>' +
           '<td class="mono">' + esc(r.group) + '</td>' +
           '<td><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b></div><div class="wk">' +
             (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="Week ' + (n + 1) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></td>' +
