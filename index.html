@@ -852,6 +852,31 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .q-letter:hover { color: #fff; filter: brightness(1.1); }
   .q-lrow { align-items: center; }
   .q-g { padding: 7px 12px; } .q-g b { font-size: 16px; }
+  .q-headline { display: flex; align-items: center; gap: 14px; }
+  .q-ic { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 14px; color: #fff; background: linear-gradient(135deg, var(--grad2), var(--accent)); box-shadow: 0 10px 22px -12px var(--accent); }
+  .q-headline h2 { margin: 0; } .q-date { display: block; color: var(--muted); font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .q-lead { margin: 14px 0 10px; color: var(--text); font-size: 15px; }
+  .h-sec { display: flex; align-items: center; gap: 10px; font-size: 20px; margin: 30px 0 12px; } .h-sec svg { color: var(--accent); }
+  .h-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+  .h-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+  .h-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; } .h-card h3 svg { color: var(--accent); }
+  .h-today { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .h-today a { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: var(--card2); color: var(--text); text-decoration: none; }
+  .h-today a:hover { background: var(--soft); }
+  .h-time { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-weight: 700; }
+  .h-what b { display: block; font-size: 15px; } .h-what small { color: var(--muted); font-size: 12.5px; }
+  .h-st { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--card); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+  .h-st.now { color: #fff; background: var(--accent); border-color: var(--accent); } .h-st.live { color: var(--ok); background: var(--ok-bg); border-color: transparent; } .h-st.done { opacity: .7; }
+  .h-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .h-nums div { background: var(--card2); border-radius: 12px; padding: 10px 12px; } .h-nums b { display: block; font-family: var(--display); font-size: 24px; } .h-nums span { color: var(--muted); font-size: 12.5px; }
+  .h-nums .ok b { color: var(--ok); }
+  .h-tools { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .h-tool { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; padding: 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; text-decoration: none; cursor: pointer; transition: transform .2s, border-color .2s; }
+  .h-tool:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+  .h-tic { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); margin-bottom: 4px; }
+  .h-tool b { font-size: 15px; } .h-tool small { color: var(--muted); font-size: 13px; line-height: 1.45; }
+  @media (max-width: 900px) { .h-grid { grid-template-columns: 1fr; } .h-tools { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .h-today a { grid-template-columns: 1fr auto; } .h-time { grid-column: 1 / -1; } }
   /* calmer home, account menu */
   .acct-menu { display: grid; gap: 2px; margin-top: 10px; }
   .acct-item { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; align-items: center; width: 100%; padding: 10px; border-radius: 10px; border: 0; background: none; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
@@ -3904,6 +3929,37 @@ const BOOT = null;
   function logout() { if (PIN) api('logout', PIN).catch(() => {}); PIN = ''; D = null; store.set('tg_token', ''); store.sset('tg_open', null); opened = []; stopTimers(); history.replaceState(null, '', location.pathname + location.search); landingView(); }
 
   /* ----- dashboard ----- */
+  /* home: what is on today, the numbers at a glance, and what each tool does */
+  const homeIcon = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    (n === 'users' ? '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>' : TB_ICONS[n]) + '</svg>';
+  function homeExtras(mine) {
+    const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes(), me = D.me.name;
+    const pool = mine.length ? mine : D.groups;
+    /* today: your sections from the schedule */
+    const todays = (D.schedule || []).filter(x => x.day === d && x.ta === me && D.groups.some(g => g.course === x.course && g.group === x.group));
+    const secs = [];
+    todays.forEach(x => { const k = x.course + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, course: x.course, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
+    secs.sort((a, b) => toMin(a.start) - toMin(b.start));
+    const today = '<section class="h-card"><h3>' + homeIcon('clock') + 'Today</h3>' + (secs.length ? '<ul class="h-today">' + secs.map(sc => {
+        const g0 = D.groups.find(g => g.course === sc.course && g.group === sc.gs[0]), live = sc.gs.some(gr => (D.groups.find(g => g.course === sc.course && g.group === gr) || {}).live);
+        const st = live ? '<span class="h-st live">Live</span>' : m > toMin(sc.end) ? '<span class="h-st done">Done</span>' : m >= toMin(sc.start) - 20 ? '<span class="h-st now">Now</span>' : '<span class="h-st">' + t12(sc.start) + '</span>';
+        return '<li><a href="' + (g0 ? pageHash('group', g0) : '#') + '"><span class="h-time">' + t12(sc.start) + '&ndash;' + t12(sc.end) + '</span><span class="h-what"><b>' + esc(sc.gs.join(' + ')) + '</b><small>' + esc(sc.course) + (sc.room ? ' &middot; Room ' + esc(sc.room) : '') + '</small></span>' + st + '</a></li>';
+      }).join('') + '</ul>' : '<p class="note">No sections of yours today' + ((D.schedule || []).some(x => x.ta === me) ? '.' : ' in the schedule.') + '</p>') + '</section>';
+    /* at a glance */
+    const studs = pool.reduce((t, g) => t + g.count, 0), reg = pool.reduce((t, g) => t + (g.registered || 0), 0), liveN = pool.filter(g => g.live).length;
+    const glance = '<section class="h-card"><h3>' + homeIcon('chart') + 'At a glance</h3><div class="h-nums">' +
+      '<div><b>' + pool.length + '</b><span>' + (mine.length ? 'my groups' : 'groups') + '</span></div><div><b>' + studs + '</b><span>students</span></div>' +
+      '<div><b>' + (studs ? Math.round(100 * reg / studs) : 0) + '%</b><span>phones registered</span></div><div' + (liveN ? ' class="ok"' : '') + '><b>' + liveN + '</b><span>check-ins live now</span></div></div>' +
+      '<a class="link" href="#insights">See the dashboard &rarr;</a></section>';
+    /* what each tool does */
+    const sc = (k, href, icon, title, text) => (href ? '<a class="h-tool" href="' + href + '">' : '<button class="h-tool" type="button" data-ht="' + k + '">') + '<span class="h-tic">' + homeIcon(icon) + '</span><b>' + title + '</b><small>' + text + '</small>' + (href ? '</a>' : '</button>');
+    const tools = '<h2 class="h-sec">' + homeIcon('archive') + 'Shortcuts</h2><div class="h-tools">' +
+      sc('', '#marks', 'pen', 'Enter marks', 'Type the marks of a quiz, the midterm or the final, for many groups at once.') +
+      sc('', '#insights', 'chart', 'Dashboard', 'Attendance by week, grades, and the students at risk.') +
+      sc('impatt', '', 'upload', 'Import attendance', 'Upload an Excel sheet of attendance taken on paper.') +
+      sc('regqr', '', 'qr', 'Registration QR', 'Students scan it once to register their phone.') + '</div>';
+    return '<div class="h-grid">' + today + glance + '</div>' + tools;
+  }
   function dashboard() {
     stopTimers();
     const isAdmin = D.me.role === 'Admin';
@@ -4021,15 +4077,16 @@ const BOOT = null;
       /* home: a button for each course, then the tabs */
       const cs = [...new Set(groups.map(g => g.course))].sort();
       const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-      /* home stays calm: a short greeting, Take attendance, then the groups (courses are in the menu at the top) */
-      const dayLine = DAYS[new Date().getDay()] + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') +
-        (isAdmin && waiting.length && tab !== 'staff' ? ' &middot; <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' &rarr;</button>' : '');
-      head = '<div class="top home-top"><div><h1>' + greet + ', ' + esc(D.me.name.split(' ')[0]) + '</h1><p class="sub">' + dayLine + '</p></div></div>' + quickHtml(null) +
+      head = '<div class="top home-top"><div><h1>' + greet + ', ' + esc(D.me.name.split(' ')[0]) + '</h1><p class="sub">Here is your day: take attendance, see today\'s sections, and open any tool.' +
+          (isAdmin && waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' &rarr;</button>' : '') + '</p></div></div>' +
+        quickHtml(null) + homeExtras(mine) +
+        '<h2 class="h-sec">' + homeIcon('users') + 'Groups</h2>' +
         '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
     }
     app.innerHTML = '<div class="wrap">' + head + body + '</div>';
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
     on('[data-tab]', b => { tab = b.dataset.tab; swap(dashboard); });
+    on('[data-ht]', b => ({ impatt: importAttendanceDialog, regqr: registrationQrDialog })[b.dataset.ht]());
     on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
     on('[data-claim]', async b => {
       const g = list[b.dataset.claim];
@@ -5039,6 +5096,7 @@ const BOOT = null;
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   let quickMins = Number(store.get('tg_qmin')) || 15;
   const isAdminView = () => D.me.role === 'Admin' && quickAll;
+  const todayLong = () => new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   function quickHtml(C) {
     const pool = quickPool(C);
     if (!pool.length) return '';
@@ -5071,7 +5129,9 @@ const BOOT = null;
     const live = lives.length ? '<div class="q-livebox">' + lives.map(s => '<a class="q-liverow" href="' + pageHash('group', s.g) + '"><span class="q-pulse" aria-hidden="true"></span><span class="q-lt"><b>Check-in is live</b><small>' + esc(s.g.course) + ' &middot; group' + (s.groups.length > 1 ? 's ' : ' ') + s.groups.map(esc).join(' + ') + '</small></span><span class="q-lgo">Show QR &rarr;</span></a>').join('') + '</div>' : '';
     if (!groupsOf.length) return '<section class="quick" id="quick"><div class="q-kicker">Take attendance</div>' + live + '</section>';
     return '<section class="quick" id="quick">' + live +
-      '<div class="q-top"><div class="q-title"><span class="q-kicker">Take attendance &middot; ' + esc(wl) + '</span><h2>' + (lives.length ? 'Another room?' : 'Start check-in in one tap') + '</h2>' + hint + '</div>' +
+      '<div class="q-top"><div class="q-title"><div class="q-headline"><span class="q-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + TB_ICONS.qr + '</svg></span>' +
+        '<div><h2>Take attendance</h2><span class="q-date">' + todayLong() + ' &middot; ' + esc(wl) + '</span></div></div>' +
+        '<p class="q-lead">' + (lives.length ? 'Another room? Pick its groups.' : 'Pick the groups in front of you and press Show QR.') + '</p>' + hint + '</div>' +
         '<button class="q-start" id="qo" type="button"><span class="qs-ring" aria-hidden="true"></span><span class="qs-in"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/></svg><b>Show QR</b><small id="qsel"></small></span></button></div>' +
       (courses.length > 1 && !C ? '<div class="q-course">' + courses.map(c => '<button type="button" class="q-cbtn' + (c === quickCourse ? ' on' : '') + '" data-qc="' + esc(c) + '">' + esc(c) + '</button>').join('') + '</div>' : '') +
       '<div class="q-letters">' + letters.map(b => '<div class="q-lrow"><button type="button" class="q-letter" data-ql="' + esc(b.L) + '" title="Pick every ' + esc(b.L) + ' group">' + esc(b.L) + '</button><div class="q-chips">' +
