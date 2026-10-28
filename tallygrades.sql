@@ -615,6 +615,43 @@ begin
   return jsonb_build_object('name', st.name, 'group', st.grp, 'already', false);
 end $$;
 
+-- import attendance from an Excel file: p_rows = [{"id", "week", "status"}], only P (present) and E (excused) are recorded.
+-- Absent is never written, so it stays empty. A student already present or excused that week is left as is.
+-- The admin can import any group of the course; a TA only the groups that are theirs.
+create or replace function public.import_attendance(p_pin text, p_course text, p_rows jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); c text := tg.clean(p_course); n_marks int; n_saved int; n_ok int; n_notyours int; v_missing text[];
+begin
+  if c = '' then raise exception 'Choose the course.'; end if;
+  perform tg.in_course(me, c);
+  if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) = 0 then raise exception 'No present marks found in the file.'; end if;
+  if jsonb_array_length(p_rows) > 20000 then raise exception 'The file is too big. Import fewer weeks or groups at a time.'; end if;
+  create temp table if not exists tg_import (sid text, week int, status text, grp text, name text, mine boolean) on commit drop;
+  truncate tg_import;
+  insert into tg_import (sid, week, status)
+    select distinct on (y.sid, y.week) y.sid, y.week, y.status from (
+      select tg.norm_id(x->>'id') as sid, case when coalesce(x->>'week', '') ~ '^\d{1,2}$' then (x->>'week')::int end as week, upper(coalesce(x->>'status', '')) as status
+      from jsonb_array_elements(p_rows) x) y
+    where y.week between 1 and 14 and y.status in ('P', 'E') and y.sid <> ''
+    order by y.sid, y.week, y.status desc;   -- P wins over E for the same week
+  get diagnostics n_marks = row_count;
+  update tg_import i set grp = st.grp, name = st.name, mine = (me.role = 'Admin' or st.ta = me.name)
+    from tg.students st where st.course = c and st.sid = i.sid;
+  select array_agg(distinct sid order by sid) into v_missing from tg_import where grp is null;
+  select count(*) filter (where mine), count(*) filter (where grp is not null and not mine) into n_ok, n_notyours from tg_import;
+  if n_ok = 0 and coalesce(array_length(v_missing, 1), 0) > 0 and n_notyours = 0 then
+    raise exception 'None of the students in the file are in %. Choose the right course.', c;
+  end if;
+  with ins as (
+    insert into tg.log (session, course, grp, week, sid, name, status, method, by_ta)
+    select '', c, i.grp, i.week, i.sid, i.name, i.status, 'Manual', me.name from tg_import i
+    where i.mine and not exists (select 1 from tg.latest(c, i.grp, i.week) l where l.sid = i.sid and l.status in ('P', 'E'))
+    returning 1)
+  select count(*) into n_saved from ins;
+  drop table tg_import;
+  return jsonb_build_object('marks', n_marks, 'saved', n_saved, 'already', n_ok - n_saved, 'notYours', n_notyours,
+    'missing', coalesce(to_jsonb(v_missing), '[]'::jsonb));
+end $$;
+
 -- ---------------------------------------------------------------- grades
 create or replace function public.grades_view(p_pin text, p_course text, p_group text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin);
@@ -697,7 +734,7 @@ begin
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)',
-    'save_items(text,text,numeric,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
+    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
