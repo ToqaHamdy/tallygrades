@@ -211,17 +211,74 @@
   .mg-row span small { display: block; color: var(--muted); font-size: 12px; }
   .mg-row > b { white-space: nowrap; }
   .mg-row.mg-none b { color: var(--muted); }
-  .ask-in { display: flex; gap: 8px; margin-top: 14px; }
-  .ask-in .in { flex: 1 1 auto; min-width: 0; font-size: 17px; }
-  .ask-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .ask-chips button { border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13.5px; cursor: pointer; }
-  .ask-chips button:hover { border-color: var(--ink); }
-  .ask-ans { margin-top: 16px; }
-  .ask-ans h3 { margin: 0 0 4px; font-size: 19px; }
-  .ask-ans .table-wrap { max-height: 38vh; overflow: auto; margin-top: 10px; }
-  .ask-ans tr[data-go] { cursor: pointer; }
-  .ask-ans tr[data-go]:hover td { background: var(--soft); }
-  .overlay .panel.ask { max-width: 860px; width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 40px); overflow: auto; }
+  .bot-fab { position: fixed; right: 22px; bottom: 22px; z-index: 45; width: 62px; height: 62px; border-radius: 50%; border: 0; cursor: pointer; color: #fff;
+    background: radial-gradient(120% 120% at 20% 15%, var(--grad2), var(--accent) 60%); box-shadow: 0 14px 34px -10px var(--accent), inset 0 1px 0 rgba(255,255,255,.35);
+    display: grid; place-items: center; transition: transform .3s cubic-bezier(.2,1.4,.4,1), box-shadow .3s; }
+  .bot-fab:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 20px 40px -10px var(--accent), inset 0 1px 0 rgba(255,255,255,.35); }
+  .bot-fab:active { transform: scale(.94); }
+  .bot-fab svg { position: absolute; transition: transform .35s cubic-bezier(.2,1.4,.4,1), opacity .2s; }
+  .bot-fab .bf-x { opacity: 0; transform: rotate(-90deg) scale(.5); }
+  .bot-fab.open .bf-chat { opacity: 0; transform: rotate(90deg) scale(.5); } .bot-fab.open .bf-x { opacity: 1; transform: none; }
+  .bf-spark { position: absolute; top: 9px; right: 11px; font-style: normal; font-size: 13px; line-height: 1; animation: twinkle 2.4s ease-in-out infinite; }
+  .bot-fab.open .bf-spark { opacity: 0; }
+  .bot-fab::after { content: ""; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 var(--accent); opacity: 0; }
+  .bot-fab.hello::after { animation: fabring 2s cubic-bezier(.2,.7,.2,1) infinite; }
+  @keyframes fabring { 0% { box-shadow: 0 0 0 0 var(--accent); opacity: .7; } 100% { box-shadow: 0 0 0 18px var(--accent); opacity: 0; } }
+  @keyframes twinkle { 0%, 100% { transform: scale(.8) rotate(0); opacity: .7; } 50% { transform: scale(1.15) rotate(25deg); opacity: 1; } }
+  .bot-panel { position: fixed; right: 22px; bottom: 98px; z-index: 44; width: 400px; height: min(640px, calc(100vh - 130px)); display: flex; flex-direction: column;
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.55); overflow: hidden;
+    transform-origin: bottom right; transform: translateY(14px) scale(.92); opacity: 0; pointer-events: none; transition: transform .28s cubic-bezier(.2,1.2,.4,1), opacity .2s; }
+  .bot-panel.open { transform: none; opacity: 1; pointer-events: auto; }
+  .bot-head { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 18px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%); }
+  .bot-head > div { flex: 1 1 auto; min-width: 0; } .bot-head b { display: block; font-family: var(--display); font-size: 17px; }
+  .bot-head small { color: var(--muted); font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bot-av { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; display: grid; place-items: center; color: #fff; font-size: 18px; background: linear-gradient(135deg, var(--grad2), var(--accent)); }
+  .bot-icon { width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; flex: 0 0 36px; }
+  .bot-icon:hover { background: var(--soft); color: var(--text); }
+  .bot-log { flex: 1 1 auto; overflow-y: auto; padding: 16px 14px 8px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+  .bmsg { max-width: 88%; padding: 10px 14px; border-radius: 18px; font-size: 14.5px; line-height: 1.5; animation: msgin .3s cubic-bezier(.2,1.2,.4,1); unicode-bidi: plaintext; }
+  .bmsg p { margin: 0; } .bmsg p + p, .bmsg p + div, .bmsg div + p { margin-top: 8px; } .bmsg ul { margin: 6px 0 0; padding-inline-start: 18px; } .bmsg li { margin: 2px 0; }
+  .bmsg.me { align-self: flex-end; background: var(--accent); color: var(--on-accent); border-bottom-right-radius: 6px; }
+  .bmsg.bot { align-self: flex-start; background: var(--card2); border-bottom-left-radius: 6px; max-width: 94%; min-width: 0; }
+  .bmsg.bot:has(.bot-list, .bot-stu, .bot-kpis) { width: 94%; }
+  .bot-stu .my-weeks, .bot-kpis b { direction: ltr; }
+  @keyframes msgin { from { opacity: 0; transform: translateY(8px) scale(.97); } }
+  .dots { display: inline-flex; gap: 4px; padding: 4px 2px; } .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: dot 1s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes dot { 0%, 80%, 100% { transform: translateY(0); opacity: .4; } 40% { transform: translateY(-5px); opacity: 1; } }
+  .bot-count { color: var(--muted); font-size: 13px; }
+  .bot-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; counter-reset: b; }
+  .bot-list li { min-width: 0; }
+  .bot-list li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 10px; background: var(--card); cursor: pointer; counter-increment: b; }
+  .bot-list li::before { content: counter(b); color: var(--muted); font-family: var(--mono); font-size: 11px; min-width: 16px; }
+  .bot-list li:hover { background: var(--soft); }
+  .bot-list li > span { flex: 1 1 auto; min-width: 0; } .bot-list b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bot-list small { color: var(--muted); font-size: 12px; } .bot-list em { font-style: normal; font-weight: 700; font-family: var(--display); }
+  .bot-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .bot-acts button, .bot-chips button { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: border-color .2s, transform .2s; }
+  .bot-acts button:hover, .bot-chips button:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .bot-chips { display: flex; gap: 6px; padding: 6px 14px 8px; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
+  .bot-chips::-webkit-scrollbar { display: none; } .bot-chips button { white-space: nowrap; background: var(--card2); }
+  .bot-in { display: flex; align-items: center; gap: 6px; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  .bot-in input { flex: 1 1 auto; min-width: 0; border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 14px; padding: 12px 14px; font: inherit; font-size: 15px; outline: none; }
+  .bot-in input:focus { border-color: var(--accent); }
+  .bot-send { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 14px; border: 0; cursor: pointer; color: #fff; background: linear-gradient(135deg, var(--grad2), var(--accent)); display: grid; place-items: center; }
+  .bot-mic.rec { color: #fff; background: var(--accent); animation: pulse 1.2s infinite; }
+  .bot-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 8px 0; }
+  .bot-kpis span { background: var(--card); border-radius: 12px; padding: 8px 10px; font-size: 12px; color: var(--muted); }
+  .bot-kpis b { display: block; font-family: var(--display); font-size: 22px; color: var(--text); } .bot-kpis .warn b { color: var(--warn); }
+  .bot-stu { background: var(--card); border-radius: 14px; padding: 12px; margin-top: 4px; }
+  .bot-stu .my-weeks { margin-top: 10px; gap: 4px; } .bot-stu .mw span { font-size: 9px; } .bot-stu .my-pct { font-size: 26px; }
+  .bot-marks { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12.5px; color: var(--muted); } .bot-marks b { color: var(--text); } .bot-marks .tot b { color: var(--accent); }
+  .flash { animation: flash 1.6s ease; } @keyframes flash { 0%, 100% { box-shadow: var(--shadow); } 30% { box-shadow: 0 0 0 4px var(--accent); } }
+  body.projector .bot-fab, body.projector .bot-panel { display: none; }
+  @media (max-width: 640px) {
+    .bot-fab { right: 16px; bottom: 16px; width: 56px; height: 56px; }
+    .bot-panel { right: 0; left: 0; bottom: 0; width: auto; height: calc(100dvh - 70px); border-radius: 22px 22px 0 0; transform-origin: bottom center; }
+    .bot-panel.open ~ .bot-fab { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bot-fab, .bot-panel, .bmsg, .bot-fab svg { transition: none; animation: none; } }
   .my-team { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--tc) 12%, transparent); }
   .my-team b { display: block; font-size: 14px; } .my-team small { color: var(--muted); font-size: 12px; }
   .my-weeks { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
@@ -3280,6 +3337,7 @@ const BOOT = null;
     state.setup ? landingView() : setupView();
   }
   function landingView() {
+    botFab(false);
     stopTimers(); acct();
     const ic = (d) => '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
     const feat = (icon, title, text) => '<li><span class="fi">' + ic(icon) + '</span><div><b>' + title + '</b><span>' + text + '</span></div></li>';
@@ -3310,6 +3368,7 @@ const BOOT = null;
   }
   /* ----- the circle at the top right: who is logged in, their courses and groups, and Log out (Log in when nobody is) ----- */
   function acct() {
+    botFab(true);
     const el = $('acctSlot');
     if (!el.dataset.ready) {
       el.dataset.ready = '1';
@@ -3572,7 +3631,7 @@ const BOOT = null;
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
-    const top = '<a class="link" href="#insights">Dashboard &rarr;</a><button class="link" id="ask">Ask about your students</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
+    const top = '<a class="link" href="#insights">Dashboard &rarr;</a><button class="link" id="ask">Ask the assistant</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
       ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button>' : '');
     let head;
     if (C) {
@@ -3582,7 +3641,7 @@ const BOOT = null;
       const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
       head = '<button class="back" id="home" type="button">&larr; All courses</button>' +
         '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
-        '<div class="links" style="margin:0"><a class="link" href="#insights/' + encodeURIComponent(C) + '">Dashboard &rarr;</a><button class="link" id="ask">Ask about this course</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
+        '<div class="links" style="margin:0"><a class="link" href="#insights/' + encodeURIComponent(C) + '">Dashboard &rarr;</a><button class="link" id="ask">Ask the assistant</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
         '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
           tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' + quickHtml(C) +
         (isAdmin ? '<section class="course cset" style="margin-bottom:30px"><div class="course-head"><h2 style="font-size:20px">Grades</h2><span>the same for every group</span></div><div id="cs0"><p class="note" style="padding:16px 0">Loading</p></div></section>' : '');
@@ -3660,7 +3719,7 @@ const BOOT = null;
     $('regqr').onclick = registrationQrDialog;
     $('final').onclick = downloadFinal;
     if (!C) $('impatt').onclick = importAttendanceDialog;
-    if ($('ask')) $('ask').onclick = () => askDialog(C);
+    if ($('ask')) $('ask').onclick = () => BOT && BOT.toggle(true);
     if ($('term')) $('term').onclick = termDialog;
     if ($('backup')) $('backup').onclick = downloadBackup;
     if (tab === 'courses') (D.allCourses || []).forEach((c, ci) => courseSettings(c, ci));
@@ -4015,97 +4074,236 @@ const BOOT = null;
     draw();
   }
 
-  /* ----- Ask about your students: questions in Arabic or English, answered in the page from your own data (no AI service, no cost) ----- */
-  const ASK_SAMPLES = ['مين غاب 3 أسابيع ورا بعض؟', 'مين في خطر في الحضور؟', 'مين غاب الأسبوع ده؟', 'مين أكتر واحد غايب؟', 'مين مغابش خالص؟', 'أعلى 10 درجات', 'مين درجته أقل من 20؟', 'مين ملوش درجة Project؟', 'Team 3'];
-  function askAnswer(q, data, onlyCourse) {
-    const ar = '٠١٢٣٤٥٦٧٨٩';
-    let t = String(q).replace(/[٠-٩]/g, d => ar.indexOf(d)).replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase().trim();
-    let courses = data.courses.filter(c => !onlyCourse || c.course === onlyCourse);
-    const named = courses.filter(c => t.indexOf(c.course.toLowerCase()) >= 0);
+  /* ----- Assistant: the chat button at the bottom right. It answers questions in Arabic or English
+     from your own data, in the page: no AI service, no cost, nothing leaves the site. ----- */
+  const BOT_SAMPLES_AR = ['ملخص الحضور', 'مين في خطر في الحضور؟', 'مين غاب 2 أسابيع ورا بعض؟', 'مين غاب الأسبوع ده؟', 'أعلى 10 درجات', 'مين ملوش درجة Project؟', 'خد الحضور'];
+  const BOT_SAMPLES_EN = ['Attendance summary', 'Who is at risk?', 'Absent 2 weeks in a row', 'Who was absent this week?', 'Top 10 grades', 'Open the dashboard'];
+  const botNorm = (q) => String(q).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[؟?!.,،]/g, ' ').toLowerCase().replace(/\s+/g, ' ').trim();
+  function botAnswer(q, data, ctx) {
+    const ar = /[؀-ۿ]/.test(q), T = (en, a) => ar ? a : en;
+    const t = ' ' + botNorm(q) + ' ', has = (re) => re.test(t);
+    let courses = data.courses.filter(c => !ctx.course || c.course === ctx.course);
+    const named = data.courses.filter(c => t.indexOf(c.course.toLowerCase()) >= 0 || t.indexOf(' ' + initials(c.course).toLowerCase() + ' ') >= 0);
     if (named.length) courses = named;
     let rows = [];
     courses.forEach(c => c.rows.forEach(r => rows.push(Object.assign({ course: c.course, C: c }, r))));
-    const groupsAll = [...new Set(rows.map(r => r.group))];
-    const grp = groupsAll.filter(g => new RegExp('(^|[^a-z0-9])' + g.toLowerCase().replace(/[^a-z0-9]/g, '\\$&') + '($|[^a-z0-9])').test(t));
+    const allGroups = [...new Set(rows.map(r => r.group))];
+    const grp = allGroups.filter(g => new RegExp('[^a-z0-9]' + g.toLowerCase().replace(/[^a-z0-9]/g, '\\$&') + '[^a-z0-9]').test(t));
     if (grp.length) rows = rows.filter(r => grp.indexOf(r.group) >= 0);
-    const where = (grp.length ? ' in ' + grp.join(' + ') : '') + (courses.length === 1 && data.courses.length > 1 ? ', ' + courses[0].course : '');
-    const nums = (t.match(/\d+(\.\d+)?/g) || []).map(Number);
-    const has = (re) => re.test(t);
+    const where = (grp.length ? T(' in ', ' في ') + grp.join(' + ') : '') + (courses.length === 1 && data.courses.length > 1 && !ctx.course ? T(', ', '، ') + courses[0].course : '');
+    const nums = (t.replace(/\b[a-z]{1,2}\d{1,2}\b/g, ' ').match(/\d+(\.\d+)?/g) || []).map(Number);
     const cw = data.currentWeek || 0;
-    const absentWord = has(/غاب|غايب|غياب|absent|absence|missed|miss/);
+    const absentWord = has(/غاب|غايب|غياب|بيغيب|absent|absence|missed|miss /);
     const maxOf = (r) => (r.C.attendanceMax || 0) + r.C.items.reduce((s, it) => s + (isBonus(it) ? 0 : Number(it.max)), 0);
-    const pctTxt = (r) => r.pct === '' ? '–' : Math.round(r.pct * 100) + '%';
-    const streak = (r) => { let best = 0, cur = 0; r.weeks.forEach(v => { if (v === 'A') { cur++; best = Math.max(best, cur); } else if (v) cur = 0; }); return best; };
-    const out = (title, list, extra) => ({ title: title + where, rows: list, extra: extra || null });
-    /* one student by ID or name */
+    const P = (v) => v === '' || v == null ? '–' : Math.round(v * 100) + '%';
+    const n1 = (v) => Math.round(v * 10) / 10;
+    const list = (text, rs, extra, more) => Object.assign({ text: text + where, rows: rs, extra: extra || null, grp: grp }, more || {});
+    const say = (text, more) => Object.assign({ text: text, grp: grp }, more || {});
+    const groupOf = (name) => D.groups.find(g => courses.some(c => c.course === g.course) && g.group === name && (D.me.role === 'Admin' || g.ta === D.me.name));
+    if (!t.trim()) return null;
+    /* small talk and help */
+    if (has(/^ (hi|hello|hey|ازيك|اهلا|السلام|صباح|مساء|هاي|ها|يا) /) && t.trim().split(' ').length <= 4)
+      return say(T('Hi ' + esc(D.me.name.split(' ')[0]) + '! Ask me about attendance, grades, groups, teams or one student. Try a question below.', 'أهلًا يا ' + esc(D.me.name.split(' ')[0]) + '! اسأليني عن الحضور أو الدرجات أو الجروبات أو التيمز أو أي طالب. جربي سؤال من اللي تحت.'), { chips: true });
+    if (has(/help|ساعدني|تعملي ايه|بتعرف|بتعمل ايه|اسال ايه|تقدر|تقدري|مساعده/))
+      return say(T('I can answer:<ul><li>Attendance summary, for a course or a group</li><li>Who is at risk, absent in a row, absent in a week, most absent, never absent</li><li>Top or lowest grades, grades below a number, who has no mark for an item</li><li>A team, a student name or ID</li><li>Take me to: dashboard, settings, a group, take attendance</li></ul>Name a group to narrow it, for example "in P1". Then ask "and P2?".',
+        'أقدر أجاوب على:<ul><li>ملخص الحضور لكورس أو جروب</li><li>مين في خطر، مين غاب ورا بعض، مين غاب في أسبوع، مين أكتر غياب، مين مغابش خالص</li><li>أعلى أو أقل درجات، مين درجته أقل من رقم، مين ملوش درجة في حاجة</li><li>تيم، أو اسم طالب أو الـ ID بتاعه</li><li>أوديكي: الـ dashboard، الإعدادات، جروب، أخد الحضور</li></ul>اكتبي اسم الجروب عشان أضيّق، مثلًا "في P1"، وبعدها اسألي "وP2؟".'), { chips: true });
+    if (has(/شكرا|thank|تسلم|حبيبي|جميل|تمام /) && t.trim().split(' ').length <= 3) return say(T('Any time!', 'العفو! أي وقت 🌷'));
+    /* take me somewhere */
+    if (has(/dashboard|داشبورد|داش بورد|لوحه التحكم|رسومات|charts/)) return say(T('Opening the dashboard' + (courses.length === 1 ? ' of ' + esc(courses[0].course) : '') + '.', 'هفتحلك الـ dashboard' + (courses.length === 1 ? ' بتاع ' + esc(courses[0].course) : '') + '.'), { go: courses.length === 1 ? '#insights/' + encodeURIComponent(courses[0].course) : '#insights' });
+    if (has(/settings|اعدادات|الاعدادات|password|باسورد|يوزرنيم|username|صوره البروفايل|profile/)) return say(T('Opening your settings.', 'هفتحلك الإعدادات.'), { go: '#settings' });
+    if (!absentWord && has(/qr|كيو ار|خد الحضور|اخد الحضور|اخد حضور|take attendance|check in|check-in|افتح الحضور|ابدا الحضور/)) {
+      if (grp.length && groupOf(grp[0])) return say(T('Opening group ' + esc(grp[0]) + '. Press Show QR there.', 'هفتحلك جروب ' + esc(grp[0]) + '، دوسي Show QR هناك.'), { go: pageHash('group', groupOf(grp[0])) });
+      return say(T('Opening Take attendance. Tick the groups in front of you and press Show one QR for all.', 'هفتحلك Take attendance. علّمي على الجروبات اللي قدامك ودوسي Show one QR for all.'), { go: '', focus: 'quick' });
+    }
+    if (grp.length && !absentWord && has(/^ (افتح|افتحي|open|go to|روح|وديني) /)) {
+      const g = groupOf(grp[0]);
+      if (g) return say(T('Opening group ' + esc(g.group) + '.', 'هفتحلك جروب ' + esc(g.group) + '.'), { go: has(/درج|grade/) ? pageHash('grades', g) : pageHash('group', g) });
+    }
+    /* one student by ID */
     const idq = t.match(/\d{5,}/);
-    if (idq) return out('Students with an ID containing ' + idq[0], rows.filter(r => r.id.indexOf(idq[0]) >= 0));
-    if (has(/team|تيم|فريق/) && nums.length) { const n = nums[0]; return out('Team ' + n, rows.filter(r => Number(r.team) === n)); }
+    if (idq) { const f = rows.filter(r => r.id.indexOf(idq[0]) >= 0); return f.length === 1 ? say('', { student: f[0] }) : list(T('Students with an ID containing ' + idq[0], 'طلبة الـ ID بتاعهم فيه ' + idq[0]), f); }
+    if (has(/team|تيم|فريق/) && nums.length) { const n = nums[0], tm = teamOf(courses[0] && courses[0].course, n); return list(T('Team ' + n, 'تيم ' + n) + (tm ? ': ' + esc(tm.name) : ''), rows.filter(r => Number(r.team) === n), null, { teamGo: tm ? '#team/' + encodeURIComponent(tm.course) + '/' + n : '' }); }
     if (absentWord && has(/ورا بعض|متتالي|متتاليه|ورا بعضها|in a row|consecutive|straight/)) {
-      const n = nums[0] || 3; return out('Absent ' + n + ' weeks or more in a row', rows.filter(r => streak(r) >= n).sort((a, b) => streak(b) - streak(a)), ['In a row', streak]);
+      const n = nums.find(x => x >= 1 && x <= 14) || 2;
+      return list(T('Absent ' + n + ' weeks or more in a row', 'غابوا ' + n + ' أسابيع أو أكتر ورا بعض'), rows.filter(r => absStreak(r) >= n).sort((a, b) => absStreak(b) - absStreak(a)), [T('In a row', 'ورا بعض'), absStreak]);
     }
-    if (absentWord && has(/اسبوع|week|النهارده|انهارده|today|this week|ده/)) {
+    if (absentWord && has(/اسبوع|week|النهارده|انهارده|today|this week| ده /)) {
       const w = nums.find(n => n >= 1 && n <= 14) || cw;
-      if (!w) return { title: 'Which week? Write the week number, for example: مين غاب أسبوع 5', rows: [] };
-      return out('Absent in week ' + w, rows.filter(r => r.weeks[w - 1] === 'A'));
+      if (!w) return say(T('Which week? For example: who was absent in week 5', 'أنهي أسبوع؟ مثلًا: مين غاب أسبوع 5'));
+      return list(T('Absent in week ' + w, 'غابوا في أسبوع ' + w), rows.filter(r => r.weeks[w - 1] === 'A'));
     }
-    if (has(/مغابش|ما غابش|مش غايب|ولا مره|never|perfect|full attendance|كل الاسابيع|حضر كل/)) return out('Never absent', rows.filter(r => r.a === 0 && r.p > 0));
-    if (absentWord && has(/اكتر|اكثر|most|top|اعلي|كتير/)) return out('Most absences', rows.filter(r => r.a > 0).sort((a, b) => b.a - a.a).slice(0, nums[0] || 15), ['Absent', r => r.a]);
-    if (has(/خطر|risk|danger|حرمان|هيسقط|هيشيل|warning|انذار/) || (has(/حضور|attendance|%|نسبه/) && has(/اقل|less|below|under|تحت/))) {
+    if (has(/مغابش|ما غابش|مش غايب|ولا مره|never|perfect|full attendance|كل الاسابيع|حضر كل|محدش غاب/)) return list(T('Never absent', 'مغابوش خالص'), rows.filter(r => r.a === 0 && r.p > 0));
+    if (absentWord && has(/اكتر|اكثر|most|top|اعلي|كتير/)) return list(T('Most absences', 'أكتر غياب'), rows.filter(r => r.a > 0).sort((a, b) => b.a - a.a).slice(0, nums[0] || 15), [T('Absent', 'غياب'), r => r.a]);
+    if (has(/خطر|risk|danger|حرمان|هيسقط|هيشيل|warning|انذار|محروم/) || (has(/حضور|attendance|%|نسبه/) && has(/اقل|less|below|under|تحت/))) {
       const lim = (nums.find(n => n > 0 && n <= 100) || 75) / 100;
-      return out('Attendance below ' + Math.round(lim * 100) + '%', rows.filter(r => r.pct !== '' && r.pct < lim).sort((a, b) => a.pct - b.pct));
+      return list(T('Attendance below ' + Math.round(lim * 100) + '%', 'حضورهم أقل من ' + Math.round(lim * 100) + '%'), rows.filter(r => r.pct !== '' && r.pct < lim).sort((a, b) => a.pct - b.pct));
     }
     const item = courses.flatMap(c => c.items).find(it => t.indexOf(String(it.item).toLowerCase()) >= 0);
-    if (item && has(/ملوش|مالوش|معندوش|مش متسجل|missing|no |without|بدون|ناقص/)) return out('No mark yet for ' + item.item, rows.filter(r => r.C.items.some(it => it.key === item.key) && (r.scores[item.key] == null || r.scores[item.key] === '')));
-    if (has(/درج|grade|mark|score|total|مجموع/)) {
-      const col = item ? ['' + item.item, r => r.scores[item.key] == null ? '–' : r.scores[item.key]] : ['Total', r => r.total + ' / ' + maxOf(r)];
-      const val = item ? (r => r.scores[item.key] == null ? -1 : Number(r.scores[item.key])) : (r => Number(r.total));
-      if (has(/اقل|less|below|under|تحت/) && nums.length) return out((item ? item.item : 'Total') + ' below ' + nums[0], rows.filter(r => val(r) >= 0 && val(r) < nums[0]).sort((a, b) => val(a) - val(b)), col);
-      if (has(/اكتر|اكبر|more|above|over|فوق/) && nums.length) return out((item ? item.item : 'Total') + ' above ' + nums[0], rows.filter(r => val(r) > nums[0]).sort((a, b) => val(b) - val(a)), col);
-      if (has(/اقل|lowest|worst|اضعف|اوحش/)) return out('Lowest ' + (item ? item.item : 'totals'), rows.filter(r => val(r) >= 0).sort((a, b) => val(a) - val(b)).slice(0, nums[0] || 10), col);
-      return out('Highest ' + (item ? item.item : 'totals'), rows.filter(r => val(r) >= 0).sort((a, b) => val(b) - val(a)).slice(0, nums[0] || 10), col);
+    if (item && has(/ملوش|مالوش|معندوش|مش متسجل|missing| no |without|بدون|ناقص|متسجلتش/)) return list(T('No mark yet for ' + esc(item.item), 'لسه ملهمش درجة ' + esc(item.item)), rows.filter(r => r.C.items.some(it => it.key === item.key) && (r.scores[item.key] == null || r.scores[item.key] === '')));
+    if (has(/درج|grade|mark|score|total|مجموع|اعلي |اوائل|الاوائل/)) {
+      const nm = item ? esc(item.item) : T('total', 'المجموع');
+      const col = item ? [item.item, r => r.scores[item.key] == null ? '–' : r.scores[item.key]] : [T('Total', 'المجموع'), r => r.total + ' / ' + maxOf(r)];
+      const val = item ? (r => r.scores[item.key] == null || r.scores[item.key] === '' ? -1 : Number(r.scores[item.key])) : (r => Number(r.total));
+      if (has(/اقل|less|below|under|تحت/) && nums.length) return list(T(nm + ' below ' + nums[0], nm + ' أقل من ' + nums[0]), rows.filter(r => val(r) >= 0 && val(r) < nums[0]).sort((a, b) => val(a) - val(b)), col);
+      if (has(/اكتر|اكبر|more|above|over|فوق/) && nums.length) return list(T(nm + ' above ' + nums[0], nm + ' أكبر من ' + nums[0]), rows.filter(r => val(r) > nums[0]).sort((a, b) => val(b) - val(a)), col);
+      if (has(/اقل|lowest|worst|اضعف|اوحش|اقل /)) return list(T('Lowest ' + nm, 'أقل ' + nm), rows.filter(r => val(r) >= 0).sort((a, b) => val(a) - val(b)).slice(0, nums[0] || 10), col);
+      return list(T('Highest ' + nm, 'أعلى ' + nm), rows.filter(r => val(r) >= 0).sort((a, b) => val(b) - val(a)).slice(0, nums[0] || 10), col);
     }
-    if (absentWord) return out('Absent at least once', rows.filter(r => r.a > 0).sort((a, b) => b.a - a.a), ['Absent', r => r.a]);
-    /* else: a name */
-    const words = t.split(/\s+/).filter(w => w.length > 1 && !/^(مين|هو|هي|فين|في|عن|ايه|who|is|the|where|student)$/.test(w));
-    if (words.length) { const f = rows.filter(r => words.every(w => r.name.toLowerCase().indexOf(w) >= 0)); if (f.length) return out('Students named "' + words.join(' ') + '"', f); }
-    return { title: 'I did not understand this question. Try one of the questions above, or write a student name or ID.', rows: [] };
+    if (has(/ملخص|summary|overview|متوسط|average|عامل ايه|عاملين ايه|احوال|how is|how are|نسبه الحضور|الحضور عامل|كام طالب|how many|عدد الطلبه|عدد/)) {
+      const ps = rows.filter(r => r.pct !== '').map(r => Number(r.pct)), risk = rows.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length;
+      const wk = []; for (let w = 1; w <= 14; w++) { const c = rows.map(r => r.weeks[w - 1]).filter(Boolean); if (c.length) wk.push([w, c.filter(v => v !== 'A').length / c.length]); }
+      const last = wk[wk.length - 1], gr = rows.filter(r => Object.keys(r.scores || {}).length), avgT = avgOf(gr.map(r => Number(r.total)));
+      const avg = avgOf(ps);
+      return say('<b>' + T('Summary', 'الملخص') + esc(where) + '</b><div class="bot-kpis"><span><b>' + rows.length + '</b>' + T('students', 'طالب') + '</span><span><b>' + P(avg) + '</b>' + T('average attendance', 'متوسط الحضور') + '</span><span class="' + (risk ? 'warn' : '') + '"><b>' + risk + '</b>' + T('at risk', 'في خطر') + '</span>' +
+        (avgT != null && courses.length === 1 && rows[0] && maxOf(rows[0]) ? '<span><b>' + n1(avgT) + '</b>' + T('average total of ', 'متوسط المجموع من ') + maxOf(rows[0]) + '</span>' : '') + '</div>' +
+        (last ? T('Last week with attendance: week ' + last[0] + ', ' + P(last[1]) + ' present.', 'آخر أسبوع اتاخد فيه حضور: أسبوع ' + last[0] + '، الحضور ' + P(last[1]) + '.') : ''),
+        { follow: risk ? [T('Who is at risk?', 'مين في خطر؟') + (grp.length ? ' ' + grp.join(' ') : '')] : null, go2: { label: T('Open the dashboard', 'افتح الـ dashboard'), href: courses.length === 1 ? '#insights/' + encodeURIComponent(courses[0].course) : '#insights' } });
+    }
+    if (absentWord) return list(T('Absent at least once', 'غابوا مرة على الأقل'), rows.filter(r => r.a > 0).sort((a, b) => b.a - a.a), [T('Absent', 'غياب'), r => r.a]);
+    /* a student name */
+    const words = t.trim().split(' ').filter(w => w.length > 1 && !/^(مين|هو|هي|فين|في|عن|ايه|اخبار|احوال|طالب|الطالب|who|is|the|where|student|about|how|show|me)$/.test(w));
+    if (words.length) {
+      const f = rows.filter(r => words.every(w => r.name.toLowerCase().indexOf(w) >= 0));
+      if (f.length === 1) return say('', { student: f[0] });
+      if (f.length) return list(T('Students named "' + esc(words.join(' ')) + '"', 'طلبة اسمهم "' + esc(words.join(' ')) + '"'), f);
+    }
+    return null;
   }
-  function askDialog(onlyCourse) {
-    let data = null;
-    dialog('<span class="pill">Free, from your own data</span><h1 style="font-size:26px;margin-top:12px">Ask about ' + (onlyCourse ? esc(onlyCourse) : 'your students') + '</h1>' +
-      '<p class="sub">Write in Arabic or English. You can name a group, for example: <bdi dir="rtl">مين غاب 3 أسابيع ورا بعض في P1؟</bdi></p>' +
-      '<form class="ask-in" id="af"><input class="in" id="aq" dir="auto" placeholder="مين في خطر في الحضور؟" autocomplete="off"><button class="btn" type="submit">Ask</button></form>' +
-      '<div class="ask-chips">' + ASK_SAMPLES.map(x => '<button type="button" dir="auto">' + esc(x) + '</button>').join('') + '</div>' +
-      '<div class="ask-ans" id="aa"><p class="note">Loading your students</p></div><div class="row" style="margin-top:16px"><button class="btn ghost" data-close type="button">Close</button></div>',
-      (o, close) => {
-        o.querySelector('.panel').classList.add('ask');
-        const aq = o.querySelector('#aq'), aa = o.querySelector('#aa');
-        const run = () => {
-          if (!data) return;
-          if (!aq.value.trim()) { aa.innerHTML = '<p class="note">' + data.courses.reduce((n, c) => n + c.rows.length, 0) + ' students loaded. Ask a question.</p>'; return; }
-          const r = askAnswer(aq.value, data, onlyCourse), many = new Set(r.rows.map(x => x.course)).size > 1;
-          aa.innerHTML = '<h3>' + esc(r.title) + '</h3>' + (r.rows.length ? '<p class="note">' + r.rows.length + (r.rows.length === 1 ? ' student' : ' students') + '. Press a student to open their group.' +
-              ' <button class="link" id="acp" type="button">Copy names</button></p><div class="table-wrap"><table><thead><tr><th>#</th><th>Student Name</th><th>ID</th><th>Group</th>' + (many ? '<th>Course</th>' : '') +
-              '<th>Attendance</th><th>Absent</th>' + (r.extra ? '<th>' + esc(r.extra[0]) + '</th>' : '') + '</tr></thead><tbody>' +
-              r.rows.map((x, i) => '<tr data-go="' + i + '"><td>' + (i + 1) + '</td><td>' + esc(x.name) + '</td><td class="mono">' + esc(x.id) + '</td><td>' + esc(x.group) + '</td>' + (many ? '<td>' + esc(x.course) + '</td>' : '') +
-                '<td>' + (x.pct === '' ? '&ndash;' : Math.round(x.pct * 100) + '%') + '</td><td>' + x.a + '</td>' + (r.extra ? '<td><b>' + esc(String(r.extra[1](x))) + '</b></td>' : '') + '</tr>').join('') + '</tbody></table></div>'
-            : (/^I did not|^Which week/.test(r.title) ? '' : '<p class="note">Nobody.</p>'));
-          aa.querySelectorAll('[data-go]').forEach(tr => tr.onclick = () => {
-            const x = r.rows[tr.dataset.go], g = D.groups.find(y => y.course === x.course && y.group === x.group);
-            if (g) { close(); go(pageHash('group', g)); }
-          });
-          const cp = aa.querySelector('#acp');
-          if (cp) cp.onclick = () => {
-            const text = r.rows.map((x, i) => (i + 1) + '. ' + x.name + ' (' + x.id + ', ' + x.group + ')').join('\n');
-            (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast('Copied ' + r.rows.length + ' names.'), () => toast('Could not copy.'));
-          };
-        };
-        o.querySelector('#af').onsubmit = (e) => { e.preventDefault(); run(); };
-        o.querySelectorAll('.ask-chips button').forEach(b => b.onclick = () => { aq.value = b.textContent; run(); });
-        aq.focus();
-        api('askData', PIN).then(d => { data = d; run(); }).catch(e => { aa.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; });
+  function botStudentCard(r, ar) {
+    const T = (en, a) => ar ? a : en, maxT = (r.C.attendanceMax || 0) + r.C.items.reduce((s, it) => s + (isBonus(it) ? 0 : Number(it.max)), 0), st = absStreak(r);
+    const lv = r.pct === '' ? '' : r.pct >= .75 ? 'hi' : r.pct >= .5 ? 'mid' : 'lo';
+    return '<div class="bot-stu"><div class="my-top"><div><b>' + esc(r.name) + '</b><span>' + esc(r.id) + ' &middot; ' + T('group ', 'جروب ') + esc(r.group) + (r.team ? ' &middot; T' + esc(r.team) : '') + '</span></div><div class="my-pct ' + lv + '">' + (r.pct === '' ? '&ndash;' : Math.round(r.pct * 100) + '%') + '</div></div>' +
+      '<div class="my-weeks">' + r.weeks.map((v, n) => '<div class="mw ' + (v || 'none') + '"><i>' + (v || '') + '</i><span>' + WEEK_NAME(n + 1) + '</span></div>').join('') + '</div>' +
+      '<p class="note" style="margin:8px 0 0">' + T(r.p + ' present, ' + r.a + ' absent, ' + r.e + ' excused', r.p + ' حضور، ' + r.a + ' غياب، ' + r.e + ' عذر') + (st >= 2 ? ' &middot; <b style="color:var(--warn)">' + T('absent ' + st + ' in a row', 'غاب ' + st + ' ورا بعض') + '</b>' : '') + '</p>' +
+      (maxT ? '<div class="bot-marks">' + (r.C.attendanceMax ? '<span>' + T('Attendance', 'الحضور') + ' <b>' + (r.attGrade === '' ? '–' : r.attGrade) + '</b>/' + r.C.attendanceMax + '</span>' : '') +
+        r.C.items.map(it => '<span>' + esc(it.item) + ' <b>' + (r.scores[it.key] == null ? '–' : r.scores[it.key]) + '</b>/' + it.max + '</span>').join('') + '<span class="tot">' + T('Total', 'المجموع') + ' <b>' + r.total + '</b>/' + maxT + '</span></div>' : '') + '</div>';
+  }
+  let BOT = null;
+  function botFab(show) {
+    if (!show && !BOT) return;
+    if (!BOT) {
+      const fab = document.createElement('button');
+      fab.type = 'button'; fab.className = 'bot-fab hide-proj'; fab.id = 'botFab'; fab.setAttribute('aria-label', 'Open the assistant'); fab.title = 'Assistant (press / to open)';
+      fab.innerHTML = '<svg class="bf-chat" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" stroke-width="3"/></svg>' +
+        '<svg class="bf-x" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg><i class="bf-spark" aria-hidden="true">&#10022;</i>';
+      const panel = document.createElement('section');
+      panel.className = 'bot-panel hide-proj'; panel.id = 'botPanel'; panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Assistant');
+      panel.innerHTML = '<header class="bot-head"><span class="bot-av" aria-hidden="true">&#10022;</span><div><b>Tally assistant</b><small id="botScope">Answers from your own data, free</small></div>' +
+        '<button type="button" class="bot-icon" id="botClear" title="New chat" aria-label="New chat"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>' +
+        '<button type="button" class="bot-icon" id="botClose" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>' +
+        '<div class="bot-log" id="botLog" aria-live="polite"></div><div class="bot-chips" id="botChips"></div>' +
+        '<form class="bot-in" id="botForm"><button type="button" class="bot-icon bot-mic" id="botMic" title="Speak" aria-label="Speak" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>' +
+        '<input id="botQ" dir="auto" autocomplete="off" placeholder="اسألي أي حاجة… Ask anything"><button type="submit" class="bot-send" aria-label="Send"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>';
+      document.body.appendChild(panel); document.body.appendChild(fab);
+      BOT = { fab: fab, panel: panel, data: null, at: 0, last: '', open: false };
+      const log = $('botLog'), q = $('botQ');
+      const scrollEnd = () => { log.scrollTop = log.scrollHeight; };
+      const chips = (ar) => { $('botChips').innerHTML = (ar === false ? BOT_SAMPLES_EN : BOT_SAMPLES_AR).map(x => '<button type="button" dir="auto">' + esc(x) + '</button>').join(''); $('botChips').querySelectorAll('button').forEach(b => b.onclick = () => ask(b.textContent)); };
+      const bubble = (cls, html) => { const d = document.createElement('div'); d.className = 'bmsg ' + cls; d.dir = 'auto'; d.innerHTML = html; log.appendChild(d); scrollEnd(); return d; };
+      const load = async () => { if (!BOT.data || Date.now() - BOT.at > 60000) { BOT.data = await api('askData', PIN); BOT.at = Date.now(); } return BOT.data; };
+      const scopeText = () => { $('botScope').textContent = courseOnly ? courseOnly + ' · from your own data, free' : 'Answers from your own data, free'; };
+      const render = (r, ar, d) => {
+        const T = (en, a) => ar ? a : en;
+        let h = r.text ? '<p>' + r.text + '</p>' : '';
+        if (r.student) h += botStudentCard(r.student, ar);
+        if (r.rows) {
+          const many = new Set(r.rows.map(x => x.course)).size > 1, show = 8;
+          h += '<p class="bot-count">' + (r.rows.length ? T(r.rows.length + (r.rows.length === 1 ? ' student' : ' students'), r.rows.length + ' طالب') : T('Nobody. 🎉', 'محدش. 🎉')) + '</p>';
+          if (r.rows.length) h += '<ol class="bot-list">' + r.rows.map((x, i) => '<li' + (i >= show ? ' hidden' : '') + ' data-i="' + i + '"><span><b>' + esc(x.name) + '</b><small>' + esc(x.group) + (many ? ', ' + esc(x.course) : '') + ' &middot; ' + (x.pct === '' ? '–' : Math.round(x.pct * 100) + '%') + '</small></span>' + (r.extra ? '<em>' + esc(String(r.extra[1](x))) + '</em>' : '') + '</li>').join('') + '</ol>';
+        }
+        const acts = [];
+        if (r.rows && r.rows.length > 8) acts.push('<button type="button" data-a="all">' + T('Show all ' + r.rows.length, 'اعرض الكل (' + r.rows.length + ')') + '</button>');
+        if (r.rows && r.rows.length) acts.push('<button type="button" data-a="copy">' + T('Copy names', 'انسخ الأسماء') + '</button>');
+        if (r.student) acts.push('<button type="button" data-a="stu">' + T('Open group ' + esc(r.student.group), 'افتح جروب ' + esc(r.student.group)) + '</button>');
+        if (r.teamGo) acts.push('<button type="button" data-a="team">' + T('Grade this team', 'قيّمي التيم') + '</button>');
+        if (r.go2) acts.push('<button type="button" data-a="go2">' + esc(r.go2.label) + '</button>');
+        (r.follow || []).forEach((f, i) => acts.push('<button type="button" data-f="' + i + '" dir="auto">' + esc(f) + '</button>'));
+        if (r.rows && r.rows.length && r.grp && !r.grp.length) {
+          const gs = [...new Set(r.rows.map(x => x.group))]; if (gs.length > 1 && gs.length <= 12) gs.forEach(g => acts.push('<button type="button" data-g="' + esc(g) + '">' + T('Only ', 'بس ') + esc(g) + '</button>'));
+        }
+        d.dir = ar ? 'rtl' : 'ltr';
+        d.innerHTML = h + (acts.length ? '<div class="bot-acts">' + acts.join('') + '</div>' : '');
+        d.querySelectorAll('.bot-list li').forEach(li => li.onclick = () => { const x = r.rows[li.dataset.i]; ask(x.id, true); });
+        d.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+          const a = b.dataset.a;
+          if (a === 'all') { d.querySelectorAll('.bot-list li[hidden]').forEach(li => li.hidden = false); b.remove(); }
+          if (a === 'copy') { const text = r.rows.map((x, i) => (i + 1) + '. ' + x.name + ' (' + x.id + ', ' + x.group + ')').join('\n'); (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => { b.textContent = T('Copied ✓', 'اتنسخ ✓'); }, () => toast('Could not copy.')); }
+          if (a === 'stu') { const g = D.groups.find(y => y.course === r.student.course && y.group === r.student.group); if (g) go(pageHash('group', g)); }
+          if (a === 'team') go(r.teamGo);
+          if (a === 'go2') go(r.go2.href);
+        });
+        d.querySelectorAll('[data-f]').forEach(b => b.onclick = () => ask(r.follow[b.dataset.f]));
+        d.querySelectorAll('[data-g]').forEach(b => b.onclick = () => ask(BOT.last + ' ' + b.dataset.g));
+        scrollEnd();
+      };
+      const ask = async (text, quiet) => {
+        text = String(text || '').trim(); if (!text) return;
+        const ar = /[؀-ۿ]/.test(text) || (quiet && /[؀-ۿ]/.test(BOT.last));
+        bubble('me', esc(text)); q.value = '';
+        const d = bubble('bot typing', '<span class="dots"><i></i><i></i><i></i></span>');
+        let data;
+        try { data = await load(); } catch (e) { d.classList.remove('typing'); d.innerHTML = '<p>' + esc(errMsg(e)) + '</p>'; return; }
+        await new Promise(res => setTimeout(res, 350 + Math.random() * 250));
+        const ctx = { course: courseOnly };
+        let r = botAnswer(text, data, ctx), used = text;
+        /* a follow-up like "and P2?" or "week 6?" repeats the last question with the new group or number */
+        if (!r && BOT.last) {
+          const t = botNorm(text);
+          const gRe = /\b[a-z]{1,2}\d{1,2}\b/g, newG = gRe.test(t), newN = /\d/.test(t.replace(gRe, ''));
+          if ((newG || newN) && t.split(' ').length <= 4) {
+            let base = botNorm(BOT.last);
+            if (newG) base = base.replace(gRe, '');
+            if (newN) base = base.replace(/(\b[a-z]{1,2}\d{1,2}\b)|\d+(\.\d+)?/g, (m, g) => g || '');
+            used = base + ' ' + t; r = botAnswer(used, data, ctx);
+          }
+        }
+        d.classList.remove('typing');
+        if (!r) { d.innerHTML = '<p>' + (ar ? 'مفهمتش السؤال ده 🤔 جربي سؤال من اللي تحت، أو اكتبي اسم طالب أو الـ ID بتاعه، أو اكتبي "ساعدني".' : 'I did not get that 🤔 Try a question below, a student name or ID, or type "help".') + '</p>'; chips(ar); return; }
+        if (!quiet && r.go == null && !r.chips) BOT.last = used;
+        render(r, ar, d);
+        if (r.chips) chips(ar);
+        if (r.go != null) { setTimeout(() => { if (location.hash === r.go || (r.go === '' && !location.hash)) route(); else go(r.go); if (r.focus) setTimeout(() => { const el = $(r.focus); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); } }, 450); if (innerWidth < 640) toggle(false); }, 500); }
+      };
+      const toggle = (on) => {
+        BOT.open = on == null ? !BOT.open : on;
+        panel.hidden = false; panel.classList.toggle('open', BOT.open); fab.classList.toggle('open', BOT.open); fab.setAttribute('aria-expanded', String(BOT.open));
+        fab.setAttribute('aria-label', BOT.open ? 'Close the assistant' : 'Open the assistant');
+        if (BOT.open) {
+          scopeText();
+          store.set('tg_bot_seen', '1'); fab.classList.remove('hello');
+          if (!log.children.length) { bubble('bot', '<p>أهلًا يا ' + esc(D.me.name.split(' ')[0]) + ' 👋 أنا المساعد بتاعك. اسأليني عن الحضور أو الدرجات أو أي طالب، بالعربي أو بالإنجليزي. وممكن تتكلمي بدل ما تكتبي 🎤</p>'); chips(true); }
+          setTimeout(() => q.focus(), 200);
+          load().catch(() => {});
+        } else { setTimeout(() => { if (!BOT.open) panel.hidden = true; }, 260); }
+      };
+      BOT.toggle = toggle; BOT.ask = ask;
+      fab.onclick = () => toggle();
+      $('botClose').onclick = () => { toggle(false); fab.focus(); };
+      $('botClear').onclick = () => { log.innerHTML = ''; BOT.last = ''; BOT.data = null; toggle(true); };
+      $('botForm').onsubmit = (e) => { e.preventDefault(); ask(q.value); };
+      document.addEventListener('keydown', (e) => {
+        if (!BOT || BOT.fab.hidden) return;
+        if (e.key === 'Escape' && BOT.open) { toggle(false); fab.focus(); }
+        if (e.key === '/' && !BOT.open && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') && !document.querySelector('.overlay')) { e.preventDefault(); toggle(true); }
       });
+      /* voice: the browser's own speech recognition, free, Arabic (Egypt) */
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        const mic = $('botMic'); mic.hidden = false; let rec = null;
+        mic.onclick = () => {
+          if (rec) { rec.stop(); return; }
+          rec = new SR(); rec.lang = /[a-z]/i.test(q.value) ? 'en-US' : 'ar-EG'; rec.interimResults = true;
+          mic.classList.add('rec'); q.placeholder = 'بسمعك… Listening';
+          rec.onresult = (e) => { q.value = [...e.results].map(x => x[0].transcript).join(''); if (e.results[e.results.length - 1].isFinal) { rec.stop(); ask(q.value); } };
+          rec.onend = () => { mic.classList.remove('rec'); q.placeholder = 'اسألي أي حاجة… Ask anything'; rec = null; };
+          rec.onerror = () => { toast('The microphone did not work. Allow it in the browser, or type.'); };
+          rec.start();
+        };
+      }
+      if (!store.get('tg_bot_seen')) fab.classList.add('hello');
+    }
+    BOT.fab.hidden = !show;
+    if (!show && BOT.open) BOT.toggle(false);
   }
 
   function importAttendanceDialog() {
