@@ -35,6 +35,9 @@ create table if not exists tg.settings (key text primary key, value text);
 -- project teams: a team can mix students of several groups of the course
 create table if not exists tg.teams (course text not null, num int not null, name text not null default '', leader text not null default '', primary key (course, num));
 create table if not exists tg.team_members (course text not null, sid text not null, num int not null, primary key (course, sid));
+-- the weekly schedule of each group: day (0 = Sunday), time, room and the TA named in the schedule
+create table if not exists tg.schedule (course text not null, grp text not null, ta text not null default '', day int not null, starts time not null, ends time not null, room text not null default '',
+  primary key (course, grp, day, starts));
 create index if not exists log_cgw on tg.log (course, grp, week);
 create index if not exists log_session on tg.log (session);
 create index if not exists grades_cg on tg.grades (course, grp);
@@ -45,6 +48,7 @@ alter table tg.devices enable row level security;  alter table tg.items enable r
 alter table tg.grades enable row level security;   alter table tg.settings enable row level security;
 alter table tg.tokens enable row level security;
 alter table tg.teams enable row level security;    alter table tg.team_members enable row level security;
+alter table tg.schedule enable row level security;
 
 -- ---------------------------------------------------------------- helpers
 create or replace function tg.clean(x text) returns text language sql immutable as $$ select regexp_replace(btrim(coalesce(x, '')), '\s+', ' ', 'g') $$;
@@ -274,7 +278,10 @@ begin
     'habits', coalesce((select jsonb_agg(jsonb_build_object('c', h.course, 'g', h.gs, 'd', h.d, 'm', h.m, 't', h.t) order by h.t) from (
         select s.course, to_jsonb(tg.sgroups(s)) as gs, extract(dow from s.opened at time zone 'Africa/Cairo')::int as d,
                (extract(hour from s.opened at time zone 'Africa/Cairo') * 60 + extract(minute from s.opened at time zone 'Africa/Cairo'))::int as m, tg.ms(s.opened) as t
-        from tg.sessions s where s.ta = me.name and s.opened > now() - interval '150 days' order by s.opened desc limit 80) h), '[]'));
+        from tg.sessions s where s.ta = me.name and s.opened > now() - interval '150 days' order by s.opened desc limit 80) h), '[]'),
+    'schedule', coalesce((select jsonb_agg(jsonb_build_object('course', sc.course, 'group', sc.grp, 'ta', sc.ta, 'day', sc.day,
+        'start', to_char(sc.starts, 'HH24:MI'), 'end', to_char(sc.ends, 'HH24:MI'), 'room', sc.room) order by sc.course, sc.day, sc.starts, sc.grp)
+      from tg.schedule sc where me.role = 'Admin' or cardinality(me.courses) = 0 or sc.course = any(me.courses)), '[]'));
 end $$;
 
 -- ---------------------------------------------------------------- student API
