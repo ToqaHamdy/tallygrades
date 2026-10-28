@@ -3674,7 +3674,7 @@ const BOOT = null;
     } else if (m) {
       const c = decodeURIComponent(m[2]), gr = decodeURIComponent(m[3]);
       const g = D.groups.find(x => x.course === c && x.group === gr);
-      if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); acct(); return swap(() => m[1] === 'grades' ? gradesPage(g) : groupPage(g)); }
+      if (g) { remember(g); acct(); return swap(() => m[1] === 'grades' ? gradesPage(g) : groupPage(g)); }
       toast('This group is not one of yours.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
@@ -3749,20 +3749,18 @@ const BOOT = null;
     const btn = (k, icon, label) => '<button class="sd-item" type="button" data-sd="' + k + '">' + svg(icon) + '<span>' + label + '</span></button>';
     const courses = [...new Set((isAdmin ? (D.allCourses || []) : []).concat(D.groups.map(g => g.course)))].sort();
     side.innerHTML = '<a class="sd-brand" href="#"><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a>' +
-      '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + btn('take', 'qr', 'Take attendance') +
-        item('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) +
+      '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + item('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) + btn('take', 'qr', 'Take attendance') +
         item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
         item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + btn('ask', 'spark', 'Ask the assistant') +
         (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
         '<div class="sd-sec">Tools</div>' + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
         (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '') + '</nav>' +
       '<div class="sd-foot">' + item('#settings', 'gear', 'Settings', h === '#settings') + '</div>';
-    /* the same menu as a bar along the top (wide screens): pages, then Courses and Tools as drop-down menus. The admin opens My schedule from the account menu */
+    /* the same menu as a bar along the top (wide screens): pages, then Courses and Tools as drop-down menus */
     const dd = (key, icon, label, body, active) => '<div class="tn-dd"><button type="button" title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" data-dd="' + key + '" aria-haspopup="true" aria-expanded="false">' + svg(icon) + '<span>' + label + '</span><svg class="tn-car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="tn-menu" hidden>' + body + '</div></div>';
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
     const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
-    $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + '<button type="button" class="tn-a" title="Take attendance" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>' +
-      (isAdmin ? '' : tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0)) +
+    $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) + '<button type="button" class="tn-a" title="Take attendance" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>' +
       tnItem('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
       tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
       (courses.length ? dd('courses', 'book', 'Courses', courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join(''), courses.some(x => h === courseHash(x))) : '') +
@@ -4041,10 +4039,10 @@ const BOOT = null;
     stopTimers();
     const tas = [...new Set((D.schedule || []).map(x => x.ta).filter(Boolean))].sort();
     const isAdmin = D.me.role === 'Admin';
-    let ta = isAdmin && tas.indexOf(wantTa) >= 0 ? wantTa : D.me.name;
+    let ta = tas.indexOf(wantTa) >= 0 ? wantTa : D.me.name;
     const draw = () => {
       app.innerHTML = '<div class="wrap"><div class="top"><div class="gtitle"><span class="gbadge q-ic" style="width:56px;height:56px">' + homeIcon('calendar') + '</span><div><h1>' + (ta === D.me.name ? 'My schedule' : esc(ta)) + '</h1><p class="sub">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') + '</p></div></div>' +
-        (isAdmin && tas.length ? taPicker(ta) : '') + '</div>' +
+        (tas.length ? taPicker(ta) : '') + '</div>' +
         '<p class="h-todayline">' + todayLine(ta) + '</p>' + calendarHtml(ta, false) +
         '<p class="note" style="margin-top:12px">From the schedule. Press a section to open its group. Today\'s sections say Done, Now, Live (check-in open) or Next.</p>' + sectionsHtml(ta) + '</div>';
       if ($('tpBtn')) bindTaPicker((v) => { ta = v; history.replaceState(null, '', '#calendar' + (ta === D.me.name ? '' : '/' + encodeURIComponent(ta))); lastHash = location.hash; draw(); });
@@ -4124,14 +4122,13 @@ const BOOT = null;
       const courses = [...new Set(list.map(g => g.course))].sort();
       if (courseFilter && courses.indexOf(courseFilter) < 0) courseFilter = '';
       const groupRow = (g, i) => {
-        const can = isAdmin || g.ta === D.me.name;
+        const can = true; /* every TA opens every group of their courses */
         let links = '';
         if (can) {
           links = '<a class="link" href="' + pageHash('group', g) + '">' + (g.live ? 'Show check-in' : 'Open') + ' &rarr;</a><a class="link" href="' + pageHash('grades', g) + '">Grades &rarr;</a>' +
             '<a class="link newtab" href="' + pageHash('group', g) + '" target="_blank" rel="noopener" title="Open in a new browser tab" aria-label="Open group ' + esc(g.group) + ' in a new tab">&#8599;</a>';
           if (isAdmin) links += '<button class="link" data-ta="' + i + '">Change TA</button><button class="link danger" data-del="' + i + '">Delete</button>';
-        } else if (!g.ta) {
-          links = '<button class="link" data-claim="' + i + '">This is my group &rarr;</button>';
+          else if (!g.ta) links += '<button class="link" data-claim="' + i + '">This is my group</button>';
         }
         const pct = g.count ? Math.round(100 * (g.registered || 0) / g.count) : 0;
         const sl = slotsOf(g.course, g.group), sTa = sl.length ? sl[0].ta : '', who = g.ta || sTa;
@@ -4185,7 +4182,7 @@ const BOOT = null;
     }
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
-      : (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
+      : (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. You can open every group of your courses under All groups, and take attendance or marks there too.') + thisWeek;
     const top = '';
     let head;
     if (C) {
@@ -4819,7 +4816,7 @@ const BOOT = null;
       bindTips($('ins')); countUp($('ins'));
       $('ic').onchange = () => { course = $('ic').value; grp = ''; store.set('tg_ins_course', course); draw(); };
       $('ig').onchange = () => { grp = $('ig').value; draw(); };
-      const openG = (gname) => { const g = D.groups.find(x => x.course === course && x.group === gname); if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) go(pageHash('group', g)); };
+      const openG = (gname) => { const g = D.groups.find(x => x.course === course && x.group === gname); if (g) go(pageHash('group', g)); };
       $('ins').querySelectorAll('[data-grp]').forEach(tr => tr.onclick = () => { grp = tr.dataset.grp; draw(); scrollTo({ top: 0, behavior: 'smooth' }); });
       $('ins').querySelectorAll('[data-stu]').forEach(tr => tr.onclick = () => openG(tr.dataset.stu));
       $('ins').querySelectorAll('[data-team]').forEach(tr => tr.onclick = () => go('#team/' + encodeURIComponent(course) + '/' + tr.dataset.team));
@@ -4857,7 +4854,7 @@ const BOOT = null;
     const n1 = (v) => Math.round(v * 10) / 10;
     const list = (text, rs, extra, more) => Object.assign({ text: text + where, rows: rs, extra: extra || null, grp: grp }, more || {});
     const say = (text, more) => Object.assign({ text: text, grp: grp }, more || {});
-    const groupOf = (name) => D.groups.find(g => courses.some(c => c.course === g.course) && g.group === name && (D.me.role === 'Admin' || g.ta === D.me.name));
+    const groupOf = (name) => D.groups.find(g => courses.some(c => c.course === g.course) && g.group === name);
     if (!t.trim()) return null;
     /* small talk and help */
     if (has(/^ (hi|hello|hey|ازيك|اهلا|السلام|صباح|مساء|هاي|ها|يا) /) && t.trim().split(' ').length <= 4)
@@ -5269,15 +5266,14 @@ const BOOT = null;
     return later.length ? later.filter(x => x.start === later[0].start) : [];
   }
   function quickPool(C) {
-    const isAdmin = D.me.role === 'Admin';
     let pool = D.groups.filter(g => g.ta === D.me.name);
-    if (isAdmin && (!pool.length || quickAll)) pool = D.groups.slice();
+    if (!pool.length || quickAll) pool = D.groups.slice();
     if (C) pool = pool.filter(g => g.course === C);
     return pool.sort((a, b) => numeric(a.course + a.group, b.course + b.group));
   }
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   let quickMins = Number(store.get('tg_qmin')) || 15;
-  const isAdminView = () => D.me.role === 'Admin' && quickAll;
+  const isAdminView = () => quickAll || !D.groups.some(g => g.ta === D.me.name);
   const todayLong = () => new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   function quickHtml(C) {
     const pool = quickPool(C);
@@ -5304,7 +5300,7 @@ const BOOT = null;
     const hint = now.length ? '<span class="q-ai"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' +
         '<span>From the schedule, now (' + DAYS[new Date().getDay()] + ' ' + t12(now[0].start) + '&ndash;' + t12(now[0].end) + '): <b>' + [...new Set(now.map(x => x.group))].map(esc).join(' + ') + '</b>' + (rooms.length ? ' in Room <b>' + rooms.map(esc).join(', ') + '</b>' : '') + '.</span></span>' + nextTxt
       : '<span class="q-ai muted">No section of yours now in the schedule. Tap the groups in the room.</span>' + nextTxt;
-    const canAll = D.me.role === 'Admin' && D.groups.some(g => g.ta === D.me.name);
+    const canAll = D.groups.some(g => g.ta === D.me.name);
     const allBtn = canAll ? '<button type="button" class="q-allbtn" id="qall">' + (quickAll ? 'Only my groups' : 'Show every group of ' + esc(quickCourse)) + '</button>' : '';
     const letters = [];
     groupsOf.forEach(g => { const L = (String(g.group).match(/^[A-Za-z]+/) || ['#'])[0].toUpperCase(); let b = letters.find(x => x.L === L); if (!b) { b = { L: L, gs: [] }; letters.push(b); } b.gs.push(g); });
@@ -5367,7 +5363,7 @@ const BOOT = null;
   async function groupPage(g, wantWeek) {
     stopTimers();
     /* the other groups of this course this user can open with it: P1 and P2 in the same room */
-    const mates = D.groups.filter(x => x.course === g.course && x.group !== g.group && (D.me.role === 'Admin' || x.ta === D.me.name)).sort((a, b) => numeric(a.group, b.group));
+    const mates = D.groups.filter(x => x.course === g.course && x.group !== g.group).sort((a, b) => numeric(a.group, b.group));
     let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, X = [], q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
     /* X: the week of the other groups in a joint check-in (A3 + A4), shown under this group's list */
     const taOf = (grp) => (D.groups.find(x => x.course === g.course && x.group === grp) || {}).ta || (slotsOf(g.course, grp)[0] || {}).ta || '';
