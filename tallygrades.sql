@@ -14,6 +14,7 @@ alter table tg.staff alter column pin drop not null;
 alter table tg.staff add column if not exists username text unique;
 alter table tg.staff add column if not exists pass_hash text;
 alter table tg.staff add column if not exists status text not null default 'active';
+alter table tg.staff add column if not exists photo text not null default '';   -- profile photo, a small JPEG data URL made in the browser
 create table if not exists tg.tokens (token text primary key, staff text not null, created timestamptz not null default now(), expires timestamptz not null);
 create table if not exists tg.students (
   ord bigserial, course text not null, grp text not null, name text not null, sid text not null, ta text not null default '',
@@ -253,7 +254,7 @@ begin
   from g left join lastw on lastw.course = g.course and lastw.grp = g.grp left join live on live.course = g.course and live.grp = g.grp
   where me.role = 'Admin' or cardinality(me.courses) = 0 or g.course = any(me.courses);
   return jsonb_build_object(
-    'me', jsonb_build_object('name', me.name, 'role', me.role, 'courses', to_jsonb(me.courses)),
+    'me', jsonb_build_object('name', me.name, 'role', me.role, 'courses', to_jsonb(me.courses), 'username', coalesce(me.username, ''), 'photo', coalesce(me.photo, '')),
     'groups', groups,
     'allCourses', case when me.role = 'Admin' then coalesce((select jsonb_agg(c order by c) from (select distinct course as c from tg.students) x), '[]') else '[]' end,
     'weeks', (select jsonb_agg(jsonb_build_array(n, tg.week_label(n) || case when ts is not null then ', ' || to_char(ts + (n - 1) * 7, 'FMDD Mon') else '' end) order by n) from generate_series(1, 14) n),
@@ -264,7 +265,7 @@ begin
         'groups', (select coalesce(jsonb_agg(distinct st.grp order by st.grp), '[]') from tg.team_members m join tg.students st on st.course = m.course and st.sid = m.sid
                    where m.course = t.course and m.num = t.num)) order by t.course, t.num)
       from tg.teams t where me.role = 'Admin' or cardinality(me.courses) = 0 or t.course = any(me.courses)), '[]'),
-    'staff', case when me.role = 'Admin' then (select jsonb_agg(jsonb_build_object('name', name, 'role', role, 'courses', to_jsonb(courses), 'username', coalesce(username, ''), 'status', status) order by role, status, name) from tg.staff) end);
+    'staff', case when me.role = 'Admin' then (select jsonb_agg(jsonb_build_object('name', name, 'role', role, 'courses', to_jsonb(courses), 'username', coalesce(username, ''), 'status', status, 'photo', coalesce(photo, '')) order by role, status, name) from tg.staff) end);
 end $$;
 
 -- ---------------------------------------------------------------- student API
@@ -429,6 +430,30 @@ begin
   update tg.staff set username = u, pass_hash = extensions.crypt(p_pass, extensions.gen_salt('bf')), pin = null where name = tg.clean(p_name);
   delete from tg.tokens where staff = tg.clean(p_name) and token <> btrim(coalesce(p_pin, ''));
   return tg.dash(me);
+end $$;
+
+-- each staff member's own settings: profile photo and password
+create or replace function public.set_my_photo(p_pin text, p_photo text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); v text := coalesce(p_photo, '');
+begin
+  if v <> '' and (v !~ '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$' or length(v) > 300000) then
+    raise exception 'This photo cannot be used. Choose a JPG or PNG image.';
+  end if;
+  update tg.staff set photo = v where name = me.name;
+  return tg.dash((select st from tg.staff st where name = me.name));
+end $$;
+create or replace function public.change_my_password(p_pin text, p_old text, p_new text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin);
+begin
+  if not ((me.pass_hash is not null and me.pass_hash = extensions.crypt(coalesce(p_old, ''), me.pass_hash))
+          or (me.pass_hash is null and me.pin is not null and me.pin = btrim(coalesce(p_old, '')))) then
+    perform pg_sleep(1); raise exception 'The current password is wrong.';
+  end if;
+  if coalesce(me.username, '') = '' then raise exception 'You have no username yet. Ask the admin to set one.'; end if;
+  if length(coalesce(p_new, '')) < 6 then raise exception 'The new password must be at least 6 characters.'; end if;
+  update tg.staff set pass_hash = extensions.crypt(p_new, extensions.gen_salt('bf')), pin = null where name = me.name;
+  delete from tg.tokens where staff = me.name and token <> btrim(coalesce(p_pin, ''));
+  return jsonb_build_object('ok', true);
 end $$;
 
 create or replace function public.add_group(p_pin text, p_course text, p_group text, p_ta text, p_list jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
@@ -799,7 +824,7 @@ do $$
 declare f text;
 begin
   foreach f in array array['student_info(text)', 'check_in(jsonb)', 'register_phone(jsonb)', 'student_status(jsonb)', 'app_state()', 'setup_admin(text,text,text)', 'login(text,text)',
-    'whoami(text)', 'logout(text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
+    'whoami(text)', 'logout(text)', 'set_my_photo(text,text)', 'change_my_password(text,text,text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
     'add_group(text,text,text,text,jsonb)', 'import_groups(text,text,jsonb)', 'claim_group(text,text,text)', 'assign_group(text,text,text,text)',
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
