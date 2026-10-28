@@ -343,6 +343,23 @@
   .ccard:hover .go { color: var(--ink); transform: translateX(4px); }
   .gstat.gs-live { border-color: var(--ok); } .gstat.gs-live b { color: var(--ok); }
   .acct { position: fixed; top: 16px; right: 16px; z-index: 30; display: flex; align-items: center; gap: 10px; }
+  body.has-nav .acct { top: 0; left: 0; right: 0; padding: 10px 16px 10px 20px; background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--line); }
+  body.has-nav .wrap { padding-top: 92px; }
+  .nav-brand { display: inline-flex; align-items: center; gap: 10px; margin-right: auto; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; }
+  .nav-brand[hidden] { display: none; }
+  .nb-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--grad2), var(--accent)); display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+  .nb-mark i { width: 3px; height: 13px; border-radius: 2px; background: #fff; }
+  .nav-tools { display: flex; align-items: center; gap: 6px; }
+  .nav-tools .tb { padding: 8px 13px; font-size: 13.5px; box-shadow: none; border-radius: 11px; }
+  .nav-more { position: relative; }
+  .nav-more[hidden] { display: none; }
+  .nav-menu { position: absolute; right: 0; top: calc(100% + 10px); width: 250px; display: grid; gap: 4px; padding: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px -16px rgba(0,0,0,.6); animation: fadein .2s ease-out; }
+  .nav-menu .tb { border-color: transparent; box-shadow: none; justify-content: flex-start; }
+  .nav-menu .tb:hover { transform: none; background: var(--soft); }
+  #navMoreBox { display: none; }
+  @media (max-width: 1260px) { .nav-tools .tb span { display: none; } .nav-tools .tb { padding: 9px; } .nav-tools .tb.primary span { display: inline; } .nav-tools .tb.primary { padding: 8px 13px; } }
+  @media (max-width: 760px) { .nav-tools { display: none; } body.has-nav #navMoreBox:not([hidden]) { display: block; } .nav-brand b { display: none; } body.has-nav .wrap { padding-top: 80px; } }
+  body.projector .acct { display: none; }
   .acct-slot { position: relative; }
   .theme-btn { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; padding: 0; background: var(--card); color: var(--text); border: 1px solid var(--line);
     box-shadow: 0 8px 24px -12px rgba(0,0,0,.5); transition: border-color .2s, transform .2s; }
@@ -3011,7 +3028,9 @@ const BOOT = null;
   }
   (function topBar() {
     const box = document.createElement('div'); box.id = 'acct'; box.className = 'acct hide-proj';
-    box.innerHTML = '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
+    box.innerHTML = '<a class="nav-brand" id="navBrand" href="#" hidden><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a><nav class="nav-tools" id="navTools" aria-label="Tools"></nav>' +
+      '<div class="nav-more" id="navMoreBox" hidden><button class="theme-btn" id="navMore" type="button" aria-haspopup="true" aria-expanded="false" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="nav-menu" id="navMenu" hidden></div></div>' +
+      '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
     document.body.appendChild(box);
     paintTheme();
     $('themeBtn').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(!isLight(), r.left + r.width / 2, r.top + r.height / 2); };
@@ -3398,6 +3417,7 @@ const BOOT = null;
   }
   function landingView() {
     botFab(false);
+    if ($('navTools')) { const keep = D; D = null; navTools(); D = keep; }
     stopTimers(); acct();
     const ic = (d) => '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
     const feat = (icon, title, text) => '<li><span class="fi">' + ic(icon) + '</span><div><b>' + title + '</b><span>' + text + '</span></div></li>';
@@ -3427,8 +3447,44 @@ const BOOT = null;
     };
   }
   /* ----- the circle at the top right: who is logged in, their courses and groups, and Log out (Log in when nobody is) ----- */
+  /* the tools in the top bar, next to the light/dark button and the account circle; on a course's pages they work on that course */
+  function navCourse() {
+    const m = location.hash.match(/^#(?:course|group|grades|insights|team)\/([^/]+)/);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function navTools() {
+    const on = !!(PIN && D);
+    document.body.classList.toggle('has-nav', on);
+    $('navBrand').hidden = !on; $('navMoreBox').hidden = !on;
+    if (!on) { $('navTools').innerHTML = ''; $('navMenu').innerHTML = ''; return; }
+    const c = navCourse(), isAdmin = D.me.role === 'Admin';
+    const list = [['#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', true], ['ask', 'spark', 'Ask the assistant'], ['impatt', 'upload', 'Import attendance'],
+      ['final', 'download', 'Download final sheet'], ['regqr', 'qr', 'Registration QR']].concat(isAdmin ? [['term', 'calendar', 'Term start'], ['backup', 'archive', 'Download backup']] : []);
+    const html = list.map(x => tb(x[0], x[1], x[2], x[3])).join('');
+    $('navTools').innerHTML = html;
+    $('navMenu').innerHTML = html;
+    const act = {
+      ask: () => BOT && BOT.toggle(true),
+      impatt: () => { importAttendanceDialog(); const co = document.querySelector('.overlay #co'); if (c && co) co.value = c; },
+      final: downloadFinal, regqr: registrationQrDialog, term: termDialog, backup: downloadBackup
+    };
+    $('acct').querySelectorAll('.tb').forEach(b => {
+      b.removeAttribute('id');
+      const key = b.tagName === 'BUTTON' ? b.querySelector('span').textContent : '';
+      const k = { 'Ask the assistant': 'ask', 'Import attendance': 'impatt', 'Download final sheet': 'final', 'Registration QR': 'regqr', 'Term start': 'term', 'Download backup': 'backup' }[key];
+      if (k) b.onclick = () => { $('navMenu').hidden = true; $('navMore').setAttribute('aria-expanded', 'false'); act[k](); };
+      else b.addEventListener('click', () => { $('navMenu').hidden = true; });
+      b.title = b.textContent;
+    });
+    if (!$('navMore').dataset.ready) {
+      $('navMore').dataset.ready = '1';
+      $('navMore').onclick = (e) => { e.stopPropagation(); const m = $('navMenu'); m.hidden = !m.hidden; $('navMore').setAttribute('aria-expanded', String(!m.hidden)); };
+      document.addEventListener('click', (e) => { if (!$('navMoreBox').contains(e.target)) { $('navMenu').hidden = true; $('navMore').setAttribute('aria-expanded', 'false'); } });
+    }
+  }
   function acct() {
     botFab(true);
+    navTools();
     const el = $('acctSlot');
     if (!el.dataset.ready) {
       el.dataset.ready = '1';
@@ -3691,9 +3747,7 @@ const BOOT = null;
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
-    const tools = (dashHref) => '<nav class="tbar" aria-label="Tools">' + tb(dashHref, 'chart', 'Dashboard', true) + tb('ask', 'spark', 'Ask the assistant') + tb('impatt', 'upload', 'Import attendance') +
-      tb('final', 'download', 'Download final sheet') + tb('regqr', 'qr', 'Registration QR') + (isAdmin && !C ? tb('term', 'calendar', 'Term start') + tb('backup', 'archive', 'Download backup') : '') + '</nav>';
-    const top = tools('#insights');
+    const top = '';
     let head;
     if (C) {
       /* one course: its summary, its grades (admin), then its groups or teams */
@@ -3702,7 +3756,7 @@ const BOOT = null;
       const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
       head = '<button class="back" id="home" type="button">&larr; All courses</button>' +
         '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
-        tools('#insights/' + encodeURIComponent(C)) + '</div>' +
+        '</div>' +
         '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
           tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' + quickHtml(C) +
         (isAdmin ? '<section class="course cset" style="margin-bottom:30px"><div class="course-head"><h2 style="font-size:20px">Grades</h2><span>the same for every group</span></div><div id="cs0"><p class="note" style="padding:16px 0">Loading</p></div></section>' : '');
@@ -3773,16 +3827,9 @@ const BOOT = null;
       const preset = (open) => () => { open(); const co = document.querySelector('.overlay #co'); if (co) co.value = C; };
       if ($('upload')) $('upload').onclick = preset(uploadDialog);
       if ($('addGroup')) $('addGroup').onclick = preset(addGroupDialog);
-      $('impatt').onclick = preset(importAttendanceDialog);
     }
     acct();
     if ($('seeReq')) $('seeReq').onclick = () => { tab = 'staff'; dashboard(); };
-    $('regqr').onclick = registrationQrDialog;
-    $('final').onclick = downloadFinal;
-    if (!C) $('impatt').onclick = importAttendanceDialog;
-    if ($('ask')) $('ask').onclick = () => BOT && BOT.toggle(true);
-    if ($('term')) $('term').onclick = termDialog;
-    if ($('backup')) $('backup').onclick = downloadBackup;
     if (tab === 'courses') (D.allCourses || []).forEach((c, ci) => courseSettings(c, ci));
   }
   /** Admin, Courses tab: one course's grade distribution, with an Edit button that opens the Grade items dialog. */
