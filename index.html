@@ -411,28 +411,81 @@
     .gtools .in { max-width: none; } .seg { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); } .seg span { grid-column: 1 / -1; padding: 8px 14px; }
     .seg button { border-left: 0; border-top: 1px solid var(--line); font-size: 13px; padding: 10px 6px; } .seg button + button { border-left: 1px solid var(--line); } .toolbar .filters .in { flex: 1 1 100%; }
     .door { grid-template-columns: 36px 1fr; grid-template-areas: "num title" "num desc"; padding: 24px 4px; } .door-go { display: none; } }
-  /* ----- motion: pages rise in, lists arrive one by one, bars fill ----- */
+  /* ----- look: a slow aurora behind the page, glass surfaces, a light that follows the mouse ----- */
+  :root { --aur1: rgba(242,59,59,.24); --aur2: rgba(255,128,64,.13); --aur3: rgba(196,60,140,.15); --glass-line: rgba(255,255,255,.07); --glass-hi: rgba(255,255,255,.05); --grad2: #FF8A3D; }
+  :root[data-theme="light"] { --aur1: rgba(220,38,38,.12); --aur2: rgba(255,140,90,.12); --aur3: rgba(200,90,170,.09); --glass-line: rgba(20,20,10,.08); --glass-hi: rgba(255,255,255,.75); --grad2: #EA580C; }
+  @property --ang { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+  body::before { content: ""; position: fixed; inset: -20vmax; z-index: -1; pointer-events: none;
+    background: radial-gradient(38vmax 38vmax at 12% 18%, var(--aur1), transparent 62%), radial-gradient(32vmax 32vmax at 88% 8%, var(--aur2), transparent 62%), radial-gradient(44vmax 44vmax at 72% 92%, var(--aur3), transparent 62%);
+    animation: aurora 26s ease-in-out infinite alternate; }
+  @keyframes aurora { 0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); } 50% { transform: translate3d(4vmax, -3vmax, 0) rotate(8deg) scale(1.08); } 100% { transform: translate3d(-3vmax, 2vmax, 0) rotate(-6deg) scale(1); } }
+  .card, .panel, .letter, .gstat, .ccard, .mycourse, .dchip, .codebox, .acct-panel, .theme-btn, .seg, .cview {
+    /* no backdrop blur: with the moving background and page transitions it can stop Chromium painting cards, and it is heavy on slow laptops */
+    background-color: color-mix(in srgb, var(--card) 86%, transparent);
+    border-color: var(--glass-line); box-shadow: inset 0 1px 0 var(--glass-hi), var(--shadow); }
+  .ccard, .letter, .gstat:not(:first-child), .card, .signin, .panel.set, .mycourse, .dchip {
+    background-image: radial-gradient(360px circle at var(--mx, -999px) var(--my, -999px), color-mix(in srgb, var(--accent) 14%, transparent), transparent 46%); }
+  .ccard:hover, .letter:hover, .card:not(.add):hover, .dchip:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--line)); }
+  .card.add { background-color: transparent; box-shadow: none; }
+  h1.brand::before { background-color: var(--accent); background-image: linear-gradient(90deg, var(--on-accent) 0 2px, transparent 2px), linear-gradient(90deg, var(--on-accent) 0 2px, transparent 2px), linear-gradient(90deg, var(--on-accent) 0 2px, transparent 2px), linear-gradient(135deg, var(--accent), var(--grad2)); }
+  .grad { background: linear-gradient(90deg, var(--accent), var(--grad2), #E5487A, var(--accent)); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 7s linear infinite; }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  /* primary buttons: a warm gradient, a soft glow and a light sweep on hover */
+  .btn { position: relative; overflow: hidden; isolation: isolate; background-image: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--grad2)));
+    box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--accent) 80%, transparent); }
+  .btn::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.32) 50%, transparent 70%); transform: translateX(-120%); transition: transform .75s cubic-bezier(.2,.7,.2,1); }
+  .btn:hover:not(:disabled)::after { transform: translateX(120%); }
+  .btn:hover:not(:disabled) { filter: none; transform: translateY(-1px); box-shadow: 0 14px 30px -12px color-mix(in srgb, var(--accent) 90%, transparent); }
+  .btn.ghost, .btn.danger { background-image: none; box-shadow: none; }
+  .btn.ghost::after, .btn.danger::after { display: none; }
+  .cview button[aria-selected="true"], .gstat:first-child, .cbadge, .letter-big, .gbadge, .acct-av, .prof-av, .done .mark { background-image: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 65%, var(--grad2))); }
+  .letter.team .letter-big, .gbadge.team-badge { background-image: none; }
+  /* the selected tab draws its underline */
+  .tab[aria-selected="true"] { border-bottom-color: transparent; position: relative; }
+  .tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--grad2)); transform-origin: left; animation: draw .5s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes draw { from { transform: scaleX(0); } }
+  /* live: a ring that spreads like a signal, a turning frame around the QR, the count bumps */
+  .odot, .pill.green::before { animation: ring 1.8s cubic-bezier(.2,.7,.2,1) infinite; }
+  @keyframes ring { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 65%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
+  .qr { position: relative; isolation: isolate; box-shadow: none; }
+  .qr::before { content: ""; position: absolute; inset: -6px; z-index: -1; border-radius: 24px; background: conic-gradient(from var(--ang), var(--accent), var(--grad2), #E5487A, var(--accent)); animation: spin 4s linear infinite; }
+  @keyframes spin { to { --ang: 360deg; } }
+  .tally b { display: inline-block; }
+  .bump { animation: bump .55s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes bump { 40% { transform: scale(1.18); color: var(--ok); } }
+  .feats .fi { transition: transform .35s cubic-bezier(.2,1.6,.4,1), border-color .2s; }
+  .feats li:hover .fi { transform: translateY(-3px) rotate(-8deg); border-color: var(--ink); }
+  .ccard .cbadge { transition: transform .35s cubic-bezier(.2,1.6,.4,1); }
+  .ccard:hover .cbadge { transform: rotate(-6deg) scale(1.06); }
+  .toast { animation: toastin .5s cubic-bezier(.2,1.5,.4,1); }
+  @keyframes toastin { from { opacity: 0; transform: translate(-50%, 16px) scale(.96); } }
+  /* ----- motion: pages change smoothly, blocks appear as they scroll in, bars fill ----- */
   @keyframes pagein { from { opacity: 0; transform: translateY(10px); } }
-  @keyframes up { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes up { from { opacity: 0; transform: translateY(16px); } }
   @keyframes fromright { from { opacity: 0; transform: translateX(24px); } }
   @keyframes fill { from { transform: scaleX(0); } }
   @keyframes pop2 { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
   .wrap, .land { animation: pagein .4s cubic-bezier(.2,.7,.2,1) both; }
-  .ccards > *, .letters > *, .gstats > *, .feats > li, .setgrid > *, .dist > *, .hero > *, .mystat > * { animation: up .5s cubic-bezier(.2,.7,.2,1) both; }
-  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(2) { animation-delay: .05s; }
-  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(3) { animation-delay: .1s; }
-  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(4) { animation-delay: .15s; }
-  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(5) { animation-delay: .2s; }
-  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(6) { animation-delay: .25s; }
-  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(n+7) { animation-delay: .3s; }
-  .signin { animation: fromright .6s .15s cubic-bezier(.2,.7,.2,1) both; }
-  .gbar i, .dbar i, .mbar i { transform-origin: left; animation: fill .9s .2s cubic-bezier(.2,.7,.2,1) both; }
-  .acct-panel { animation: pop2 .18s ease-out; }
+  html.has-vt .wrap, html.has-vt .land { animation: none; }
+  .gstats > *, .feats > li, .setgrid > *, .dist > *, .hero > *, .mystat > h2 { animation: up .55s cubic-bezier(.2,.7,.2,1) both; }
+  :is(.gstats, .feats, .setgrid, .dist, .hero) > :nth-child(2) { animation-delay: .06s; }
+  :is(.gstats, .feats, .setgrid, .dist, .hero) > :nth-child(3) { animation-delay: .12s; }
+  :is(.gstats, .feats, .setgrid, .dist, .hero) > :nth-child(4) { animation-delay: .18s; }
+  :is(.gstats, .feats, .setgrid, .dist, .hero) > :nth-child(5) { animation-delay: .24s; }
+  :is(.gstats, .feats, .setgrid, .dist, .hero) > :nth-child(n+6) { animation-delay: .3s; }
+  .rv { opacity: 0; }
+  .rv.in { opacity: 1; animation: up .6s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--d, 0s); }
+  .signin { animation: fromright .65s .15s cubic-bezier(.2,.7,.2,1) both; }
+  .gbar i, .dbar i, .mbar i { transform-origin: left; animation: fill 1s .25s cubic-bezier(.2,.7,.2,1) both; }
+  .acct-panel { animation: pop2 .2s cubic-bezier(.2,.7,.2,1); }
   .tab { transition: color .2s, border-color .25s; }
-  .btn, .link, .ccard, .letter, .gstat, .pick, .tg-pick, .ochip { transition: background-color .2s, border-color .2s, color .2s, transform .2s, filter .2s; }
-  .letter:hover { border-color: color-mix(in srgb, var(--muted) 60%, var(--line)); }
-  .gstat:hover { transform: translateY(-2px); }
-  ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+  .btn, .link, .ccard, .letter, .gstat, .pick, .tg-pick, .ochip, .card { transition: background-color .25s, border-color .25s, color .2s, transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s, filter .2s; }
+  .gstat:hover, .letter:hover { transform: translateY(-2px); }
+  ::view-transition-old(root) { animation: vt-out .2s ease-in both; }
+  ::view-transition-new(root) { animation: vt-in .38s cubic-bezier(.2,.7,.2,1) both; }
+  @keyframes vt-out { to { opacity: 0; transform: translateY(-6px); } }
+  @keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
+  html.vt-theme::view-transition-old(root), html.vt-theme::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -2772,7 +2825,9 @@ const BOOT = null;
       paintTheme();
     };
     if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return apply();
+    document.documentElement.classList.add('vt-theme');
     const t = document.startViewTransition(apply);
+    t.finished.finally(() => document.documentElement.classList.remove('vt-theme'));
     const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
     t.ready.then(() => document.documentElement.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)'] },
       { duration: 520, easing: 'cubic-bezier(.4,0,.2,1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
@@ -2783,6 +2838,36 @@ const BOOT = null;
     document.body.appendChild(box);
     paintTheme();
     $('themeBtn').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(!isLight(), r.left + r.width / 2, r.top + r.height / 2); };
+  })();
+  /* page changes cross-fade where the browser can do it */
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (document.startViewTransition && !reduced()) document.documentElement.classList.add('has-vt');
+  const swap = (fn) => document.startViewTransition && !reduced() ? (document.startViewTransition(fn), undefined) : fn();
+  /* blocks and cards appear as they scroll into view, one after another */
+  const io = 'IntersectionObserver' in window && !reduced()
+    ? new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { rootMargin: '0px 0px -30px 0px' }) : null;
+  function reveal() {
+    if (!io) return;
+    app.querySelectorAll('.ccard, .letter, .course-head, .mycourse, .panel.set, .cset').forEach(el => {
+      if (el.dataset.rv) return;
+      el.dataset.rv = '1'; el.classList.add('rv');
+      el.style.setProperty('--d', Math.min([...el.parentNode.children].indexOf(el), 6) * 0.06 + 's');
+      io.observe(el);
+    });
+  }
+  new MutationObserver(reveal).observe(app, { childList: true, subtree: true });
+  /* a soft light follows the mouse over cards */
+  (function spotlight() {
+    const SEL = '.ccard, .letter, .gstat, .card, .signin, .panel.set, .mycourse, .dchip';
+    let last = null;
+    document.addEventListener('pointermove', (e) => {
+      const el = e.target.closest && e.target.closest(SEL);
+      if (last && last !== el) { last.style.removeProperty('--mx'); last.style.removeProperty('--my'); }
+      last = el;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+    }, { passive: true });
   })();
   /* numbers in the summary tiles count up once when a page opens */
   function countUp(scope) {
@@ -3041,22 +3126,22 @@ const BOOT = null;
     const m = location.hash.match(/^#(group|grades|team)\/([^/]*)\/([^/]*)$/);
     if (m && m[1] === 'team') {
       const t = teamOf(decodeURIComponent(m[2]), Number(decodeURIComponent(m[3])));
-      if (t) { acct(); return teamPage(t); }
+      if (t) { acct(); return swap(() => teamPage(t)); }
       toast('Team not found.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     } else if (m) {
       const c = decodeURIComponent(m[2]), gr = decodeURIComponent(m[3]);
       const g = D.groups.find(x => x.course === c && x.group === gr);
-      if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); acct(); return m[1] === 'grades' ? gradesPage(g) : groupPage(g); }
+      if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) { remember(g); acct(); return swap(() => m[1] === 'grades' ? gradesPage(g) : groupPage(g)); }
       toast('This group is not one of yours.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
-    if (location.hash === '#settings') { acct(); return settingsPage(); }
+    if (location.hash === '#settings') { acct(); return swap(settingsPage); }
     const mc = location.hash.match(/^#course\/([^/]*)$/);
     courseOnly = mc ? decodeURIComponent(mc[1]) : null;
     stopTimers();
     if (!fresh) { try { D = await api('whoami', PIN); } catch (e) {} }
-    dashboard();
+    swap(dashboard);
   }
   window.addEventListener('hashchange', () => route());
   const stopTimers = () => { timers.forEach(t => clearInterval(t)); timers = []; document.body.classList.remove('projector'); };
@@ -3074,7 +3159,7 @@ const BOOT = null;
     app.innerHTML = '<div class="land">' +
       '<section class="hero"><div class="hero-brand"><h1 class="brand">Tally Grades</h1></div>' +
         '<p class="eyebrow">Lab attendance and grades</p>' +
-        '<h2 class="hero-t">Every section, counted.</h2>' +
+        '<h2 class="hero-t">Every section, <span class="grad">counted.</span></h2>' +
         '<p class="hero-d">Students check in with a QR code. TAs follow every group live, grade quizzes and project teams, and download the course sheet in one click.</p>' +
         '<ul class="feats">' +
           feat('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>', 'QR check-in', 'One scan per student, one phone per student.') +
@@ -3380,7 +3465,7 @@ const BOOT = null;
     }
     app.innerHTML = '<div class="wrap">' + head + body + '</div>';
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
-    on('[data-tab]', b => { tab = b.dataset.tab; dashboard(); });
+    on('[data-tab]', b => { tab = b.dataset.tab; swap(dashboard); });
     on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
     on('[data-claim]', async b => {
       const g = list[b.dataset.claim];
@@ -3408,7 +3493,7 @@ const BOOT = null;
     on('[data-cv]', b => {
       const [c, v] = b.dataset.cv.split('|');
       courseView[c] = v; store.sset('tg_cview', JSON.stringify(courseView));
-      dashboard();
+      swap(dashboard);
     });
     const applyFilter = () => {
       const q = groupQuery.toLowerCase();
@@ -3979,6 +4064,7 @@ const BOOT = null;
       $('dg').textContent = L.code;
       const url = SITE + '?s=' + L.id + '&c=' + L.code;
       if (url !== lastQr) { lastQr = url; const qq = qrcode(0, 'M'); qq.addData(url); qq.make(); $('qrsvg').innerHTML = qq.createSvgTag({ cellSize: 8, margin: 2, scalable: true }); }
+      if ($('cn').textContent !== String(L.count) && $('cn').textContent !== '0') { $('cn').classList.remove('bump'); void $('cn').offsetWidth; $('cn').classList.add('bump'); }
       $('cn').textContent = L.count; $('tt').textContent = L.total;
       $('gs').textContent = L.guests ? '+ ' + L.guests + ' from other groups (counted in their own groups)' : (L.guestsAllowed === false ? '' : '');
       $('gl').innerHTML = L.guests ? '<h2>From other groups</h2><ol>' + L.guestNames.map(n => '<li>' + esc(n) + '</li>').join('') + '</ol>' : '';
