@@ -32,6 +32,8 @@ create table if not exists tg.devices (device text primary key, sid text not nul
 create table if not exists tg.items (course text not null, key text not null, item text not null, max numeric not null, kind text not null default 'Grade', ord int not null default 0, primary key (course, key));
 create table if not exists tg.grades (id bigserial primary key, ts timestamptz not null default now(), course text not null, grp text not null, sid text not null, name text not null, key text not null, score numeric, by_ta text not null default '');
 create table if not exists tg.settings (key text primary key, value text);
+-- everything else anyone writes (groups, grade items, check-ins, term start): what, where, who and when
+create table if not exists tg.audit (id bigserial primary key, ts timestamptz not null default now(), course text not null default '', grp text not null default '', what text not null, by_ta text not null default '');
 -- project teams: a team can mix students of several groups of the course
 create table if not exists tg.teams (course text not null, num int not null, name text not null default '', leader text not null default '', primary key (course, num));
 create table if not exists tg.team_members (course text not null, sid text not null, num int not null, primary key (course, sid));
@@ -49,6 +51,7 @@ alter table tg.grades enable row level security;   alter table tg.settings enabl
 alter table tg.tokens enable row level security;
 alter table tg.teams enable row level security;    alter table tg.team_members enable row level security;
 alter table tg.schedule enable row level security;
+alter table tg.audit enable row level security;
 
 -- ---------------------------------------------------------------- helpers
 create or replace function tg.clean(x text) returns text language sql immutable as $$ select regexp_replace(btrim(coalesce(x, '')), '\s+', ' ', 'g') $$;
@@ -62,6 +65,8 @@ create or replace function tg.method_label(m text, by_ta text, note text) return
     then 'Manual' || coalesce(', in group ' || substring(note from '^Attended group (\S+)'), '') || case when by_ta <> '' then ' (' || by_ta || ')' else '' end
     else coalesce('Self, in group ' || substring(note from '^Attended group (\S+)'), m) end $$;
 
+create or replace function tg.note(c text, g text, what text, by_ta text) returns void language sql as $$
+  insert into tg.audit (course, grp, what, by_ta) values (coalesce(c, ''), coalesce(g, ''), what, coalesce(by_ta, '')) $$;
 create or replace function tg.who(p_pin text) returns tg.staff language plpgsql as $$
 declare r tg.staff;
 begin
@@ -246,16 +251,17 @@ create or replace function tg.grade_rows(c text, g text default null, t text def
   with it as (select key from tg.items where course = c and kind <> 'Attendance'),
   att as (select coalesce((select max from tg.items where course = c and kind = 'Attendance'), 0) as mx),
   m as materialized (select * from tg.matrix(c, g, t)),
-  sc as materialized (select distinct on (gr.grp, gr.sid, gr.key) gr.grp, gr.sid, gr.key, gr.score from tg.grades gr
+  sc as materialized (select distinct on (gr.grp, gr.sid, gr.key) gr.grp, gr.sid, gr.key, gr.score, gr.by_ta, gr.ts from tg.grades gr
          where gr.course = c and gr.key in (select key from it) order by gr.grp, gr.sid, gr.key, gr.id desc),
-  agg as materialized (select sc.grp, sc.sid, jsonb_object_agg(sc.key, sc.score) filter (where sc.score is not null) as obj, sum(sc.score) as total
+  agg as materialized (select sc.grp, sc.sid, jsonb_object_agg(sc.key, sc.score) filter (where sc.score is not null) as obj, sum(sc.score) as total,
+          jsonb_object_agg(sc.key, jsonb_build_object('by', sc.by_ta, 't', to_char(sc.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'))) filter (where sc.score is not null) as byk
           from sc group by sc.grp, sc.sid)
   select coalesce(jsonb_agg(jsonb_build_object(
       'group', m.grp, 'ta', m.ta, 'name', m.name, 'id', m.sid, 'weeks', to_jsonb(m.weeks), 'p', m.p, 'a', m.a, 'e', m.e, 'missed', to_jsonb(m.missed),
       'team', (select tm.num from tg.team_members tm where tm.course = c and tm.sid = m.sid),
       'pct', coalesce(to_jsonb(m.pct), '""'::jsonb),
       'attGrade', case when att.mx > 0 and m.pct is not null then to_jsonb(round(m.pct * att.mx, 2)) else '""'::jsonb end,
-      'scores', coalesce(agg.obj, '{}'::jsonb),
+      'scores', coalesce(agg.obj, '{}'::jsonb), 'by', coalesce(agg.byk, '{}'::jsonb),
       'total', round(coalesce(agg.total, 0) + case when att.mx > 0 and m.pct is not null then round(m.pct * att.mx, 2) else 0 end, 2),
       'section', (select jsonb_agg(case when v in ('P', 'E') then to_jsonb(1) when v = 'A' then to_jsonb(0) else '""'::jsonb end order by n)
                   from unnest(m.weeks) with ordinality as u(v, n) where n not in (7, 14))
@@ -533,6 +539,7 @@ begin
   get diagnostics n = row_count;
   update tg.students set ta = t where course = c and grp = g and ta <> t and t <> '';
   d := tg.dash(me);
+  perform tg.note(c, g, 'Added ' || n || ' students to the group', me.name);
   return d || jsonb_build_object('added', n);
 end $$;
 
@@ -556,6 +563,7 @@ begin
     total := total + n; ng := ng + 1;
     if t <> '' then update tg.students set ta = t where course = c and grp = g and ta <> t; end if;
   end loop;
+  perform tg.note(c, '', 'Uploaded ' || ng || ' groups with ' || total || ' students', me.name);
   return tg.dash(me) || jsonb_build_object('imported', jsonb_build_object('groups', ng, 'students', total, 'skipped', skipped));
 end $$;
 
@@ -566,6 +574,7 @@ begin
   owner := tg.group_ta(p_course, p_group);
   if owner <> '' and owner <> me.name then raise exception 'This group belongs to %. Ask the admin to change it.', owner; end if;
   update tg.students set ta = me.name where course = p_course and grp = p_group;
+  perform tg.note(p_course, p_group, 'Took the group as their own', me.name);
   return tg.dash(me);
 end $$;
 
@@ -574,6 +583,7 @@ declare me tg.staff := tg.admin(p_pin); t text := tg.clean(p_ta);
 begin
   if t <> '' and not exists (select 1 from tg.staff where name = t and status = 'active') then raise exception 'This TA was not found.'; end if;
   update tg.students set ta = t where course = p_course and grp = p_group;
+  perform tg.note(p_course, p_group, 'Changed the TA of the group to ' || coalesce(nullif(t, ''), 'nobody'), me.name);
   return tg.dash(me);
 end $$;
 
@@ -581,6 +591,7 @@ create or replace function public.remove_group(p_pin text, p_course text, p_grou
 declare me tg.staff := tg.admin(p_pin);
 begin
   delete from tg.students where course = p_course and grp = p_group;
+  perform tg.note(p_course, p_group, 'Deleted the group', me.name);
   return tg.dash(me);
 end $$;
 
@@ -616,6 +627,7 @@ declare me tg.staff := tg.admin(p_pin); v text := left(coalesce(p_date, ''), 10)
 begin
   if v <> '' and v !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'Choose a date.'; end if;
   insert into tg.settings (key, value) values ('Term start', v) on conflict (key) do update set value = excluded.value;
+  perform tg.note('', '', 'Set the term start to ' || coalesce(nullif(v, ''), 'nothing'), me.name);
   return tg.dash(me);
 end $$;
 
@@ -639,6 +651,7 @@ begin
   insert into tg.sessions (id, ta, course, grp, also, week, opened, closes, strict_mode, guests, secret, code)
     values (v_id, me.name, p_course, p_group, v_also, p_week, now(), now() + make_interval(mins => mins), coalesce(p_strict, false), coalesce(p_guests, true),
             gen_random_uuid()::text, (1000 + floor(random() * 9000))::int::text);
+  perform tg.note(p_course, p_group, 'Opened the check-in of ' || tg.week_label(p_week) || ' for group' || case when cardinality(v_also) > 0 then 's ' || array_to_string(array[p_group] || v_also, ' + ') else ' ' || p_group end, me.name);
   return tg.live(v_id);
 end $$;
 
@@ -656,12 +669,14 @@ create or replace function public.extend_session(p_pin text, p_id text, p_minute
 declare s tg.sessions := tg.session_for(p_pin, p_id);
 begin
   if tg.is_live(s) then update tg.sessions set closes = greatest(closes, now()) + make_interval(mins => coalesce(p_minutes, 5)) where id = p_id; end if;
+  perform tg.note(s.course, s.grp, 'Added ' || coalesce(p_minutes, 5) || ' minutes to the check-in of ' || tg.week_label(s.week), (tg.who(p_pin)).name);
   return tg.live(p_id);
 end $$;
 create or replace function public.close_session(p_pin text, p_id text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare s tg.sessions := tg.session_for(p_pin, p_id);
 begin
   update tg.sessions set closed = least(now(), closes) where id = p_id and closed is null;
+  perform tg.note(s.course, s.grp, 'Closed the check-in of ' || tg.week_label(s.week), (tg.who(p_pin)).name);
   return tg.live(p_id);
 end $$;
 -- the student has no internet: the TA types the ID (or its last digits) on the live screen and the student is present in their own group
@@ -830,6 +845,7 @@ begin
     -- Check: a done / not done item, the TA ticks it and the student gets the full mark
     insert into tg.items (course, key, item, max, kind, ord) values (c, k, tg.clean(x->>'item'), (x->>'max')::numeric, case when coalesce((x->>'check')::boolean, false) then 'Check' else 'Grade' end, i);
   end loop;
+  perform tg.note(c, '', 'Changed the grade items: attendance ' || greatest(0, coalesce(p_att_max, 0)) || coalesce(', ' || (select string_agg(item || ' ' || max, ', ' order by ord) from tg.items where course = c and kind <> 'Attendance'), ''), me.name);
   return tg.items_json(c);
 end $$;
 create or replace function public.save_scores(p_pin text, p_course text, p_group text, p_changes jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
@@ -871,6 +887,10 @@ begin
     from (select l.*, lag(l.status) over (partition by l.course, l.grp, l.sid, l.week order by l.id) as prev
           from tg.log l where l.course = p_course and (p_group is null or l.grp = p_group)) z
     where z.prev is distinct from z.status and not (z.prev is null and z.status = 'A')
+    union all
+    select a.ts, a.id, jsonb_build_object('t', to_char(a.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Other', 'group', a.grp, 'id', '', 'name', '',
+             'what', a.what, 'from', '', 'to', '', 'by', a.by_ta) as j
+    from tg.audit a where a.course = p_course and (p_group is null or a.grp = p_group or a.grp = '')
   ) u order by u.ts desc, u.id desc limit 600) v), '[]');
 end $$;
 

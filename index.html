@@ -393,6 +393,8 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .tn-take.alt:hover, .tn-take.alt.on { background: color-mix(in srgb, var(--accent) 14%, transparent); filter: none; } .tn-take + .tn-take { margin-left: 8px; }
   .hist-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 16px 0 12px; } .hist-tools .in { flex: 1 1 220px; }
   #hk button.on { background: var(--soft); color: var(--ink); }
+  .hist-k.ot { background: var(--card2); color: var(--muted); } .hist-av.ot { background: var(--card2); color: var(--text); }
+  td .by { display: block; font-size: 10.5px; line-height: 1.2; color: var(--muted); margin-top: 3px; min-height: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin-left: auto; margin-right: auto; cursor: default; }
   .hist-sum { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; } .hist-sum b { color: var(--text); }
   .hist-feed { max-height: 56vh; overflow-y: auto; padding-right: 4px; }
   .hist-day { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
@@ -3454,6 +3456,14 @@ const BOOT = null;
   const markCell = (it, cls, v, attrs) => it.check
     ? '<label class="ckcell"><input type="checkbox" class="cell ck ' + cls + '"' + (v !== '' && Number(v) > 0 ? ' checked' : '') + ' data-max="' + it.max + '" ' + attrs + '><span aria-hidden="true"></span></label>'
     : '<input class="cell ' + cls + '" inputmode="decimal" autocomplete="off" data-max="' + it.max + '" value="' + esc(v) + '" ' + attrs + '>';
+  /* who wrote a mark: a small first name under the box, the full name and time on hover */
+  const nowStamp = () => { const d = new Date(), z = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); };
+  const byTag = (r, key) => { const b = r && r.by && r.by[key]; return '<small class="by"' + (b && b.by ? ' title="Entered by ' + esc(b.by) + ', ' + esc(b.t) + '">' + esc(b.by.split(' ')[0]) : '>') + '</small>'; };
+  const stampBy = (inp, r, key) => {
+    if (r) { r.by = r.by || {}; if (cellVal(inp) === '') delete r.by[key]; else r.by[key] = { by: D.me.name, t: nowStamp() }; }
+    const sm = inp && inp.closest('td') && inp.closest('td').querySelector('.by'); if (!sm) return;
+    const b = r && r.by && r.by[key]; sm.textContent = b ? b.by.split(' ')[0] : ''; sm.title = b ? 'Entered by ' + b.by + ', ' + b.t : '';
+  };
   const cellVal = (inp) => inp.type === 'checkbox' ? (inp.checked ? String(Number(inp.dataset.max)) : '') : inp.value.trim().replace(',', '.');
   const itemHead = (it) => '<th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small>' +
     (it.check ? '<button type="button" class="ckall" data-ck="' + esc(it.key) + '" title="Tick or untick everyone shown">all</button>' : '') + '</th>';
@@ -4406,8 +4416,8 @@ const BOOT = null;
   function historyDialog(course, group) {
     const ST = { P: 'present', E: 'excused' };
     dialog('<span class="pill">' + esc(course) + (group ? ' &middot; group ' + esc(group) : '') + '</span><h1 style="font-size:26px;margin-top:12px">History</h1>' +
-      '<p class="sub">Who changed what, and when. The newest change is at the top.</p>' +
-      '<div class="hist-tools"><input class="in" id="hq" type="search" placeholder="Search a student, an ID or a TA"><div class="seg" id="hk"><button type="button" class="on" data-k="">All</button><button type="button" data-k="Mark">Marks</button><button type="button" data-k="Attendance">Attendance</button></div></div>' +
+      '<p class="sub">Everything anyone wrote: marks, attendance, groups, grade items and check-ins, with who did it and when. The newest is at the top.</p>' +
+      '<div class="hist-tools"><input class="in" id="hq" type="search" placeholder="Search a student, an ID or a TA"><div class="seg" id="hk"><button type="button" class="on" data-k="">All</button><button type="button" data-k="Mark">Marks</button><button type="button" data-k="Attendance">Attendance</button><button type="button" data-k="Other">Groups and setup</button></div></div>' +
       '<p class="hist-sum" id="hsum"></p><div class="hist-feed" id="hrows"><p class="note">Loading</p></div>' +
       '<div class="row" style="margin-top:16px"><button class="btn ghost" data-close type="button">Close</button></div>',
       async (o) => {
@@ -4421,6 +4431,7 @@ const BOOT = null;
             if (x.to === '') return 'removed the mark <b>' + esc(x.from) + '</b> of ' + tag(x);
             return 'changed ' + tag(x) + ' from <s>' + esc(x.from) + '</s> to <b>' + esc(x.to) + '</b>';
           }
+          if (x.kind === 'Other') return esc(x.what.charAt(0).toLowerCase() + x.what.slice(1)) + (x.group && !group ? ' <span class="hist-k ot">group ' + esc(x.group) + '</span>' : '');
           if (x.how === 'Self') return 'checked in with the QR code in ' + tag(x);
           const was = ST[x.from], now = ST[x.to], src = x.how === 'Import' ? ' <small>(from an Excel sheet)</small>' : '';
           if (!now) return 'removed the attendance of ' + tag(x) + (was ? ' <small>(was ' + was + ')</small>' : '') + src;
@@ -4441,9 +4452,9 @@ const BOOT = null;
           shown.forEach(x => {
             const d = dayOf(x.t);
             if (d !== day) { day = d; html += '<h3 class="hist-day">' + esc(d) + '</h3>'; }
-            const self = x.how === 'Self', who = self ? x.name : (x.by || 'Unknown');
-            html += '<div class="hist-it"><span class="hist-av' + (self ? ' st' : '') + '">' + esc(initials(who)) + '</span><div class="hist-tx"><p><b>' + esc(who) + '</b> ' + say(x) + (self ? '' : ' for <b>' + esc(x.name) + '</b>') + '</p>' +
-              '<small>Group ' + esc(x.group) + ' &middot; ID ' + esc(x.id) + (self ? ' &middot; by the student' : '') + '</small></div><time>' + ampm(x.t.slice(11)) + '</time></div>';
+            const self = x.how === 'Self', other = x.kind === 'Other', who = self ? x.name : (x.by || 'Unknown');
+            html += '<div class="hist-it"><span class="hist-av' + (self ? ' st' : other ? ' ot' : '') + '">' + esc(initials(who)) + '</span><div class="hist-tx"><p><b>' + esc(who) + '</b> ' + say(x) + (self || other ? '' : ' for <b>' + esc(x.name) + '</b>') + '</p>' +
+              (other ? '' : '<small>Group ' + esc(x.group) + ' &middot; ID ' + esc(x.id) + (self ? ' &middot; by the student' : '') + '</small>') + '</div><time>' + ampm(x.t.slice(11)) + '</time></div>';
           });
           o.querySelector('#hrows').innerHTML = html || '<p class="note">' + (rows.length ? 'Nothing matches.' : 'No changes yet.') + '</p>';
         };
@@ -4633,7 +4644,8 @@ const BOOT = null;
       Object.keys(snap).forEach(k => {
         const r = rowOf(k), ky = k.split('|')[3]; if (!r) return;
         if (snap[k] === '') delete r.scores[ky]; else r.scores[ky] = Number(String(snap[k]).replace(',', '.'));
-        if (!(k in dirty) && $('mkb')) { const inp = $('mkb').querySelector('.mk-table .cell[data-i="' + C().rows.indexOf(r) + '"]'); if (inp && k.split('|')[0] === course && ky === key) inp.classList.remove('dirty'); }
+        if (snap[k] === '') { if (r.by) delete r.by[ky]; } else { r.by = r.by || {}; r.by[ky] = { by: D.me.name, t: nowStamp() }; }
+        if (!(k in dirty) && $('mkb')) { const inp = $('mkb').querySelector('.mk-table .cell[data-i="' + C().rows.indexOf(r) + '"]'); if (inp && k.split('|')[0] === course && ky === key) { inp.classList.remove('dirty'); const sm = inp.closest('td').querySelector('.by'), b = r.by && r.by[ky]; if (sm) { sm.textContent = b ? b.by.split(' ')[0] : ''; sm.title = b ? 'Entered by ' + b.by + ', ' + b.t : ''; } } }
       });
     }
     app.innerHTML = '<div class="wrap" id="mk"><div class="top"><div><h1>Enter marks</h1><p class="sub">Choose what you are marking and the groups, then type the marks. Enter moves to the next student.</p></div></div><div id="mkb"><p class="note">Loading</p></div></div>';
@@ -4701,7 +4713,7 @@ const BOOT = null;
         '<p class="mk-stat"><b>' + filled.length + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(it.item) + '</b>' + (nums.length && !it.check ? ' &middot; average <b>' + Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 + '</b> of ' + it.max : '') + '</p>' +
         '<div class="table-wrap"><table class="mk-table"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th><th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th></tr></thead><tbody>' +
           (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
-            '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td></tr>').join('')
+            '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, key) + '</td></tr>').join('')
             : '<tr><td colspan="5" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
         '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
       bind(); status();
@@ -5717,7 +5729,7 @@ const BOOT = null;
     const saver = makeSaver({ id: 'grades_' + g.course + '_' + g.group, dirty,
       valid: (k, v) => { const it = V && V.items.find(x => x.key === k.split('|')[1]); return !!it && markOk(it.max, v); },
       send: (snap) => api('saveScores', PIN, g.course, g.group, Object.keys(snap).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: snap[k] }; })),
-      applied: (snap, res) => { if (res) V = res; Object.keys(snap).forEach(k => { if (k in dirty) return; const [id, key] = k.split('|'), i = V.rows.findIndex(r => r.id === id); const inp = $('rows') && $('rows').querySelector('.cell[data-i="' + i + '"][data-k="' + CSS.escape(key) + '"]'); if (inp) inp.classList.remove('dirty'); }); },
+      applied: (snap, res) => { if (res) V = res; Object.keys(snap).forEach(k => { if (k in dirty) return; const [id, key] = k.split('|'), i = V.rows.findIndex(r => r.id === id); const inp = $('rows') && $('rows').querySelector('.cell[data-i="' + i + '"][data-k="' + CSS.escape(key) + '"]'); if (inp) { inp.classList.remove('dirty'); stampBy(inp, V.rows[i], key); } }); },
       onState: () => { if ($('st')) status(); } });
     app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'grades') +
       '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(g.group) + '</span><div><h1>' + esc(g.course) + '</h1><p class="sub">Grades of group ' + esc(g.group) + '. Type the marks: they save on their own. Enter moves to the next student.</p></div></div>' +
@@ -5783,7 +5795,7 @@ const BOOT = null;
           '<div class="wk">' + (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="' + weekName(n) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></div></td>' +
         (V.attendanceMax ? '<td class="num mono">' + (r.attGrade === '' ? '&ndash;' : r.attGrade) + '</td>' : '') +
         V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
-          return '<td class="num">' + markCell(it, k in dirty ? 'dirty' : '', v, 'data-i="' + i + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td>'; }).join('') +
+          return '<td class="num">' + markCell(it, k in dirty ? 'dirty' : '', v, 'data-i="' + i + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, it.key) + '</td>'; }).join('') +
         '<td class="num tot"><div class="totc"><span class="total" id="tot' + i + '">' + r.total + '</span>' + bar(r.total, mt).replace('<span class="mbar', '<span id="totb' + i + '" class="mbar') + '</div></td></tr>').join('');
       $('rows').querySelectorAll('.cell').forEach(inp => {
         inp.oninput = () => {
@@ -5840,7 +5852,7 @@ const BOOT = null;
     const saver = makeSaver({ id: 'team_' + t.course + '_' + t.num, dirty,
       valid: (k, v) => { const it = V && V.items.find(x => x.key === k.split('|')[1]); return !!it && markOk(it.max, v); },
       send: (snap) => api('saveTeamScores', PIN, t.course, t.num, Object.keys(snap).map(k => { const [id, key] = k.split('|'); return { id: id, key: key, score: snap[k] }; })),
-      applied: (snap, res) => { if (res) V = res; Object.keys(snap).forEach(k => { if (k in dirty) return; const [id, key] = k.split('|'), i = V.rows.findIndex(r => r.id === id); const inp = $('rows') && $('rows').querySelector('.mcell[data-i="' + i + '"][data-k="' + CSS.escape(key) + '"]'); if (inp) inp.classList.remove('dirty'); }); },
+      applied: (snap, res) => { if (res) V = res; Object.keys(snap).forEach(k => { if (k in dirty) return; const [id, key] = k.split('|'), i = V.rows.findIndex(r => r.id === id); const inp = $('rows') && $('rows').querySelector('.mcell[data-i="' + i + '"][data-k="' + CSS.escape(key) + '"]'); if (inp) { inp.classList.remove('dirty'); stampBy(inp, V.rows[i], key); } }); },
       onState: () => { if ($('st')) status(); } });
     const unsaved = () => Object.keys(dirty).length;
     app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(t.course) + '</button>' +
@@ -5880,7 +5892,7 @@ const BOOT = null;
           '<td><div class="attline"><b class="' + (r.pct === '' ? '' : level(r.pct)) + '">' + (r.pct === '' ? '&ndash;' : fmtPct(r.pct)) + '</b></div><div class="wk">' +
             (r.weeks || []).map((v, n) => '<i class="' + (v || 'none') + '" title="Week ' + (n + 1) + ': ' + ({ P: 'Present', A: 'Absent', E: 'Excused' }[v] || 'No check-in') + '"></i>').join('') + '</div></td>' +
           V.items.map(it => { const k = r.id + '|' + it.key; const v = k in dirty ? dirty[k] : (r.scores[it.key] === undefined ? '' : r.scores[it.key]);
-            return '<td class="num">' + markCell(it, 'mcell' + (k in dirty ? ' dirty' : ''), v, 'data-i="' + i + '" data-k="' + esc(it.key) + '"' + (r.canEdit ? '' : ' disabled title="Not your group"') + ' aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td>'; }).join('') +
+            return '<td class="num">' + markCell(it, 'mcell' + (k in dirty ? ' dirty' : ''), v, 'data-i="' + i + '" data-k="' + esc(it.key) + '"' + (r.canEdit ? '' : ' disabled title="Not your group"') + ' aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, it.key) + '</td>'; }).join('') +
           '<td class="num tot"><span class="total" id="tot' + i + '">' + r.total + '</span></td></tr>').join('');
       const recalc = (i) => {
         const r = V.rows[i]; let sum = r.attGrade || 0;
