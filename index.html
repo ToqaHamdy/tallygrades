@@ -378,22 +378,40 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .ccard:hover .go { color: var(--ink); transform: translateX(4px); }
   .gstat.gs-live { border-color: var(--ok); } .gstat.gs-live b { color: var(--ok); }
   .acct { position: fixed; top: 16px; right: 16px; z-index: 30; display: flex; align-items: center; gap: 10px; }
-  body.has-nav .acct { top: 0; left: 0; right: 0; padding: 10px 16px 10px 20px; background: color-mix(in srgb, var(--bg) 90%, transparent); border-bottom: 1px solid var(--line); }
-  body.has-nav .wrap { padding-top: 92px; }
-  .nav-brand { white-space: nowrap; display: inline-flex; align-items: center; gap: 10px; margin-right: auto; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; }
-  .nav-brand[hidden] { display: none; }
-  .nb-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--grad2), var(--accent)); display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+  .side { position: fixed; top: 0; left: 0; bottom: 0; width: 256px; z-index: 36; display: flex; flex-direction: column; padding: 16px 12px 14px; overflow-y: auto;
+    background: var(--card); border-right: 1px solid var(--line); scrollbar-width: thin; }
+  .side[hidden] { display: none; }
+  body.has-side { padding-left: 256px; }
+  .sd-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; white-space: nowrap; }
+  .nb-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--grad2), var(--accent)); display: inline-flex; align-items: center; justify-content: center; gap: 3px; flex: 0 0 auto; }
   .nb-mark i { width: 3px; height: 13px; border-radius: 2px; background: #fff; }
-  .nav-tools { display: flex; align-items: center; gap: 6px; }
-  .nav-tools .tb { padding: 8px 13px; font-size: 13.5px; box-shadow: none; border-radius: 11px; }
-  .nav-more { position: relative; }
-  .nav-more[hidden] { display: none; }
-  .nav-menu { position: absolute; right: 0; top: calc(100% + 10px); width: 250px; display: grid; gap: 4px; padding: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px -16px rgba(0,0,0,.6); animation: fadein .2s ease-out; }
-  .nav-menu .tb { border-color: transparent; box-shadow: none; justify-content: flex-start; }
-  .nav-menu .tb:hover { transform: none; background: var(--soft); }
-  #navMoreBox { display: none; }
-  @media (max-width: 1420px) { .nav-tools .tb span { display: none; } .nav-tools .tb { padding: 9px; } .nav-tools .tb.primary span { display: inline; } .nav-tools .tb.primary { padding: 8px 13px; } }
-  @media (max-width: 760px) { .nav-tools { display: none; } body.has-nav #navMoreBox:not([hidden]) { display: block; } .nav-brand b { display: none; } body.has-nav .wrap { padding-top: 80px; } }
+  .sd-nav { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; }
+  .sd-item { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; padding: 9px 12px; border-radius: 10px; border: 0; background: none; color: var(--muted);
+    font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; text-align: left; cursor: pointer; transition: background-color .15s, color .15s; }
+  .sd-item svg { flex: 0 0 auto; }
+  .sd-item span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sd-item.sd-course span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+  .sd-item:hover { background: var(--soft); color: var(--text); }
+  .sd-item.on { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); }
+  .sd-item.on::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  .sd-item.on svg { color: var(--accent); }
+  .sd-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sd-sec { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 18px 12px 6px; opacity: .8; }
+  .sd-sec-item { flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px 12px 8px 14px; }
+  .sd-code { color: var(--text); font-weight: 700; font-size: 13.5px; }
+  .sd-when { font-size: 12px; font-weight: 500; }
+  .sd-dot { position: absolute; right: 12px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--accent); }
+  .sd-dot.live { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: lp 1.6s infinite; }
+  .sd-foot { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
+  .side-btn[hidden] { display: none; }
+  .side-scrim { display: none; }
+  @media (min-width: 901px) { .side-btn { display: none !important; } }
+  @media (max-width: 900px) {
+    body.has-side { padding-left: 0; }
+    .side { transform: translateX(-105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); box-shadow: 24px 0 60px -20px rgba(0,0,0,.6); width: min(300px, 86vw); }
+    body.side-open .side { transform: none; }
+    body.side-open .side-scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.45); animation: fadein .2s ease-out; }
+  }
   body.projector .acct { display: none; }
   .acct-slot { position: relative; }
   .theme-btn { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; padding: 0; background: var(--card); color: var(--text); border: 1px solid var(--line);
@@ -3126,9 +3144,11 @@ const BOOT = null;
   }
   (function topBar() {
     const box = document.createElement('div'); box.id = 'acct'; box.className = 'acct hide-proj';
-    box.innerHTML = '<a class="nav-brand" id="navBrand" href="#" hidden><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a><nav class="nav-tools" id="navTools" aria-label="Tools"></nav>' +
-      '<div class="nav-more" id="navMoreBox" hidden><button class="theme-btn" id="navMore" type="button" aria-haspopup="true" aria-expanded="false" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="nav-menu" id="navMenu" hidden></div></div>' +
+    box.innerHTML = '<button class="theme-btn side-btn" id="sideOpen" type="button" hidden aria-label="Menu" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>' +
       '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
+    const side = document.createElement('aside'); side.id = 'side'; side.className = 'side hide-proj'; side.hidden = true; side.setAttribute('aria-label', 'Menu');
+    const scrim = document.createElement('div'); scrim.id = 'sideScrim'; scrim.className = 'side-scrim';
+    document.body.appendChild(side); document.body.appendChild(scrim);
     document.body.appendChild(box);
     paintTheme();
     $('themeBtn').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(!isLight(), r.left + r.width / 2, r.top + r.height / 2); };
@@ -3165,6 +3185,10 @@ const BOOT = null;
   })();
   /* the tools row at the top of the home and course pages: a button with an icon for each tool */
   const TB_ICONS = {
+    home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.8 1.8.7-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7z"/>',
     upload: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
@@ -3515,7 +3539,7 @@ const BOOT = null;
   }
   function landingView() {
     botFab(false);
-    if ($('navTools')) { const keep = D; D = null; navTools(); D = keep; }
+    if ($('side')) { const keep = D; D = null; sideNav(); D = keep; }
     stopTimers(); acct();
     const ic = (d) => '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
     const feat = (icon, title, text) => '<li><span class="fi">' + ic(icon) + '</span><div><b>' + title + '</b><span>' + text + '</span></div></li>';
@@ -3550,39 +3574,62 @@ const BOOT = null;
     const m = location.hash.match(/^#(?:course|group|grades|insights|team)\/([^/]+)/);
     return m ? decodeURIComponent(m[1]) : '';
   }
-  function navTools() {
-    const on = !!(PIN && D);
-    document.body.classList.toggle('has-nav', on);
-    $('navBrand').hidden = !on; $('navMoreBox').hidden = !on;
-    if (!on) { $('navTools').innerHTML = ''; $('navMenu').innerHTML = ''; return; }
-    const c = navCourse(), isAdmin = D.me.role === 'Admin';
-    const list = [['#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', true], ['ask', 'spark', 'Ask the assistant'], ['impatt', 'upload', 'Import attendance'],
-      ['final', 'download', 'Download final sheet'], ['regqr', 'qr', 'Registration QR']].concat(isAdmin ? [['term', 'calendar', 'Term start'], ['backup', 'archive', 'Download backup']] : []);
-    const html = list.map(x => tb(x[0], x[1], x[2], x[3])).join('');
-    $('navTools').innerHTML = html;
-    $('navMenu').innerHTML = html;
+  /* the menu on the left of every staff page: pages, courses, your sections, tools */
+  function sideNav() {
+    const on = !!(PIN && D), side = $('side');
+    document.body.classList.toggle('has-side', on);
+    side.hidden = !on; $('sideOpen').hidden = !on;
+    if (!on) { side.innerHTML = ''; document.body.classList.remove('side-open'); return; }
+    const h = location.hash, c = navCourse(), isAdmin = D.me.role === 'Admin', me = D.me.name;
+    const svg = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + TB_ICONS[n] + '</svg>';
+    const item = (href, icon, label, active, extra) => '<a class="sd-item' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span>' + (extra || '') + '</a>';
+    const btn = (k, icon, label) => '<button class="sd-item" type="button" data-sd="' + k + '">' + svg(icon) + '<span>' + label + '</span></button>';
+    const courses = [...new Set((isAdmin ? (D.allCourses || []) : []).concat(D.groups.map(g => g.course)))].sort();
+    /* your sections: from the schedule (groups taught together at the same time), or your groups */
+    const n = new Date(), today = n.getDay(), mins = n.getHours() * 60 + n.getMinutes();
+    const mineSched = (D.schedule || []).filter(x => x.ta === me && D.groups.some(g => g.course === x.course && g.group === x.group));
+    const secs = [];
+    mineSched.forEach(x => { const k = x.course + '|' + x.day + '|' + x.start; let sct = secs.find(y => y.k === k); if (!sct) { sct = { k: k, course: x.course, day: x.day, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sct); } sct.gs.push(x.group); });
+    secs.sort((a, b) => ((a.day - today + 7) % 7) - ((b.day - today + 7) % 7) || toMin(a.start) - toMin(b.start));
+    const groupHref = (course, grp) => { const g = D.groups.find(x => x.course === course && x.group === grp); return g ? pageHash('group', g) : courseHash(course); };
+    const inSec = (sct) => sct.gs.some(gr => h === pageHash('group', { course: sct.course, group: gr }) || h === pageHash('grades', { course: sct.course, group: gr }));
+    const secHtml = secs.length ? secs.map(sct => {
+        const now = sct.day === today && mins >= toMin(sct.start) - 20 && mins <= toMin(sct.end);
+        const live = sct.gs.some(gr => (D.groups.find(x => x.course === sct.course && x.group === gr) || {}).live);
+        return '<a class="sd-item sd-sec-item' + (inSec(sct) ? ' on' : '') + '" href="' + groupHref(sct.course, sct.gs[0]) + '"><span class="sd-code">' + esc(sct.gs.join(' + ')) + '</span><span class="sd-when">' + DAY3[sct.day] + ' ' + t12(sct.start) + (sct.room ? ' &middot; ' + esc(sct.room) : '') + '</span>' +
+          (live ? '<i class="sd-dot live" title="Check-in is live"></i>' : now ? '<i class="sd-dot" title="Now"></i>' : '') + '</a>';
+      }).join('')
+      : D.groups.filter(g => g.ta === me).sort((a, b) => numeric(a.course + a.group, b.course + b.group)).map(g => '<a class="sd-item sd-sec-item' + (h === pageHash('group', g) || h === pageHash('grades', g) ? ' on' : '') + '" href="' + pageHash('group', g) + '"><span class="sd-code">' + esc(g.group) + '</span><span class="sd-when">' + esc(g.course) + '</span>' + (g.live ? '<i class="sd-dot live"></i>' : '') + '</a>').join('');
+    side.innerHTML = '<a class="sd-brand" href="#"><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a>' +
+      '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + btn('take', 'qr', 'Take attendance') +
+        item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + btn('ask', 'spark', 'Ask the assistant') +
+        (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
+        (secHtml ? '<div class="sd-sec">My sections</div>' + secHtml : '') +
+        '<div class="sd-sec">Tools</div>' + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
+        (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '') + '</nav>' +
+      '<div class="sd-foot">' + item('#settings', 'gear', 'Settings', h === '#settings') + '</div>';
+    const close = () => { document.body.classList.remove('side-open'); $('sideOpen').setAttribute('aria-expanded', 'false'); };
+    const take = () => {
+      const show = () => { const el = $('quick'); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); } };
+      if ($('quick')) show(); else { go(c ? courseHash(c) : ''); setTimeout(show, 700); }
+    };
     const act = {
-      ask: () => BOT && BOT.toggle(true),
+      take: take, ask: () => BOT && BOT.toggle(true),
       impatt: () => { importAttendanceDialog(); const co = document.querySelector('.overlay #co'); if (c && co) co.value = c; },
       final: downloadFinal, regqr: registrationQrDialog, term: termDialog, backup: downloadBackup
     };
-    $('acct').querySelectorAll('.tb').forEach(b => {
-      b.removeAttribute('id');
-      const key = b.tagName === 'BUTTON' ? b.querySelector('span').textContent : '';
-      const k = { 'Ask the assistant': 'ask', 'Import attendance': 'impatt', 'Download final sheet': 'final', 'Registration QR': 'regqr', 'Term start': 'term', 'Download backup': 'backup' }[key];
-      if (k) b.onclick = () => { $('navMenu').hidden = true; $('navMore').setAttribute('aria-expanded', 'false'); act[k](); };
-      else b.addEventListener('click', () => { $('navMenu').hidden = true; });
-      b.title = b.textContent;
-    });
-    if (!$('navMore').dataset.ready) {
-      $('navMore').dataset.ready = '1';
-      $('navMore').onclick = (e) => { e.stopPropagation(); const m = $('navMenu'); m.hidden = !m.hidden; $('navMore').setAttribute('aria-expanded', String(!m.hidden)); };
-      document.addEventListener('click', (e) => { if (!$('navMoreBox').contains(e.target)) { $('navMenu').hidden = true; $('navMore').setAttribute('aria-expanded', 'false'); } });
+    side.querySelectorAll('[data-sd]').forEach(b => b.onclick = () => { close(); act[b.dataset.sd](); });
+    side.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+    if (!side.dataset.ready) {
+      side.dataset.ready = '1';
+      $('sideOpen').onclick = () => { const o = !document.body.classList.contains('side-open'); document.body.classList.toggle('side-open', o); $('sideOpen').setAttribute('aria-expanded', String(o)); };
+      $('sideScrim').onclick = close;
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('side-open')) close(); });
     }
   }
   function acct() {
     botFab(true);
-    navTools();
+    sideNav();
     const el = $('acctSlot');
     if (!el.dataset.ready) {
       el.dataset.ready = '1';
@@ -3846,8 +3893,8 @@ const BOOT = null;
         }).join('');
     }
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
-    const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
-      : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
+    const hello = (isAdmin ? 'You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
+      : (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
     const top = '';
     let head;
     if (C) {
@@ -3864,7 +3911,8 @@ const BOOT = null;
     } else {
       /* home: a button for each course, then the tabs */
       const cs = [...new Set(groups.map(g => g.course))].sort();
-      head = '<div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">' + hello + '</p></div>' + top + '</div>' +
+      const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+      head = '<div class="top"><div><h1>' + greet + ', ' + esc(D.me.name.split(' ')[0]) + '</h1><p class="sub">' + hello + '</p></div>' + top + '</div>' +
         (cs.length ? '<div class="ccards">' + cs.map(c => {
           const gs = groups.filter(g => g.course === c), nt = teams.filter(t => t.course === c).length, lv = gs.filter(g => g.live).length;
           return '<a class="ccard" href="' + courseHash(c) + '"><span class="cbadge">' + esc(initials(c)) + '</span><span class="cinfo"><b>' + esc(c) + '</b><small>' + gs.length + (gs.length === 1 ? ' group, ' : ' groups, ') +
