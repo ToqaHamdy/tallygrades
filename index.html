@@ -133,6 +133,12 @@
   .dchip small { display: block; font-size: 12px; font-weight: 500; }
   .dist-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-weight: 600; }
   .dist-foot b { font-family: var(--display); font-size: 24px; color: var(--text); margin-left: 6px; }
+  .together { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 14px; margin-top: 4px; border-top: 1px dashed var(--line); }
+  .together > span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-right: 4px; }
+  .together small { flex: 1 1 100%; color: var(--muted); font-size: 13px; }
+  .tg-pick { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; cursor: pointer; background: var(--card2); }
+  .tg-pick:has(input:checked) { border-color: var(--ink); background: var(--soft); }
+  .tg-pick b { font-family: var(--display); font-size: 17px; }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2654,7 +2660,7 @@ const BOOT = null;
     removeGroup: ['remove_group', ['p_pin', 'p_course', 'p_group']], addStaff: ['add_staff', ['p_pin', 'p_name', 'p_user', 'p_pass', 'p_courses']],
     setStaffCourses: ['set_staff_courses', ['p_pin', 'p_name', 'p_courses']], removeStaff: ['remove_staff', ['p_pin', 'p_name']],
     setTermStart: ['set_term_start', ['p_pin', 'p_date']],
-    openSession: ['open_session', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_minutes', 'p_strict', 'p_guests']],
+    openSession: ['open_session', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_minutes', 'p_strict', 'p_guests', 'p_also']],
     extendSession: ['extend_session', ['p_pin', 'p_id', 'p_minutes']], closeSession: ['close_session', ['p_pin', 'p_id']],
     randomCheck: ['random_check', ['p_pin', 'p_id', 'p_n']], groupState: ['group_state', ['p_pin', 'p_course', 'p_group', 'p_week']],
     groupSummary: ['group_summary', ['p_pin', 'p_course', 'p_group']], mark: ['mark', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id', 'p_status']],
@@ -3315,6 +3321,8 @@ const BOOT = null;
   }
   async function groupPage(g, wantWeek) {
     stopTimers();
+    /* the other groups of this course this user can open with it: P1 and P2 in the same room */
+    const mates = D.groups.filter(x => x.course === g.course && x.group !== g.group && (D.me.role === 'Admin' || x.ta === D.me.name)).sort((a, b) => numeric(a.group, b.group));
     let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
     app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; Groups</button>' +
@@ -3392,7 +3400,11 @@ const BOOT = null;
       const box = $('startbox');
       if (week === 'all') { box.innerHTML = '<p class="note" style="margin:0">Every week of the term, with each student\'s attendance %.</p>'; $('all').hidden = true; $('guest').hidden = true; return; }
       $('all').hidden = false; $('guest').hidden = false;
-      if (L && L.open && L.week === week) { box.innerHTML = '<p class="note" style="margin:0">Check-in is open for this week. Students scan the QR code below.</p>'; return; }
+      if (L && L.open && L.week === week) {
+        const gs = L.groups || [L.group];
+        box.innerHTML = '<p class="note" style="margin:0">Check-in is open for this week' + (gs.length > 1 ? ' for groups <b>' + gs.map(esc).join(' + ') + '</b> together' : '') + '. Students scan the QR code below.</p>';
+        return;
+      }
       if (L && L.open) {
         box.innerHTML = '<p class="note" style="margin:0">Check-in is open now for <b>' + esc(L.weekLabel) + '</b>.</p><button class="btn ghost" id="gol" type="button">Go to ' + esc(L.weekLabel) + '</button>';
         $('gol').onclick = () => { week = L.week; $('wk').value = String(week); load(); };
@@ -3401,10 +3413,13 @@ const BOOT = null;
       box.innerHTML = '<label class="f" style="flex:0 0 120px">Minutes open<input class="in" id="mn" type="number" min="1" max="180" value="15"></label>' +
         '<label class="check" style="padding-bottom:12px"><input type="checkbox" id="stc"> Strict mode</label>' +
         '<label class="check" style="padding-bottom:12px"><input type="checkbox" id="gst" checked> Accept students from other groups</label>' +
-        '<button class="btn" id="open" type="button">Show QR for ' + esc(W ? W.weekLabel : 'this week') + '</button>';
+        '<button class="btn" id="open" type="button">Show QR for ' + esc(W ? W.weekLabel : 'this week') + '</button>' +
+        (mates.length ? '<div class="together"><span>Check in together with</span>' + mates.map(m => '<label class="tg-pick"><input type="checkbox" class="also" value="' + esc(m.group) + '"><b>' + esc(m.group) + '</b></label>').join('') +
+          '<small>One QR and one code for all of them. Each student is marked in their own group.</small></div>' : '');
       $('open').onclick = async () => {
         $('open').disabled = true;
-        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked); await load(); }
+        const also = [...document.querySelectorAll('.also:checked')].map(x => x.value);
+        try { await api('openSession', PIN, g.course, g.group, week, Number($('mn').value), $('stc').checked, $('gst').checked, also); await load(); }
         catch (e) { toast(errMsg(e)); $('open').disabled = false; }
       };
     }
@@ -3435,10 +3450,10 @@ const BOOT = null;
           try {
             const picks = await api('randomCheck', PIN, L.id, 3);
             const rb = $('rb'); rb.hidden = false;
-            rb.innerHTML = '<h2>' + (picks.length ? 'Random check: are they here?' : 'Nobody checked in yet.') + '</h2>' + picks.map((p, i) => '<div class="item"><span>' + esc(p.name) + '</span><button class="btn danger" data-ab="' + i + '" type="button">Not here</button></div>').join('');
+            rb.innerHTML = '<h2>' + (picks.length ? 'Random check: are they here?' : 'Nobody checked in yet.') + '</h2>' + picks.map((p, i) => '<div class="item"><span>' + esc(p.name) + (p.group && p.group !== g.group ? ' (' + esc(p.group) + ')' : '') + '</span><button class="btn danger" data-ab="' + i + '" type="button">Not here</button></div>').join('');
             rb.querySelectorAll('[data-ab]').forEach(b => b.onclick = async () => {
               b.disabled = true;
-              try { await api('mark', PIN, g.course, g.group, L.week, picks[b.dataset.ab].id, 'A'); b.textContent = 'Marked absent'; refresh(); } catch (e) { toast(errMsg(e)); b.disabled = false; }
+              try { await api('mark', PIN, g.course, picks[b.dataset.ab].group || g.group, L.week, picks[b.dataset.ab].id, 'A'); b.textContent = 'Marked absent'; refresh(); } catch (e) { toast(errMsg(e)); b.disabled = false; }
             });
           } catch (e) { toast(errMsg(e)); }
         };
