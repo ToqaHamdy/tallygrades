@@ -269,7 +269,12 @@ begin
         'groups', (select coalesce(jsonb_agg(distinct st.grp order by st.grp), '[]') from tg.team_members m join tg.students st on st.course = m.course and st.sid = m.sid
                    where m.course = t.course and m.num = t.num)) order by t.course, t.num)
       from tg.teams t where me.role = 'Admin' or cardinality(me.courses) = 0 or t.course = any(me.courses)), '[]'),
-    'staff', case when me.role = 'Admin' then (select jsonb_agg(jsonb_build_object('name', name, 'role', role, 'courses', to_jsonb(courses), 'username', coalesce(username, ''), 'status', status, 'photo', coalesce(photo, '')) order by role, status, name) from tg.staff) end);
+    'staff', case when me.role = 'Admin' then (select jsonb_agg(jsonb_build_object('name', name, 'role', role, 'courses', to_jsonb(courses), 'username', coalesce(username, ''), 'status', status, 'photo', coalesce(photo, '')) order by role, status, name) from tg.staff) end,
+    -- the check-ins this staff member opened lately, with day and time in Cairo: Take attendance learns which groups to pick, on every device
+    'habits', coalesce((select jsonb_agg(jsonb_build_object('c', h.course, 'g', h.gs, 'd', h.d, 'm', h.m, 't', h.t) order by h.t) from (
+        select s.course, to_jsonb(tg.sgroups(s)) as gs, extract(dow from s.opened at time zone 'Africa/Cairo')::int as d,
+               (extract(hour from s.opened at time zone 'Africa/Cairo') * 60 + extract(minute from s.opened at time zone 'Africa/Cairo'))::int as m, tg.ms(s.opened) as t
+        from tg.sessions s where s.ta = me.name and s.opened > now() - interval '150 days' order by s.opened desc limit 80) h), '[]'));
 end $$;
 
 -- ---------------------------------------------------------------- student API

@@ -4658,7 +4658,9 @@ const BOOT = null;
     store.set('tg_qhist', JSON.stringify(h.slice(-80)));
   }
   function quickGuess(course, valid) {
-    let h = []; try { h = JSON.parse(store.get('tg_qhist') || '[]'); } catch (e) {}
+    /* the check-ins saved in the database (every device); this device's own list only when the database has none yet */
+    let h = (D && D.habits || []).map(x => ({ c: x.c, g: x.g.slice().sort(numeric), d: x.d, m: x.m, t: x.t }));
+    if (!h.length) { try { h = JSON.parse(store.get('tg_qhist') || '[]'); } catch (e) {} }
     const now = new Date(), d = now.getDay(), m = now.getHours() * 60 + now.getMinutes();
     const near = h.filter(x => x.c === course && x.d === d && Math.abs(x.m - m) <= 90 && x.g.every(g => valid.indexOf(g) >= 0));
     if (!near.length) return null;
