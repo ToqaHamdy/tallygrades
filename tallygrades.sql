@@ -188,21 +188,23 @@ begin
   held := w = 1 or exists (select 1 from tg.sessions where course = c and (grp = g or g = any(also)) and week = w)
               or exists (select 1 from tg.log where course = c and grp = g and week = w and status in ('P', 'A', 'E'));
   select coalesce(jsonb_agg(jsonb_build_object('id', st.sid, 'name', st.name,
-      'status', coalesce(l.status, case when w = 1 then 'P' when held then 'A' else '' end),
+      -- only present and excused show; anything else (no check-in, or a mark taken back) is empty, never 'absent'
+      'status', case when l.status in ('P', 'E') then l.status when l.status is null and w = 1 then 'P' else '' end,
       'time', case when l.status = 'P' and l.method = 'Self' then tg.hm(l.ts) else '' end,
       'method', case when l.sid is null then case when w = 1 then 'Week 1' else '' end else tg.method_label(l.method, l.by_ta, l.note) end,
       'team', (select tm.num from tg.team_members tm where tm.course = c and tm.sid = st.sid)) order by st.ord), '[]')
     into rows from tg.students st left join tg.latest(c, g, w) l on l.sid = st.sid where st.course = c and st.grp = g;
   return jsonb_build_object('course', c, 'group', g, 'week', w, 'weekLabel', tg.week_label(w), 'held', held, 'rows', rows,
     'present', (select count(*) from jsonb_array_elements(rows) r where r->>'status' = 'P'),
-    'absent', (select count(*) from jsonb_array_elements(rows) r where r->>'status' = 'A'),
+    'absent', case when held then (select count(*) from jsonb_array_elements(rows) r where r->>'status' = '') else 0 end,
     'excused', (select count(*) from jsonb_array_elements(rows) r where r->>'status' = 'E'),
     'flags', tg.flags(c, g, w, 20));
 end $$;
 
--- every week of every chosen student: P, A, E, or '' when that week had no check-in
+-- every week of every chosen student: P, E, or '' (no absent is ever shown; a held week without P or E is counted as missed for the %)
+drop function if exists tg.matrix(text, text, text);
 create or replace function tg.matrix(c text, g text default null, t text default null)
-returns table (grp text, ta text, name text, sid text, ord bigint, weeks text[], p int, a int, e int, pct numeric) language sql stable as $$
+returns table (grp text, ta text, name text, sid text, ord bigint, weeks text[], p int, a int, e int, pct numeric, missed int[]) language sql stable as $$
   with st as materialized (select s.grp, s.ta, s.name, s.sid, s.ord from tg.students s where s.course = c and (g is null or s.grp = g) and (t is null or s.ta = t)),
   lat as materialized (select distinct on (l.grp, l.week, l.sid) l.grp, l.week, l.sid, l.status from tg.log l
                        where l.course = c and l.status in ('P', 'A', 'E') order by l.grp, l.week, l.sid, l.id desc),
@@ -211,14 +213,16 @@ returns table (grp text, ta text, name text, sid text, ord bigint, weeks text[],
                           union all select x.g, s.week from tg.sessions s cross join unnest(tg.sgroups(s)) as x(g) where s.course = c) x),
   cells as materialized (
     select st.grp, st.ta, st.name, st.sid, st.ord, w.week,
-           coalesce(lat.status, case when w.week = 1 then 'P' when h.week is not null then 'A' else '' end) as v
+           case when lat.status in ('P', 'E') then lat.status when lat.status is null and w.week = 1 then 'P' else '' end as v,
+           (w.week = 1 or h.week is not null) as held
     from st cross join generate_series(1, 14) as w(week)
     left join lat on lat.grp = st.grp and lat.sid = st.sid and lat.week = w.week
     left join held h on h.grp = st.grp and h.week = w.week)
   select cl.grp, cl.ta, cl.name, cl.sid, cl.ord, array_agg(cl.v order by cl.week),
-         count(*) filter (where cl.v = 'P')::int, count(*) filter (where cl.v = 'A')::int, count(*) filter (where cl.v = 'E')::int,
-         case when count(*) filter (where cl.v in ('P', 'A', 'E')) = 0 then null
-              else (count(*) filter (where cl.v in ('P', 'E')))::numeric / count(*) filter (where cl.v in ('P', 'A', 'E')) end
+         count(*) filter (where cl.v = 'P')::int, count(*) filter (where cl.held and cl.v = '')::int, count(*) filter (where cl.v = 'E')::int,
+         case when count(*) filter (where cl.held or cl.v <> '') = 0 then null
+              else (count(*) filter (where cl.v in ('P', 'E')))::numeric / count(*) filter (where cl.held or cl.v <> '') end,
+         coalesce(array_agg(cl.week order by cl.week) filter (where cl.held and cl.v = ''), '{}')
   from cells cl group by cl.grp, cl.ta, cl.name, cl.sid, cl.ord order by cl.ord $$;
 
 create or replace function tg.items_json(c text) returns jsonb language sql stable as $$
@@ -235,7 +239,7 @@ create or replace function tg.grade_rows(c text, g text default null, t text def
   agg as materialized (select sc.grp, sc.sid, jsonb_object_agg(sc.key, sc.score) filter (where sc.score is not null) as obj, sum(sc.score) as total
           from sc group by sc.grp, sc.sid)
   select coalesce(jsonb_agg(jsonb_build_object(
-      'group', m.grp, 'ta', m.ta, 'name', m.name, 'id', m.sid, 'weeks', to_jsonb(m.weeks), 'p', m.p, 'a', m.a, 'e', m.e,
+      'group', m.grp, 'ta', m.ta, 'name', m.name, 'id', m.sid, 'weeks', to_jsonb(m.weeks), 'p', m.p, 'a', m.a, 'e', m.e, 'missed', to_jsonb(m.missed),
       'team', (select tm.num from tg.team_members tm where tm.course = c and tm.sid = m.sid),
       'pct', coalesce(to_jsonb(m.pct), '""'::jsonb),
       'attGrade', case when att.mx > 0 and m.pct is not null then to_jsonb(round(m.pct * att.mx, 2)) else '""'::jsonb end,
@@ -388,7 +392,7 @@ begin
       'team', (select jsonb_build_object('num', t.num, 'name', t.name,
                  'leader', coalesce((select s2.name from tg.students s2 where s2.course = t.course and s2.sid = t.leader order by s2.ord limit 1), ''))
                from tg.team_members m join tg.teams t on t.course = m.course and t.num = m.num where m.course = st.course and m.sid = st.sid),
-      'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb),
+      'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'missed', to_jsonb(mx.missed), 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb),
       'grade', tg.student_grade(st.course, st.grp, st.sid, mx.pct),
       'groupAvg', (select jsonb_build_object('pct', avg((r->>'pct')::numeric) filter (where r->>'pct' <> ''), 'total', round(avg((r->>'total')::numeric), 2), 'n', count(*))
                    from jsonb_array_elements(tg.grade_rows(st.course, st.grp)) r)) order by st.course, st.grp), '[]')

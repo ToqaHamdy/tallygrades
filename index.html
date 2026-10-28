@@ -3446,8 +3446,8 @@ const BOOT = null;
         (c.team.leader ? '<small>Team leader: ' + esc(c.team.leader) + '</small>' : '') + '</div></div>' : '') +
       '<div class="my-weeks">' + (c.weeks || []).map((v, n) => '<div class="mw ' + (v || 'none') + (r.currentWeek === n + 1 ? ' now' : '') + '" title="Week ' + (n + 1) + ': ' + (word[v] || 'No check-in') + '"><i>' +
         (v || '') + '</i><span>' + (n === 6 ? 'Mid' : n === 13 ? 'Final' : 'W' + (n + 1)) + '</span></div>').join('') + '</div>' +
-      '<p class="note">' + c.p + ' present, ' + c.a + ' absent, ' + c.e + ' excused</p>' + myCompare(c) + myGrade(c.grade) + '</div>').join('') +
-      '<p class="note" style="text-align:center">P present, A absent, E excused, empty: no check-in that week. Open this page any time to see it again.</p></div>';
+      '<p class="note">' + c.p + ' present, ' + c.e + ' excused' + (c.a ? ', ' + c.a + ' missed' : '') + '</p>' + myCompare(c) + myGrade(c.grade) + '</div>').join('') +
+      '<p class="note" style="text-align:center">P present, E excused, empty: no check-in that week. Open this page any time to see it again.</p></div>';
   }
   function registration(fromLanding) {
     const device = phoneId();
@@ -4119,7 +4119,7 @@ const BOOT = null;
       if (!data.length) return toast('No students to export yet.');
       const wb = XLSX.utils.book_new(), used = {};
       data.forEach(c => {
-        const head = ['Group', 'TA', 'Student Name', 'ID'].concat(c.weeks, ['Present', 'Absent', 'Excused', 'Attendance %'],
+        const head = ['Group', 'TA', 'Student Name', 'ID'].concat(c.weeks, ['Present', 'Missed', 'Excused', 'Attendance %'],
           c.attendanceMax ? ['Attendance (' + c.attendanceMax + ')'] : [], c.items.map(it => it.item + ' (' + it.max + ')'), ['Total']);
         const rows = c.rows.map(r => [r.group, r.ta, r.name, Number(r.id)].concat(r.weeks, [r.p, r.a, r.e, r.pct],
           c.attendanceMax ? [r.attGrade] : [], c.items.map(it => r.scores[it.key] === undefined ? '' : r.scores[it.key]), [r.total]));
@@ -4484,7 +4484,9 @@ const BOOT = null;
 
   /* ----- Dashboard: attendance, grades, students at risk and teams, from the same data as Ask ----- */
   const WEEK_NAME = (n) => n === 7 ? 'Mid' : n === 14 ? 'Final' : 'W' + n;
-  const absStreak = (r) => { let best = 0, cur = 0; r.weeks.forEach(v => { if (v === 'A') { cur++; best = Math.max(best, cur); } else if (v) cur = 0; }); return best; };
+  /* the longest run of section weeks missed one after another (week 7, the midterm week, does not break a run) */
+  const absStreak = (r) => { const ms = r.missed || []; let best = 0, cur = 0, prev = -9; ms.forEach(w => { cur = (w === prev + 1 || (prev === 6 && w === 8)) ? cur + 1 : 1; best = Math.max(best, cur); prev = w; }); return best; };
+  const missedIn = (r, w) => (r.missed || []).indexOf(w) >= 0;
   const avgOf = (xs) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
   /** one-series bar chart in SVG: values 0..1 (null = no data), a dashed reference line, hover tips */
   function barChart(bars, opt) {
@@ -4534,7 +4536,7 @@ const BOOT = null;
       const avgT = avgOf(graded.map(r => Number(r.total)));
       const held = [];
       for (let w = 1; w <= 14; w++) {
-        const cells = rows.map(r => r.weeks[w - 1]).filter(Boolean), ok = cells.filter(v => v === 'P' || v === 'E').length;
+        const cells = rows.filter(r => r.weeks[w - 1] || missedIn(r, w)).map(r => r.weeks[w - 1]), ok = cells.filter(v => v === 'P' || v === 'E').length;
         held.push({ w: w, n: cells.length, ok: ok, v: cells.length ? ok / cells.length : null });
       }
       const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
@@ -4571,10 +4573,10 @@ const BOOT = null;
       }
       /* at risk */
       h += '<section class="ins-card"><div class="ins-h"><h2>Students at risk (' + risk.length + ')</h2><span>Attendance below 75%, or absent 2 weeks or more in a row. Press a student to open their group.' + (risk.length ? ' <button class="link" id="rcp" type="button">Copy names</button>' : '') + '</span></div>' +
-        (risk.length ? '<div class="table-wrap"><table><thead><tr><th>#</th><th>Student Name</th><th>ID</th><th>Group</th><th>Attendance</th><th>Absent</th><th>Why</th></tr></thead><tbody>' +
+        (risk.length ? '<div class="table-wrap"><table><thead><tr><th>#</th><th>Student Name</th><th>ID</th><th>Group</th><th>Attendance</th><th>Missed</th><th>Why</th></tr></thead><tbody>' +
           risk.map((r, i) => { const st = absStreak(r), why = [];
             if (r.pct !== '' && r.pct < .75) why.push('<span class="chip A" style="min-width:0">Below 75%</span>');
-            if (st >= 2) why.push('<span class="chip E" style="min-width:0">Absent ' + st + ' in a row</span>');
+            if (st >= 2) why.push('<span class="chip E" style="min-width:0">Missed ' + st + ' in a row</span>');
             return '<tr data-stu="' + esc(r.group) + '"><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td><td><b>' + pctS(r.pct) + '</b></td><td>' + r.a + '</td><td>' + why.join(' ') + '</td></tr>'; }).join('') + '</tbody></table></div>'
           : '<p class="note">Nobody. Every student is at 75% or above.</p>') + '</section>';
       /* teams */
@@ -4680,7 +4682,7 @@ const BOOT = null;
     if (absentWord && has(/اسبوع|week|النهارده|انهارده|today|this week| ده /)) {
       const w = nums.find(n => n >= 1 && n <= 14) || cw;
       if (!w) return say(T('Which week? For example: who was absent in week 5', 'أنهي أسبوع؟ مثلًا: مين غاب أسبوع 5'));
-      return list(T('Absent in week ' + w, 'غابوا في أسبوع ' + w), rows.filter(r => r.weeks[w - 1] === 'A'));
+      return list(T('Absent in week ' + w, 'غابوا في أسبوع ' + w), rows.filter(r => missedIn(r, w)));
     }
     if (has(/مغابش|ما غابش|مش غايب|ولا مره|never|perfect|full attendance|كل الاسابيع|حضر كل|محدش غاب/)) return list(T('Never absent', 'مغابوش خالص'), rows.filter(r => r.a === 0 && r.p > 0));
     if (absentWord && has(/اكتر|اكثر|most|top|اعلي|كتير/)) return list(T('Most absences', 'أكتر غياب'), rows.filter(r => r.a > 0).sort((a, b) => b.a - a.a).slice(0, nums[0] || 15), [T('Absent', 'غياب'), r => r.a]);
@@ -4701,7 +4703,7 @@ const BOOT = null;
     }
     if (has(/ملخص|summary|overview|متوسط|average|عامل ايه|عاملين ايه|احوال|how is|how are|نسبه الحضور|الحضور عامل|كام طالب|how many|عدد الطلبه|عدد/)) {
       const ps = rows.filter(r => r.pct !== '').map(r => Number(r.pct)), risk = rows.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length;
-      const wk = []; for (let w = 1; w <= 14; w++) { const c = rows.map(r => r.weeks[w - 1]).filter(Boolean); if (c.length) wk.push([w, c.filter(v => v !== 'A').length / c.length]); }
+      const wk = []; for (let w = 1; w <= 14; w++) { const c = rows.filter(r => r.weeks[w - 1] || missedIn(r, w)).map(r => r.weeks[w - 1]); if (c.length) wk.push([w, c.filter(Boolean).length / c.length]); }
       const last = wk[wk.length - 1], gr = rows.filter(r => Object.keys(r.scores || {}).length), avgT = avgOf(gr.map(r => Number(r.total)));
       const avg = avgOf(ps);
       return say('<b>' + T('Summary', 'الملخص') + esc(where) + '</b><div class="bot-kpis"><span><b>' + rows.length + '</b>' + T('students', 'طالب') + '</span><span><b>' + P(avg) + '</b>' + T('average attendance', 'متوسط الحضور') + '</span><span class="' + (risk ? 'warn' : '') + '"><b>' + risk + '</b>' + T('at risk', 'في خطر') + '</span>' +
@@ -5210,7 +5212,7 @@ const BOOT = null;
       }
       const who = ids.length === 1 ? esc((M.rows.find(r => r.id === ids[0]) || {}).name || '') : ids.length + ' students';
       bar.innerHTML = '<span><b>' + n + (n === 1 ? ' week' : ' weeks') + '</b> chosen for ' + who + '</span>' +
-        '<button class="btn" type="button" data-st="P">Present</button><button class="btn ghost" type="button" data-st="A">Absent</button><button class="btn ghost" type="button" data-st="E">Excused</button><button class="link" type="button" id="wsx">Clear</button>';
+        '<button class="btn" type="button" data-st="P">Present</button><button class="btn ghost" type="button" data-st="A" title="Remove the mark: the square becomes empty">Clear</button><button class="btn ghost" type="button" data-st="E">Excused</button><button class="link" type="button" id="wsx">Clear</button>';
       $('wsx').onclick = () => { sel = {}; renderList(); };
       bar.querySelectorAll('[data-st]').forEach(b => b.onclick = async () => {
         bar.querySelectorAll('button').forEach(x => x.disabled = true);
@@ -5218,7 +5220,7 @@ const BOOT = null;
         try {
           M = await api('markWeeks', PIN, g.course, g.group, items, b.dataset.st);
           sel = {}; renderList();
-          toast(n + (n === 1 ? ' week' : ' weeks') + ' marked ' + ({ P: 'present', A: 'absent', E: 'excused' }[b.dataset.st]) + '.');
+          toast(n + (n === 1 ? ' week' : ' weeks') + (b.dataset.st === 'A' ? ' cleared.' : ' marked ' + ({ P: 'present', E: 'excused' }[b.dataset.st]) + '.'));
         } catch (e) { toast(errMsg(e)); bar.querySelectorAll('button').forEach(x => x.disabled = false); }
       });
     }
@@ -5298,7 +5300,7 @@ const BOOT = null;
             rb.innerHTML = '<h2>' + (picks.length ? 'Random check: are they here?' : 'Nobody checked in yet.') + '</h2>' + picks.map((p, i) => '<div class="item"><span>' + esc(p.name) + (p.group && p.group !== g.group ? ' (' + esc(p.group) + ')' : '') + '</span><button class="btn danger" data-ab="' + i + '" type="button">Not here</button></div>').join('');
             rb.querySelectorAll('[data-ab]').forEach(b => b.onclick = async () => {
               b.disabled = true;
-              try { await api('mark', PIN, g.course, picks[b.dataset.ab].group || g.group, L.week, picks[b.dataset.ab].id, 'A'); b.textContent = 'Marked absent'; refresh(); } catch (e) { toast(errMsg(e)); b.disabled = false; }
+              try { await api('mark', PIN, g.course, picks[b.dataset.ab].group || g.group, L.week, picks[b.dataset.ab].id, 'A'); b.textContent = 'Removed'; refresh(); } catch (e) { toast(errMsg(e)); b.disabled = false; }
             });
           } catch (e) { toast(errMsg(e)); }
         };
@@ -5326,8 +5328,8 @@ const BOOT = null;
       if (M) {
         const nowW = D.currentWeek || Math.max(1, ...M.rows.map(r => r.weeks.reduce((m, v, n) => v ? n + 1 : m, 0)));
         const isOn = (id, w) => sel[id] && sel[id].has(w);
-        $('stt').innerHTML = '<span>P = present, A = absent, E = excused, empty = no check-in that week.</span><span style="color:var(--text);flex-basis:100%">Press week squares to choose them, then mark them all at once. Press a week name to choose that week for everyone.</span>';
-        $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th>' + M.weeks.map((w, n) => '<th><button type="button" class="wcol" data-col="' + (n + 1) + '" title="Choose ' + esc(w) + ' for every student shown">' + esc(w) + '</button></th>').join('') + '<th>Present</th><th>Absent</th><th>%</th></tr>';
+        $('stt').innerHTML = '<span>P = present, E = excused, empty = not present or no check-in that week.</span><span style="color:var(--text);flex-basis:100%">Press week squares to choose them, then mark them all at once. Press a week name to choose that week for everyone.</span>';
+        $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th>' + M.weeks.map((w, n) => '<th><button type="button" class="wcol" data-col="' + (n + 1) + '" title="Choose ' + esc(w) + ' for every student shown">' + esc(w) + '</button></th>').join('') + '<th>Present</th><th>Missed</th><th>%</th></tr>';
         $('rows').innerHTML = M.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
           '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '<button type="button" class="wrow" data-row="' + i + '" title="Choose every week until week ' + nowW + ' that is not present yet">Choose missing weeks</button></td><td class="mono">' + esc(r.id) + '</td>' +
           r.weeks.map((v, n) => '<td class="wc' + (isOn(r.id, n + 1) ? ' on' : '') + '" data-r="' + i + '" data-w="' + (n + 1) + '" title="Week ' + (n + 1) + ': press to choose">' + (v ? '<span class="chip ' + v + '" style="min-width:0;padding:3px 9px">' + v + '</span>' : '<span class="wc-e">+</span>') + '</td>').join('') +
@@ -5350,17 +5352,17 @@ const BOOT = null;
       }
       if (!W) return;
       const live = L && L.open && L.week === W.week;
-      const waiting = (r) => live && r.status === 'A' && !r.method;
-      $('stt').innerHTML = live ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.rows.filter(waiting).length + '</b>not checked in yet</span>' : W.held ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.absent + '</b>absent</span><span><b>' + W.excused + '</b>excused</span>'
+      const waiting = (r) => live && !r.status;
+      $('stt').innerHTML = live ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.rows.filter(waiting).length + '</b>not checked in yet</span>' : W.held ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.absent + '</b>not present</span><span><b>' + W.excused + '</b>excused</span>'
         : '<span>' + esc(W.weekLabel) + ': no check-in yet.</span>';
       $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th><th>Time</th><th>How</th><th>Status</th></tr>';
       $('rows').innerHTML = W.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
         '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + teamChip(W.course, r.team) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
-        '<td><button type="button" class="chip ' + (waiting(r) ? '' : r.status) + '" data-i="' + i + '">' + (waiting(r) ? 'Not yet' : ({ P: 'Present', A: 'Absent', E: 'Excused' }[r.status] || 'Not marked')) + '</button></td></tr>').join('');
+        '<td><button type="button" class="chip ' + (waiting(r) ? '' : r.status) + '" data-i="' + i + '">' + (waiting(r) ? 'Not yet' : ({ P: 'Present', E: 'Excused' }[r.status] || '&ndash;')) + '</button></td></tr>').join('');
       $('rows').querySelectorAll('[data-i]').forEach(b => b.onclick = async () => {
         const r = W.rows[b.dataset.i];
         b.disabled = true;
-        try { W = await api('mark', PIN, W.course, W.group, W.week, r.id, { A: 'P', '': 'P', P: 'E', E: 'A' }[r.status]); renderList(); if (L && L.open) refresh(); }
+        try { W = await api('mark', PIN, W.course, W.group, W.week, r.id, { '': 'P', P: 'E', E: 'A' }[r.status || '']); renderList(); if (L && L.open) refresh(); }
         catch (e) { toast(errMsg(e)); b.disabled = false; }
       });
       $('fl').innerHTML = W.flags.length ? W.flags.map(f => '<li>' + esc(f) + '</li>').join('') : '<li>None</li>';
@@ -5391,7 +5393,7 @@ const BOOT = null;
       '<div class="seg"><span>Copy</span><button type="button" id="cpsec">Section attendance (W1 to W12)</button><button type="button" id="cpgr">Grades</button><button type="button" id="cpall">Whole table</button></div></div>' +
       '<div class="table-wrap gtable"><table><thead id="th"></thead><tbody id="rows"><tr><td style="color:var(--muted)">Loading</td></tr></tbody></table></div>' +
       '<p class="note" style="margin-top:14px">Copy section attendance gives 1 for present (or excused) and leaves absent students empty, so it never writes 0 over a mark another TA already put. Weeks 1 to 6 and 8 to 13 become W1 to W12, in the order of the course sheet. In Excel, click the first student\'s W1 cell, then Paste Special and tick <b>Skip blanks</b>, so the empty cells keep what is already there.</p>' +
-      '<p class="note wklegend"><i class="P"></i>Present <i class="A"></i>Absent <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
+      '<p class="note wklegend"><i class="P"></i>Present <i class="E"></i>Excused <i class="none"></i>No check-in that week. The outlined squares are week 7 (Midterm) and week 14 (Final). Hover a square to see the week.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     const unsaved = () => Object.keys(dirty).length;
     leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
