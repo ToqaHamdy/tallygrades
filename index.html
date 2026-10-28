@@ -227,6 +227,18 @@
   .ckall { display: block; margin: 4px auto 0; border: 1px solid var(--line); background: var(--card2); color: var(--muted); border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 11px; cursor: pointer; text-transform: none; letter-spacing: 0; }
   .ckall:hover { color: var(--text); border-color: var(--ok); }
   .ckit-l { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .tbar { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .tb { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    font: inherit; font-size: 14.5px; font-weight: 600; text-decoration: none; cursor: pointer; box-shadow: var(--shadow); white-space: nowrap;
+    transition: transform .2s cubic-bezier(.2,1.4,.4,1), border-color .2s, background-color .2s, box-shadow .2s; }
+  .tb svg { color: var(--muted); transition: color .2s, transform .3s cubic-bezier(.2,1.4,.4,1); flex: 0 0 auto; }
+  .tb:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: 0 12px 26px -14px var(--accent); }
+  .tb:hover svg { color: var(--accent); transform: scale(1.12); }
+  .tb:active { transform: translateY(0) scale(.97); }
+  .tb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tb.primary { background: linear-gradient(135deg, var(--grad2), var(--accent)); border-color: transparent; color: #fff; box-shadow: 0 12px 26px -12px var(--accent); }
+  .tb.primary svg { color: #fff; } .tb.primary:hover svg { color: #fff; }
+  @media (max-width: 640px) { .tbar { flex-wrap: nowrap; overflow-x: auto; margin: 4px -16px 0; padding: 4px 16px 8px; scrollbar-width: none; } .tbar::-webkit-scrollbar { display: none; } .tb { padding: 9px 13px; font-size: 13.5px; } }
   .my-grade { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 6px; }
   .mg-head { display: flex; justify-content: space-between; align-items: baseline; }
   .mg-head span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
@@ -3034,6 +3046,21 @@ const BOOT = null;
       el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px');
     }, { passive: true });
   })();
+  /* the tools row at the top of the home and course pages: a button with an icon for each tool */
+  const TB_ICONS = {
+    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    spark: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 1.8 1.8.7-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7z"/>',
+    upload: '<path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+    download: '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    archive: '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/>'
+  };
+  const tb = (idOrHref, icon, label, primary) => {
+    const svg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + TB_ICONS[icon] + '</svg>';
+    return idOrHref.charAt(0) === '#' ? '<a class="tb' + (primary ? ' primary' : '') + '" href="' + idOrHref + '">' + svg + '<span>' + label + '</span></a>'
+      : '<button class="tb' + (primary ? ' primary' : '') + '" type="button" id="' + idOrHref + '">' + svg + '<span>' + label + '</span></button>';
+  };
   /* numbers in the summary tiles count up once when a page opens */
   function countUp(scope) {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -3664,8 +3691,9 @@ const BOOT = null;
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
-    const top = '<a class="link" href="#insights">Dashboard &rarr;</a><button class="link" id="ask">Ask the assistant</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
-      ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button>' : '');
+    const tools = (dashHref) => '<nav class="tbar" aria-label="Tools">' + tb(dashHref, 'chart', 'Dashboard', true) + tb('ask', 'spark', 'Ask the assistant') + tb('impatt', 'upload', 'Import attendance') +
+      tb('final', 'download', 'Download final sheet') + tb('regqr', 'qr', 'Registration QR') + (isAdmin && !C ? tb('term', 'calendar', 'Term start') + tb('backup', 'archive', 'Download backup') : '') + '</nav>';
+    const top = tools('#insights');
     let head;
     if (C) {
       /* one course: its summary, its grades (admin), then its groups or teams */
@@ -3674,14 +3702,14 @@ const BOOT = null;
       const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
       head = '<button class="back" id="home" type="button">&larr; All courses</button>' +
         '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
-        '<div class="links" style="margin:0"><a class="link" href="#insights/' + encodeURIComponent(C) + '">Dashboard &rarr;</a><button class="link" id="ask">Ask the assistant</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
+        tools('#insights/' + encodeURIComponent(C)) + '</div>' +
         '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
           tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' + quickHtml(C) +
         (isAdmin ? '<section class="course cset" style="margin-bottom:30px"><div class="course-head"><h2 style="font-size:20px">Grades</h2><span>the same for every group</span></div><div id="cs0"><p class="note" style="padding:16px 0">Loading</p></div></section>' : '');
     } else {
       /* home: a button for each course, then the tabs */
       const cs = [...new Set(groups.map(g => g.course))].sort();
-      head = '<div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">' + hello + '</p></div><div class="links" style="margin:0">' + top + '</div></div>' +
+      head = '<div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">' + hello + '</p></div>' + top + '</div>' +
         (cs.length ? '<div class="ccards">' + cs.map(c => {
           const gs = groups.filter(g => g.course === c), nt = teams.filter(t => t.course === c).length, lv = gs.filter(g => g.live).length;
           return '<a class="ccard" href="' + courseHash(c) + '"><span class="cbadge">' + esc(initials(c)) + '</span><span class="cinfo"><b>' + esc(c) + '</b><small>' + gs.length + (gs.length === 1 ? ' group, ' : ' groups, ') +
