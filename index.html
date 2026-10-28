@@ -180,6 +180,11 @@
   .mw.E i { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
   .mw.now i { outline: 2px solid var(--ink); outline-offset: 1px; }
   .mw span { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .ch-left { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; }
+  .cview { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--card); }
+  .cview button { background: none; border: 0; padding: 7px 14px; font-weight: 600; font-size: 14px; color: var(--muted); }
+  .cview button + button { border-left: 1px solid var(--line); }
+  .cview button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2872,6 +2877,8 @@ const BOOT = null;
   }
 
   /* =============== STAFF =============== */
+  let courseView = {};
+  try { courseView = JSON.parse(store.sget('tg_cview') || '{}') || {}; } catch (e) {}
   let PIN = store.get('tg_token') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
   /* ----- addresses: #group/<course>/<group> and #grades/<course>/<group>, so each group can open in its own browser tab ----- */
   const pageHash = (kind, g) => '#' + kind + '/' + encodeURIComponent(g.course) + '/' + encodeURIComponent(g.group);
@@ -3018,25 +3025,15 @@ const BOOT = null;
     const mine = groups.filter(g => g.ta === D.me.name);
     if ((tab === 'staff' || tab === 'courses') && !isAdmin) tab = 'mine';
     const teams = D.teams || [];
-    if (tab === 'teams' && !teams.length) tab = 'mine';
+    if (tab === 'teams') tab = 'mine';
     if (tab === 'mine' && !mine.length && groups.length) tab = 'all';
     const list = tab === 'mine' ? mine : groups;
     const tabs = [['mine', 'My groups (' + mine.length + ')'], ['all', 'All groups (' + groups.length + ')']];
     const waiting = isAdmin ? D.staff.filter(x => x.status === 'pending') : [];
-    if (teams.length) tabs.push(['teams', 'Teams (' + teams.length + ')']);
     if (isAdmin) tabs.push(['staff', 'TAs (' + D.staff.filter(x => x.role !== 'Admin' && x.status !== 'pending').length + ')' + (waiting.length ? ', ' + waiting.length + ' waiting' : '')]);
     if (isAdmin) tabs.push(['courses', 'Courses (' + (D.allCourses || []).length + ')']);
     let body = '';
-    if (tab === 'teams') {
-      const tHash = (t) => '#team/' + encodeURIComponent(t.course) + '/' + t.num;
-      body = [...new Set(teams.map(t => t.course))].map(c => '<section class="course"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + teams.filter(t => t.course === c).length + ' teams, ' +
-          teams.filter(t => t.course === c).reduce((n, t) => n + t.count, 0) + ' students</span></div><div class="letters">' +
-        teams.filter(t => t.course === c).map(t => '<div class="letter team" style="--tc:' + teamColor(t.num) + '"><div class="letter-head"><span class="letter-big">' + t.num + '</span>' +
-          '<div><div class="team-name">' + esc(t.name) + '</div><span class="letter-meta">' + t.count + ' students, ' + (t.groups || []).map(esc).join(', ') + '</span></div></div>' +
-          '<p class="note" style="margin:12px 0 0">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></p>' +
-          '<div class="links" style="margin:12px 0 6px"><a class="link" href="' + tHash(t) + '">Grade team &rarr;</a><a class="link newtab" href="' + tHash(t) + '" target="_blank" rel="noopener" title="Open in a new browser tab">&#8599;</a></div></div>').join('') +
-        '</div></section>').join('');
-    } else if (tab === 'courses') {
+    if (tab === 'courses') {
       const all = D.allCourses || [];
       body = all.length ? '<p class="sub" style="margin:-8px 0 22px">The grade distribution of each course. It is the same for every group of the course. The attendance mark is calculated from each student\'s attendance %.</p>' +
         all.map((c, ci) => '<section class="course cset"><div class="course-head"><h2>' + esc(c) + '</h2><span>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</span></div><div id="cs' + ci + '"><p class="note" style="padding:16px 0">Loading</p></div></section>').join('')
@@ -3072,6 +3069,12 @@ const BOOT = null;
           '<div class="gmeta">' + g.count + ' students, ' + (g.registered || 0) + ' phones</div><div class="gbar" title="' + pct + '% of phones registered"><i style="width:' + pct + '%"></i></div></div>' +
           (links ? '<div class="links">' + links + '</div>' : '<div class="owner">Belongs to ' + esc(g.ta) + '</div>') + '</div>';
       };
+      /* each course section shows its groups or, with the switch next to its name, its project teams */
+      const tHash = (t) => '#team/' + encodeURIComponent(t.course) + '/' + t.num;
+      const teamBlocks = (c) => teams.filter(t => t.course === c).map(t => '<div class="letter team" style="--tc:' + teamColor(t.num) + '" data-tq="' + esc((t.num + ' ' + t.name + ' ' + t.leader).toLowerCase()) + '"><div class="letter-head"><span class="letter-big">' + t.num + '</span>' +
+          '<div><div class="team-name">' + esc(t.name) + '</div><span class="letter-meta">' + t.count + ' students, ' + (t.groups || []).map(esc).join(', ') + '</span></div></div>' +
+          '<p class="note" style="margin:12px 0 0">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></p>' +
+          '<div class="links" style="margin:12px 0 6px"><a class="link" href="' + tHash(t) + '">Grade team &rarr;</a><a class="link newtab" href="' + tHash(t) + '" target="_blank" rel="noopener" title="Open in a new browser tab">&#8599;</a></div></div>').join('');
       const sections = [];
       list.forEach((g, i) => { let sec = sections.find(x => x.course === g.course); if (!sec) { sec = { course: g.course, rows: [] }; sections.push(sec); } sec.rows.push([g, i]); });
       body = '<div class="toolbar">' + (list.length > 4 ? '<div class="filters"><select class="in" id="fc"><option value="">All courses</option>' +
@@ -3085,8 +3088,14 @@ const BOOT = null;
             const L = (String(g.group).match(/^[A-Za-z]+/) || [''])[0].toUpperCase() || '#';
             let b = letters.find(x => x.L === L); if (!b) { b = { L: L, rows: [] }; letters.push(b); } b.rows.push([g, i]);
           });
-          return '<section class="course" data-course="' + esc(sec.course) + '"><div class="course-head"><h2>' + esc(sec.course) + '</h2><span>' + sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') +
-            sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students</span></div><div class="letters">' +
+          const nT = teams.filter(t => t.course === sec.course).length, view = nT && courseView[sec.course] === 'teams' ? 'teams' : 'groups';
+          const sw = nT ? '<div class="cview" role="tablist"><button type="button" role="tab" data-cv="' + esc(sec.course) + '|groups" aria-selected="' + (view === 'groups') + '">Groups</button>' +
+            '<button type="button" role="tab" data-cv="' + esc(sec.course) + '|teams" aria-selected="' + (view === 'teams') + '">Teams (' + nT + ')</button></div>' : '';
+          const head = '<section class="course" data-course="' + esc(sec.course) + '" data-view="' + view + '"><div class="course-head"><div class="ch-left"><h2>' + esc(sec.course) + '</h2>' + sw + '</div><span>' +
+            (view === 'teams' ? nT + ' teams, ' + teams.filter(t => t.course === sec.course).reduce((n, t) => n + t.count, 0) + ' students'
+              : sec.rows.length + (sec.rows.length > 1 ? ' groups, ' : ' group, ') + sec.rows.reduce((t, [g]) => t + g.count, 0) + ' students') + '</span></div>';
+          if (view === 'teams') return head + '<div class="letters">' + teamBlocks(sec.course) + '</div></section>';
+          return head + '<div class="letters">' +
             letters.map(b => '<div class="letter"><div class="letter-head"><span class="letter-big">' + esc(b.L) + '</span><span class="letter-meta">Group ' + esc(b.L) + '<br>' +
               b.rows.length + (b.rows.length > 1 ? ' groups, ' : ' group, ') + b.rows.reduce((t, [g]) => t + g.count, 0) + ' students</span></div>' + b.rows.map(([g, i]) => groupRow(g, i)).join('') + '</div>').join('') +
             '</div></section>';
@@ -3126,12 +3135,21 @@ const BOOT = null;
     });
     if ($('addGroup')) $('addGroup').onclick = addGroupDialog;
     if ($('upload')) $('upload').onclick = uploadDialog;
+    on('[data-cv]', b => {
+      const [c, v] = b.dataset.cv.split('|');
+      courseView[c] = v; store.sset('tg_cview', JSON.stringify(courseView));
+      dashboard();
+    });
     const applyFilter = () => {
+      const q = groupQuery.toLowerCase();
       app.querySelectorAll('.grow[data-c]').forEach(c => {
-        c.hidden = (courseFilter && c.dataset.c !== courseFilter) || (groupQuery && c.dataset.q.indexOf(groupQuery.toLowerCase()) < 0);
+        c.hidden = (courseFilter && c.dataset.c !== courseFilter) || (q && c.dataset.q.indexOf(q) < 0);
       });
-      app.querySelectorAll('.course[data-course] .letter').forEach(b => { b.hidden = !b.querySelector('.grow:not([hidden])'); });
-      app.querySelectorAll('.course[data-course]').forEach(sec => { sec.hidden = !sec.querySelector('.grow:not([hidden])'); });
+      app.querySelectorAll('.course[data-course] .letter[data-tq]').forEach(b => { b.hidden = q && b.dataset.tq.indexOf(q) < 0; });
+      app.querySelectorAll('.course[data-course] .letter:not([data-tq])').forEach(b => { b.hidden = !b.querySelector('.grow:not([hidden])'); });
+      app.querySelectorAll('.course[data-course]').forEach(sec => {
+        sec.hidden = (courseFilter && sec.dataset.course !== courseFilter) || !sec.querySelector(sec.dataset.view === 'teams' ? '.letter[data-tq]:not([hidden])' : '.grow:not([hidden])');
+      });
     };
     if ($('fc')) $('fc').onchange = () => { courseFilter = $('fc').value; applyFilter(); };
     if ($('fq')) $('fq').oninput = () => { groupQuery = $('fq').value.trim(); applyFilter(); };
@@ -3855,7 +3873,7 @@ const BOOT = null;
     stopTimers();
     let V = null; const dirty = {};
     const unsaved = () => Object.keys(dirty).length;
-    app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button">&larr; Teams</button>' +
+    app.innerHTML = '<div class="wrap" style="--tc:' + teamColor(t.num) + '"><button class="back" id="bk" type="button">&larr; ' + esc(t.course) + '</button>' +
       '<div class="top"><div class="gtitle"><span class="gbadge team-badge">T' + t.num + '</span><div><h1>' + esc(t.name) + '</h1><p class="sub">Team ' + t.num + ' of ' + esc(t.course) + ', ' + t.count + ' students from ' +
       (t.groups || []).map(esc).join(', ') + '. Type a mark in the <b>Whole team</b> row to give it to everyone, change any student after that, then press Save.</p></div></div></div>' +
       '<div class="gtools"><input class="in" id="sr" type="search" placeholder="Search a name or ID"><span class="note">Leader: <b style="color:var(--text)">' + esc(t.leader || 'not set') + '</b></span></div>' +
@@ -3863,7 +3881,7 @@ const BOOT = null;
       '<p class="note" style="margin-top:14px">Each mark is saved in the student\'s own group, so it also shows on that group\'s grades page.</p>' +
       '<div class="savebar" id="sbar"><span id="st">All marks saved</span><button class="btn" id="save" type="button" disabled>Save</button></div></div>';
     leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
-    $('bk').onclick = () => { tab = 'teams'; go(''); };
+    $('bk').onclick = () => { courseView[t.course] = 'teams'; store.sset('tg_cview', JSON.stringify(courseView)); go(''); };
     $('sr').oninput = () => { const q = $('sr').value.trim().toLowerCase(); $('rows').querySelectorAll('tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; }); };
     const fmtPct = (x) => x === '' ? '' : Math.round(x * 100) + '%';
     const level = (f) => f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
