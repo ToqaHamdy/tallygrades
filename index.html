@@ -174,6 +174,34 @@
   .pw-wrap .in { width: 100%; padding-right: 50px; }
   .pw-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; border-radius: 10px; }
   .pw-eye:hover { color: var(--text); background: var(--soft); }
+  .ins-bar { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 18px; }
+  .ins-bar .f { flex: 0 1 320px; margin: 0; }
+  .ins-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; margin: 0 0 18px; box-shadow: var(--shadow); }
+  .ins-h { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 12px; }
+  .ins-h h2 { margin: 0; font-size: 20px; } .ins-h > span { color: var(--muted); font-size: 13.5px; }
+  .ins-card .table-wrap { box-shadow: none; }
+  .ins-card tr[data-grp], .ins-card tr[data-stu], .ins-card tr[data-team] { cursor: pointer; }
+  .ins-card tr[data-grp]:hover td, .ins-card tr[data-stu]:hover td, .ins-card tr[data-team]:hover td { background: var(--soft); }
+  .chart { width: 100%; height: auto; display: block; }
+  .ch-grid { stroke: var(--line); stroke-width: 1; }
+  .ch-ref { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .ch-ax { fill: var(--muted); font-size: 11px; font-family: var(--mono); }
+  @media (max-width: 640px) { .ch-ax { font-size: 10px; } .ins-card { padding: 16px; } }
+  .ch-bar { fill: var(--accent); transition: opacity .15s; } .ch-bar.low { fill: var(--chart-low, var(--warn)); } .ch-bar.hot { opacity: .75; }
+  :root[data-theme="light"] { --chart-low: #F59E0B; }
+  .ch-none { fill: var(--line); }
+  .chtip { position: fixed; z-index: 100; pointer-events: none; background: var(--text); color: var(--bg); font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 8px; white-space: nowrap; }
+  .gstat.gs-risk b { color: var(--warn); }
+  .meter { display: inline-block; width: 90px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; vertical-align: middle; }
+  .meter i { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+  .meter.low i { background: var(--chart-low, var(--warn)); } .meter.grp i { background: var(--muted); }
+  .mrow { display: inline-flex; align-items: center; gap: 10px; }
+  .my-budget { margin: 0; padding: 10px 12px; border-radius: 12px; font-size: 14px; }
+  .my-budget.ok { background: var(--ok-bg); } .my-budget.warn { background: var(--warn-bg); } .my-budget.lo { background: var(--err-bg); }
+  .my-cmp { display: grid; gap: 10px; }
+  .cmp > span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .cmp-row { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; margin-top: 6px; font-size: 14px; }
+  .cmp-row .meter { width: 100%; } .cmp-row small { color: var(--muted); }
   .my-grade { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 6px; }
   .mg-head { display: flex; justify-content: space-between; align-items: baseline; }
   .mg-head span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
@@ -3036,6 +3064,19 @@ const BOOT = null;
   }
   new MutationObserver(() => addEyes()).observe(document.body, { childList: true, subtree: true });
 
+  /** The student next to their group: attendance and marks, and how many more weeks they can miss. */
+  function myCompare(c) {
+    const A = c.groupAvg || {}, out = [];
+    const left = 3 - c.a; /* 12 section weeks: 3 absences keep a student at 75% */
+    const budget = left > 0 ? '<p class="my-budget ok">You can miss <b>' + left + (left === 1 ? ' more week' : ' more weeks') + '</b> and stay at 75% or above.</p>'
+      : left === 0 ? '<p class="my-budget warn">Do not miss any more weeks. One more absence takes you below 75%.</p>'
+      : '<p class="my-budget lo">You are below 75%. Talk to your TA.</p>';
+    const bar = (label, you, them, max, fmt) => '<div class="cmp"><span>' + label + '</span><div class="cmp-row"><small>You</small><span class="meter"><i style="width:' + Math.round(100 * Math.min(1, (you || 0) / max)) + '%"></i></span><b>' + fmt(you) + '</b></div>' +
+      '<div class="cmp-row"><small>Group</small><span class="meter grp"><i style="width:' + Math.round(100 * Math.min(1, (them || 0) / max)) + '%"></i></span><b>' + fmt(them) + '</b></div></div>';
+    if (c.pct !== '' && A.pct != null) out.push(bar('Attendance', Number(c.pct), Number(A.pct), 1, v => Math.round(v * 100) + '%'));
+    if (c.grade && c.grade.max && A.total != null) out.push(bar('Total marks', Number(c.grade.total), Number(A.total), c.grade.max, v => (Math.round(v * 10) / 10) + ' / ' + c.grade.max));
+    return budget + (out.length ? '<div class="my-cmp">' + out.join('') + '<p class="note" style="margin:0">Group: the average of the ' + (A.n || '') + ' students in group ' + esc(c.group) + '.</p></div>' : '');
+  }
   /** The marks of one course: the attendance mark, each grade the TA saved, and the total. */
   function myGrade(G) {
     if (!G) return '';
@@ -3064,7 +3105,7 @@ const BOOT = null;
         (c.team.leader ? '<small>Team leader: ' + esc(c.team.leader) + '</small>' : '') + '</div></div>' : '') +
       '<div class="my-weeks">' + (c.weeks || []).map((v, n) => '<div class="mw ' + (v || 'none') + (r.currentWeek === n + 1 ? ' now' : '') + '" title="Week ' + (n + 1) + ': ' + (word[v] || 'No check-in') + '"><i>' +
         (v || '') + '</i><span>' + (n === 6 ? 'Mid' : n === 13 ? 'Final' : 'W' + (n + 1)) + '</span></div>').join('') + '</div>' +
-      '<p class="note">' + c.p + ' present, ' + c.a + ' absent, ' + c.e + ' excused</p>' + myGrade(c.grade) + '</div>').join('') +
+      '<p class="note">' + c.p + ' present, ' + c.a + ' absent, ' + c.e + ' excused</p>' + myCompare(c) + myGrade(c.grade) + '</div>').join('') +
       '<p class="note" style="text-align:center">P present, A absent, E excused, empty: no check-in that week. Open this page any time to see it again.</p></div>';
   }
   function registration(fromLanding) {
@@ -3221,6 +3262,8 @@ const BOOT = null;
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
     if (location.hash === '#settings') { acct(); return swap(settingsPage); }
+    const mi = location.hash.match(/^#insights(?:\/([^/]*))?$/);
+    if (mi) { acct(); return swap(() => insightsPage(mi[1] ? decodeURIComponent(mi[1]) : '')); }
     const mc = location.hash.match(/^#course\/([^/]*)$/);
     courseOnly = mc ? decodeURIComponent(mc[1]) : null;
     stopTimers();
@@ -3529,7 +3572,7 @@ const BOOT = null;
     const thisWeek = D.currentWeek ? ' This week is <b>' + esc(D.weeks[D.currentWeek - 1][1]) + '</b>.' : '';
     const hello = (isAdmin ? 'Hi ' + esc(D.me.name) + '. You are the admin: you see every group and manage the TAs.' + (waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' waiting &rarr;</button>' : '')
       : 'Hi ' + esc(D.me.name) + '. ' + (D.me.courses && D.me.courses.length ? 'Your course' + (D.me.courses.length > 1 ? 's: ' : ': ') + D.me.courses.map(esc).join(', ') + '. ' : '') + 'Your groups are under My groups. To take a group, open All groups and press This is my group.') + thisWeek;
-    const top = '<button class="link" id="ask">Ask about your students</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
+    const top = '<a class="link" href="#insights">Dashboard &rarr;</a><button class="link" id="ask">Ask about your students</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button>' + (isAdmin
       ? '<button class="link" id="term">Term start</button><button class="link" id="backup">Download backup</button>' : '');
     let head;
     if (C) {
@@ -3539,7 +3582,7 @@ const BOOT = null;
       const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
       head = '<button class="back" id="home" type="button">&larr; All courses</button>' +
         '<div class="top"><div class="gtitle"><span class="gbadge">' + esc(initials(C)) + '</span><div><h1>' + esc(C) + '</h1><p class="sub">' + tas + (tas === 1 ? ' TA' : ' TAs') + ' teach this course.' + thisWeek + '</p></div></div>' +
-        '<div class="links" style="margin:0"><button class="link" id="ask">Ask about this course</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
+        '<div class="links" style="margin:0"><a class="link" href="#insights/' + encodeURIComponent(C) + '">Dashboard &rarr;</a><button class="link" id="ask">Ask about this course</button><button class="link" id="impatt">Import attendance</button><button class="link" id="final">Download final sheet</button><button class="link" id="regqr">Registration QR</button></div></div>' +
         '<div class="gstats">' + tile(list.length, list.length === 1 ? 'group' : 'groups') + tile(n, 'students') + tile((n ? Math.round(100 * reg / n) : 0) + '%', 'phones registered') +
           tile(live, live === 1 ? 'group live now' : 'groups live now', live ? 'gs-live' : '') + (ts.length ? tile(ts.length, 'project teams') : '') + '</div>' + quickHtml(C) +
         (isAdmin ? '<section class="course cset" style="margin-bottom:30px"><div class="course-head"><h2 style="font-size:20px">Grades</h2><span>the same for every group</span></div><div id="cs0"><p class="note" style="padding:16px 0">Loading</p></div></section>' : '');
@@ -3853,6 +3896,125 @@ const BOOT = null;
     }
     return sheets;
   }
+  /* ----- Dashboard: attendance, grades, students at risk and teams, from the same data as Ask ----- */
+  const WEEK_NAME = (n) => n === 7 ? 'Mid' : n === 14 ? 'Final' : 'W' + n;
+  const absStreak = (r) => { let best = 0, cur = 0; r.weeks.forEach(v => { if (v === 'A') { cur++; best = Math.max(best, cur); } else if (v) cur = 0; }); return best; };
+  const avgOf = (xs) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  /** one-series bar chart in SVG: values 0..1 (null = no data), a dashed reference line, hover tips */
+  function barChart(bars, opt) {
+    const narrow = innerWidth < 640, W = narrow ? 420 : 760, H = narrow ? 260 : 230, L = narrow ? 34 : 40, R = 6, T = 14, B = 28, n = bars.length, slot = (W - L - R) / n, bw = Math.min(42, slot - 6);
+    const y = (v) => T + (H - T - B) * (1 - v);
+    let g = [0, .25, .5, .75, 1].map(v => '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" class="ch-grid"/><text x="' + (L - 8) + '" y="' + (y(v) + 4) + '" class="ch-ax" text-anchor="end">' + Math.round(v * (opt.max || 100)) + (opt.unit || '') + '</text>').join('');
+    if (opt.ref != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(opt.ref) + '" y2="' + y(opt.ref) + '" class="ch-ref"/>';
+    bars.forEach((b, i) => {
+      const x = L + i * slot + (slot - bw) / 2;
+      g += '<text x="' + (x + bw / 2) + '" y="' + (H - 8) + '" class="ch-ax" text-anchor="middle">' + esc(b.label) + '</text>';
+      if (b.v == null) { g += '<rect x="' + x + '" y="' + (y(0) - 3) + '" width="' + bw + '" height="3" rx="1.5" class="ch-none" data-tip="' + esc(b.tip) + '"/>'; return; }
+      const top = y(Math.max(0, Math.min(1, b.v))), h = Math.max(2, y(0) - top), r = Math.min(4, h / 2, bw / 2);
+      g += '<path d="M' + x + ',' + y(0) + 'V' + (top + r) + 'Q' + x + ',' + top + ' ' + (x + r) + ',' + top + 'H' + (x + bw - r) + 'Q' + (x + bw) + ',' + top + ' ' + (x + bw) + ',' + (top + r) + 'V' + y(0) + 'Z" class="ch-bar' + (b.low ? ' low' : '') + '"/>' +
+        '<rect x="' + (L + i * slot) + '" y="' + T + '" width="' + slot + '" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc(b.tip) + '"/>';
+    });
+    return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opt.label) + '">' + g + '</svg>';
+  }
+  function bindTips(root) {
+    let tt = $('chtip');
+    if (!tt) { tt = document.createElement('div'); tt.id = 'chtip'; tt.className = 'chtip'; tt.hidden = true; document.body.appendChild(tt); }
+    root.querySelectorAll('[data-tip]').forEach(el => {
+      el.addEventListener('pointerenter', () => { tt.textContent = el.dataset.tip; tt.hidden = false; el.parentNode.querySelectorAll('.hot').forEach(x => x.classList.remove('hot')); const bar = el.previousElementSibling; if (bar && bar.classList.contains('ch-bar')) bar.classList.add('hot'); });
+      el.addEventListener('pointermove', (e) => { tt.style.left = Math.min(innerWidth - tt.offsetWidth - 8, e.clientX + 14) + 'px'; tt.style.top = (e.clientY - tt.offsetHeight - 12) + 'px'; });
+      el.addEventListener('pointerleave', () => { tt.hidden = true; root.querySelectorAll('.hot').forEach(x => x.classList.remove('hot')); });
+    });
+  }
+  async function insightsPage(wantCourse) {
+    stopTimers();
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; ' + (wantCourse ? esc(wantCourse) : 'Home') + '</button><div class="top"><div><h1>Dashboard</h1><p class="sub">Attendance, grades, students at risk and teams.</p></div></div><div id="ins"><p class="note">Loading</p></div></div>';
+    $('bk').onclick = () => go(wantCourse ? courseHash(wantCourse) : '');
+    let data;
+    try { data = await api('askData', PIN); } catch (e) { $('ins').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
+    if (!$('ins')) return;
+    if (!data.courses.length) { $('ins').innerHTML = '<div class="empty">No students yet.</div>'; return; }
+    let course = data.courses.some(c => c.course === wantCourse) ? wantCourse : (store.get('tg_ins_course') || '');
+    if (!data.courses.some(c => c.course === course)) course = data.courses[0].course;
+    let grp = '';
+    const draw = () => {
+      const C = data.courses.find(c => c.course === course);
+      const groups = [...new Set(C.rows.map(r => r.group))].sort(numeric);
+      if (grp && groups.indexOf(grp) < 0) grp = '';
+      const rows = C.rows.filter(r => !grp || r.group === grp);
+      const items = C.items, maxT = (C.attendanceMax || 0) + items.reduce((t, it) => t + (isBonus(it) ? 0 : Number(it.max)), 0);
+      const pcts = rows.filter(r => r.pct !== '').map(r => Number(r.pct));
+      const risk = rows.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).sort((a, b) => (a.pct === '' ? 1 : a.pct) - (b.pct === '' ? 1 : b.pct));
+      const graded = rows.filter(r => Object.keys(r.scores || {}).length || (C.attendanceMax && r.pct !== ''));
+      const avgT = avgOf(graded.map(r => Number(r.total)));
+      const held = [];
+      for (let w = 1; w <= 14; w++) {
+        const cells = rows.map(r => r.weeks[w - 1]).filter(Boolean), ok = cells.filter(v => v === 'P' || v === 'E').length;
+        held.push({ w: w, n: cells.length, ok: ok, v: cells.length ? ok / cells.length : null });
+      }
+      const tile = (big, label, cls) => '<div class="gstat' + (cls ? ' ' + cls : '') + '"><b>' + big + '</b><span>' + label + '</span></div>';
+      const pctS = (v) => v == null || v === '' ? '&ndash;' : Math.round(v * 100) + '%';
+      const meter = (v, low) => '<span class="meter' + (low ? ' low' : '') + '"><i style="width:' + Math.round((v || 0) * 100) + '%"></i></span>';
+      let h = '<div class="ins-bar"><label class="f">Course<select class="in" id="ic">' + data.courses.map(c => '<option' + (c.course === course ? ' selected' : '') + '>' + esc(c.course) + '</option>').join('') + '</select></label>' +
+        '<label class="f">Group<select class="in" id="ig"><option value="">All groups (' + groups.length + ')</option>' + groups.map(g => '<option' + (g === grp ? ' selected' : '') + '>' + esc(g) + '</option>').join('') + '</select></label></div>';
+      h += '<div class="gstats">' + tile(rows.length, 'students') + tile(pcts.length ? Math.round(100 * avgOf(pcts)) + '%' : '&ndash;', 'average attendance') +
+        tile(risk.length, 'students at risk', risk.length ? 'gs-risk' : '') + tile(held.filter(x => x.n).length, 'weeks with attendance') +
+        (maxT ? tile(avgT == null ? '&ndash;' : (Math.round(avgT * 10) / 10) + '<small>/ ' + maxT + '</small>', 'average total') : '') + '</div>';
+      /* attendance by week */
+      h += '<section class="ins-card"><div class="ins-h"><h2>Attendance by week</h2><span>Present or excused, out of the students marked that week. The dashed line is 75%.</span></div>' +
+        barChart(held.map(x => ({ label: WEEK_NAME(x.w), v: x.v, low: x.v != null && x.v < .75, tip: x.v == null ? 'Week ' + x.w + ': no attendance' : 'Week ' + x.w + ': ' + Math.round(x.v * 100) + '% (' + x.ok + ' of ' + x.n + ')' })), { ref: .75, unit: '%', label: 'Attendance by week' }) + '</section>';
+      /* groups */
+      if (!grp && groups.length > 1) {
+        const gs = groups.map(g => { const rs = C.rows.filter(r => r.group === g), ps = rs.filter(r => r.pct !== '').map(r => Number(r.pct)), gr = rs.filter(r => Object.keys(r.scores || {}).length || (C.attendanceMax && r.pct !== ''));
+          return { g: g, ta: rs[0] ? rs[0].ta : '', n: rs.length, pct: avgOf(ps), risk: rs.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length, tot: avgOf(gr.map(r => Number(r.total))) }; });
+        h += '<section class="ins-card"><div class="ins-h"><h2>Groups</h2><span>Press a group to see only that group.</span></div><div class="table-wrap"><table><thead><tr><th>Group</th><th>TA</th><th>Students</th><th>Average attendance</th><th>At risk</th>' + (maxT ? '<th>Average total</th>' : '') + '</tr></thead><tbody>' +
+          gs.map(x => '<tr data-grp="' + esc(x.g) + '"><td><b>' + esc(x.g) + '</b></td><td>' + esc(x.ta || '') + '</td><td>' + x.n + '</td><td><span class="mrow">' + meter(x.pct, x.pct != null && x.pct < .75) + '<b>' + pctS(x.pct) + '</b></span></td>' +
+            '<td>' + (x.risk ? '<span class="chip A" style="min-width:0">' + x.risk + '</span>' : '0') + '</td>' + (maxT ? '<td>' + (x.tot == null ? '&ndash;' : Math.round(x.tot * 10) / 10 + ' / ' + maxT) + '</td>' : '') + '</tr>').join('') + '</tbody></table></div></section>';
+      }
+      /* grades */
+      if (maxT) {
+        const buckets = Array.from({ length: 10 }, (_, i) => ({ i: i, n: 0 }));
+        graded.forEach(r => { buckets[Math.min(9, Math.floor(10 * Number(r.total) / maxT))].n++; });
+        const top = Math.max(1, ...buckets.map(b => b.n));
+        h += '<section class="ins-card"><div class="ins-h"><h2>Grades</h2><span>How many students have each total, out of ' + maxT + '. ' + graded.length + ' of ' + rows.length + ' students have marks.</span></div>' +
+          barChart(buckets.map(b => ({ label: (b.i * 10) + '%', v: b.n / top, tip: b.n + (b.n === 1 ? ' student' : ' students') + ' with ' + Math.round(b.i * maxT / 10 * 10) / 10 + ' to ' + Math.round((b.i + 1) * maxT / 10 * 10) / 10 })), { max: top, unit: '', label: 'Grade distribution' }) +
+          '<div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Item</th><th>Out of</th><th>Average</th><th>Highest</th><th>Lowest</th><th>No mark yet</th></tr></thead><tbody>' +
+          (C.attendanceMax ? (() => { const v = rows.filter(r => r.pct !== '').map(r => Number(r.pct) * C.attendanceMax); return '<tr><td>Attendance <small class="note">from attendance %</small></td><td>' + C.attendanceMax + '</td><td>' + (v.length ? (Math.round(avgOf(v) * 10) / 10) : '&ndash;') + '</td><td>' + (v.length ? Math.round(Math.max(...v) * 10) / 10 : '&ndash;') + '</td><td>' + (v.length ? Math.round(Math.min(...v) * 10) / 10 : '&ndash;') + '</td><td>' + (rows.length - v.length) + '</td></tr>'; })() : '') +
+          items.map(it => { const v = rows.map(r => r.scores[it.key]).filter(x => x != null && x !== '').map(Number);
+            return '<tr><td>' + esc(it.item) + (isBonus(it) ? ' <small class="note">extra</small>' : '') + '</td><td>' + it.max + '</td><td>' + (v.length ? Math.round(avgOf(v) * 10) / 10 : '&ndash;') + '</td><td>' + (v.length ? Math.max(...v) : '&ndash;') + '</td><td>' + (v.length ? Math.min(...v) : '&ndash;') + '</td><td>' + (rows.length - v.length) + '</td></tr>'; }).join('') +
+          '</tbody></table></div></section>';
+      }
+      /* at risk */
+      h += '<section class="ins-card"><div class="ins-h"><h2>Students at risk (' + risk.length + ')</h2><span>Attendance below 75%, or absent 2 weeks or more in a row. Press a student to open their group.' + (risk.length ? ' <button class="link" id="rcp" type="button">Copy names</button>' : '') + '</span></div>' +
+        (risk.length ? '<div class="table-wrap"><table><thead><tr><th>#</th><th>Student Name</th><th>ID</th><th>Group</th><th>Attendance</th><th>Absent</th><th>Why</th></tr></thead><tbody>' +
+          risk.map((r, i) => { const st = absStreak(r), why = [];
+            if (r.pct !== '' && r.pct < .75) why.push('<span class="chip A" style="min-width:0">Below 75%</span>');
+            if (st >= 2) why.push('<span class="chip E" style="min-width:0">Absent ' + st + ' in a row</span>');
+            return '<tr data-stu="' + esc(r.group) + '"><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td><td><b>' + pctS(r.pct) + '</b></td><td>' + r.a + '</td><td>' + why.join(' ') + '</td></tr>'; }).join('') + '</tbody></table></div>'
+          : '<p class="note">Nobody. Every student is at 75% or above.</p>') + '</section>';
+      /* teams */
+      const nums = [...new Set(rows.map(r => r.team).filter(t => t != null && t !== ''))].sort((a, b) => a - b);
+      if (nums.length) {
+        h += '<section class="ins-card"><div class="ins-h"><h2>Teams (' + nums.length + ')</h2><span>Press a team to grade it.</span></div><div class="table-wrap"><table><thead><tr><th>Team</th><th>Name</th><th>Members</th><th>Average attendance</th><th>At risk</th>' + (maxT ? '<th>Average total</th>' : '') + '</tr></thead><tbody>' +
+          nums.map(n => { const rs = rows.filter(r => r.team === n), t = teamOf(course, n) || {}, ps = rs.filter(r => r.pct !== '').map(r => Number(r.pct)), pa = avgOf(ps), tt = avgOf(rs.map(r => Number(r.total)));
+            return '<tr data-team="' + n + '"><td><span class="tmchip" style="--tc:' + teamColor(n) + ';margin:0">T' + n + '</span></td><td>' + esc(t.name || '') + '</td><td>' + rs.length + '</td><td><span class="mrow">' + meter(pa, pa != null && pa < .75) + '<b>' + pctS(pa) + '</b></span></td>' +
+              '<td>' + rs.filter(r => (r.pct !== '' && r.pct < .75) || absStreak(r) >= 2).length + '</td>' + (maxT ? '<td>' + (tt == null ? '&ndash;' : Math.round(tt * 10) / 10 + ' / ' + maxT) + '</td>' : '') + '</tr>'; }).join('') + '</tbody></table></div></section>';
+      }
+      $('ins').innerHTML = h;
+      bindTips($('ins')); countUp($('ins'));
+      $('ic').onchange = () => { course = $('ic').value; grp = ''; store.set('tg_ins_course', course); draw(); };
+      $('ig').onchange = () => { grp = $('ig').value; draw(); };
+      const openG = (gname) => { const g = D.groups.find(x => x.course === course && x.group === gname); if (g && (D.me.role === 'Admin' || g.ta === D.me.name)) go(pageHash('group', g)); };
+      $('ins').querySelectorAll('[data-grp]').forEach(tr => tr.onclick = () => { grp = tr.dataset.grp; draw(); scrollTo({ top: 0, behavior: 'smooth' }); });
+      $('ins').querySelectorAll('[data-stu]').forEach(tr => tr.onclick = () => openG(tr.dataset.stu));
+      $('ins').querySelectorAll('[data-team]').forEach(tr => tr.onclick = () => go('#team/' + encodeURIComponent(course) + '/' + tr.dataset.team));
+      if ($('rcp')) $('rcp').onclick = () => {
+        const text = risk.map((r, i) => (i + 1) + '. ' + r.name + ' (' + r.id + ', ' + r.group + ', ' + pctS(r.pct).replace('&ndash;', '-') + ')').join('\n');
+        (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast('Copied ' + risk.length + ' names.'), () => toast('Could not copy.'));
+      };
+    };
+    draw();
+  }
+
   /* ----- Ask about your students: questions in Arabic or English, answered in the page from your own data (no AI service, no cost) ----- */
   const ASK_SAMPLES = ['مين غاب 3 أسابيع ورا بعض؟', 'مين في خطر في الحضور؟', 'مين غاب الأسبوع ده؟', 'مين أكتر واحد غايب؟', 'مين مغابش خالص؟', 'أعلى 10 درجات', 'مين درجته أقل من 20؟', 'مين ملوش درجة Project؟', 'Team 3'];
   function askAnswer(q, data, onlyCourse) {
