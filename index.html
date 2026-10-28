@@ -688,6 +688,9 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .chip.P { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
   .chip.A { background: var(--err-bg); color: var(--err); border-color: transparent; }
   tr.gsec td { background: var(--focus); padding-top: 14px; }
+  .gtabs { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; margin-bottom: 6px; }
+  .gtab { display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--card2); color: var(--text); font: inherit; cursor: pointer; }
+  .gtab b { font-size: 15px; } .gtab small { color: var(--muted); font-size: 12.5px; } .gtab.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card2)); }
   tr.gsec b { font-size: 15px; margin-right: 12px; }
   tr.gsec span { color: var(--muted); font-size: 13px; margin-right: 12px; }
   .chip.E { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
@@ -5583,7 +5586,7 @@ const BOOT = null;
     let sel = {}; /* All weeks page: the chosen cells, student ID -> set of week numbers */
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
     app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button"><span class="bk-ic" aria-hidden="true"></span>' + esc(g.course) + '</button>' + openBar(g, 'group') +
-      '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span>' + (taOf(g.group) ? '<span class="pill sched">TA ' + esc(taOf(g.group)) + '</span>' : '') + slotsOf(g.course, g.group).map(x => '<span class="pill sched">' + DAY3[x.day] + ' ' + t12(x.start) + '&ndash;' + t12(x.end) + (x.room ? ' &middot; Room ' + esc(x.room) : '') + '</span>').join('') + '<span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
+      '<div class="top"><div><span id="gpills"><span class="pill">Group ' + esc(g.group) + '</span>' + (taOf(g.group) ? '<span class="pill sched">TA ' + esc(taOf(g.group)) + '</span>' : '') + '</span>' + slotsOf(g.course, g.group).map(x => '<span class="pill sched">' + DAY3[x.day] + ' ' + t12(x.start) + '&ndash;' + t12(x.end) + (x.room ? ' &middot; Room ' + esc(x.room) : '') + '</span>').join('') + '<span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
       '<div class="links hide-proj" style="margin:0"><button class="link" id="hist" type="button">History</button><button class="link" id="gr">Grades &rarr;</button></div></div>' +
       '<div class="panel hide-proj" style="padding:16px 20px;margin-bottom:20px"><div class="row" style="align-items:center">' +
       '<label class="f" style="flex:0 1 320px">Week<select class="in" id="wk">' + weekOpts + '<option value="all">All weeks (summary)</option></select></label>' +
@@ -5620,11 +5623,11 @@ const BOOT = null;
         });
     };
     $('all').onclick = async () => {
-      const gs = [W].concat(X).filter(Boolean).map(v => v.group);
-      if (!W || !confirm('Mark everyone in group' + (gs.length > 1 ? 's ' + gs.join(' + ') : ' ' + W.group) + ' present for ' + W.weekLabel + '? Excused students stay excused.')) return;
+      const gs = [W].concat(X).filter(Boolean).map(v => v.group).filter(x => !only || x === only);
+      if (!W || !confirm('Mark everyone in group' + (gs.length > 1 ? 's ' + gs.join(' + ') : ' ' + gs[0]) + ' present for ' + W.weekLabel + '? Excused students stay excused.')) return;
       try {
-        W = await api('markAll', PIN, g.course, g.group, W.week);
-        X = await Promise.all(X.map(v => api('markAll', PIN, g.course, v.group, v.week)));
+        if (gs.indexOf(W.group) >= 0) W = await api('markAll', PIN, g.course, g.group, W.week);
+        X = await Promise.all(X.map(v => gs.indexOf(v.group) >= 0 ? api('markAll', PIN, g.course, v.group, v.week) : v));
         renderList(); toast('Everyone is present. Now mark the absent students.');
       } catch (e) { toast(errMsg(e)); }
     };
@@ -5683,7 +5686,16 @@ const BOOT = null;
         } catch (e) { toast(errMsg(e)); bar.querySelectorAll('button').forEach(x => x.disabled = false); }
       });
     }
+    /* the top of the page names every group of the check-in, each with its TA */
+    function paintPills() {
+      const gs = L && L.open && L.week === week && (L.groups || []).length > 1 ? L.groups.slice().sort(numeric) : [g.group];
+      const tas = [...new Set(gs.map(taOf).filter(Boolean))];
+      $('gpills').innerHTML = '<span class="pill">' + (gs.length > 1 ? 'Groups ' + gs.map(esc).join(' + ') : 'Group ' + esc(g.group)) + '</span>' +
+        (gs.length > 1 && tas.length > 1 ? gs.filter(x => taOf(x)).map(x => '<span class="pill sched">' + esc(x) + ': TA ' + esc(taOf(x)) + '</span>').join('') : tas.length ? '<span class="pill sched">TA ' + esc(tas[0]) + '</span>' : '');
+    }
+    let only = '';   /* in a joint check-in: show one group of the list, or '' for all of them */
     function renderStart() {
+      paintPills();
       $('livepill').hidden = !(L && L.open);
       const box = $('startbox');
       if (week === 'all') { box.innerHTML = '<p class="note" style="margin:0">Every week of the term, with each student\'s attendance %.</p>'; $('all').hidden = true; $('guest').hidden = true; return; }
@@ -5812,14 +5824,19 @@ const BOOT = null;
       if (!W) return;
       const live = L && L.open && L.week === W.week;
       const waiting = (r) => live && !r.status;
-      const views = [W].concat(live ? X : []), multi = views.length > 1;
+      const allViews = [W].concat(live ? X : []), multi = allViews.length > 1;
+      if (!multi || !allViews.some(v => v.group === only)) only = '';
+      const views = allViews.filter(v => !only || v.group === only);
       const sum = (f) => views.reduce((t, v) => t + f(v), 0);
-      $('stt').innerHTML = live ? '<span><b>' + sum(v => v.present) + '</b>present</span><span><b>' + sum(v => v.rows.filter(waiting).length) + '</b>not checked in yet</span>' : W.held ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.absent + '</b>not present</span><span><b>' + W.excused + '</b>excused</span>'
-        : '<span>' + esc(W.weekLabel) + ': no check-in yet.</span>';
+      $('stt').innerHTML = (multi ? '<div class="gtabs">' + [''].concat(allViews.map(v => v.group)).map(x => { const vs = allViews.filter(v => !x || v.group === x);
+          return '<button type="button" class="gtab' + (x === only ? ' on' : '') + '" data-only="' + esc(x) + '"><b>' + (x ? esc(x) : 'All') + '</b><small>' + vs.reduce((t, v) => t + v.present, 0) + ' of ' + vs.reduce((t, v) => t + v.rows.length, 0) + '</small></button>'; }).join('') + '</div>' : '') +
+        (live ? '<span><b>' + sum(v => v.present) + '</b>present</span><span><b>' + sum(v => v.rows.filter(waiting).length) + '</b>not checked in yet</span>' : W.held ? '<span><b>' + W.present + '</b>present</span><span><b>' + W.absent + '</b>not present</span><span><b>' + W.excused + '</b>excused</span>'
+        : '<span>' + esc(W.weekLabel) + ': no check-in yet.</span>');
+      $('stt').querySelectorAll('[data-only]').forEach(b => b.onclick = () => { only = b.dataset.only; renderList(); });
       $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th><th>Time</th><th>How</th><th>Status</th></tr>';
       $('rows').innerHTML = views.map((v, k) => {
         const ta = taOf(v.group);
-        const head = multi ? '<tr class="gsec"><td colspan="6"><b>Group ' + esc(v.group) + '</b>' + (ta ? '<span>TA ' + esc(ta) + '</span>' : '') + '<span>' + v.present + ' present of ' + v.rows.length + '</span></td></tr>' : '';
+        const head = multi && !only ? '<tr class="gsec"><td colspan="6"><b>Group ' + esc(v.group) + '</b>' + (ta ? '<span>TA ' + esc(ta) + '</span>' : '') + '<span>' + v.present + ' present of ' + v.rows.length + '</span></td></tr>' : '';
         return head + v.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
           '<tr><td>' + (i + 1) + '</td><td>' + stuLink(v.course, r.id, r.name) + teamChip(v.course, r.team) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.time) + '</td><td>' + esc(r.method) + '</td>' +
           '<td><button type="button" class="chip ' + (waiting(r) ? '' : r.status) + '" data-g="' + k + '" data-i="' + i + '">' + (waiting(r) ? 'Not yet' : ({ P: 'Present', E: 'Excused' }[r.status] || '&ndash;')) + '</button></td></tr>').join('');
@@ -5829,7 +5846,7 @@ const BOOT = null;
         b.disabled = true;
         try {
           const res = await api('mark', PIN, v.course, v.group, v.week, r.id, { '': 'P', P: 'E', E: 'A' }[r.status || '']);
-          if (k) X[k - 1] = res; else W = res;
+          if (v === W) W = res; else X[X.indexOf(v)] = res;
           renderList(); if (L && L.open) refresh();
         } catch (e) { toast(errMsg(e)); b.disabled = false; }
       });
