@@ -213,6 +213,38 @@
   .acct-row .acct-sub { flex-basis: 100%; white-space: normal; }
   a.acct-row:hover { background: var(--card2); }
   .acct-out { width: 100%; margin-top: 16px; color: var(--err); }
+  .land { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr); gap: 56px; align-items: center; max-width: 1180px; margin: 0 auto; padding: 72px 24px 24px; min-height: calc(100vh - 170px); }
+  .hero-brand h1 { font-size: 26px; }
+  .eyebrow { display: inline-block; margin: 34px 0 0; padding: 5px 12px; border-radius: 999px; background: var(--soft); color: var(--ink); font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .hero-t { font-family: var(--display); font-size: clamp(42px, 5.6vw, 72px); font-weight: 800; letter-spacing: -.04em; line-height: 1; margin: 18px 0 0; }
+  .hero-d { color: var(--muted); font-size: 18px; line-height: 1.55; max-width: 52ch; margin: 18px 0 0; }
+  .feats { list-style: none; padding: 0; margin: 32px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
+  .feats li { display: flex; gap: 12px; align-items: flex-start; }
+  .feats .fi { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--ink); }
+  .feats b { display: block; font-size: 15px; } .feats span span, .feats div span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+  .signin { padding: 32px; border-radius: 22px; }
+  .signin h2 { font-size: 28px; margin: 0 0 4px; }
+  .or { display: flex; align-items: center; gap: 12px; margin: 22px 0; color: var(--muted); font-size: 13px; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .stu-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; text-align: left; padding: 14px 18px; }
+  .stu-btn b { display: block; } .stu-btn small { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .av-img { object-fit: cover; display: block; }
+  .acct-btn.has-photo { padding: 0; overflow: hidden; background: var(--card); }
+  .acct-btn .av-img { width: 100%; height: 100%; border-radius: 50%; }
+  img.acct-av { border-radius: 50%; }
+  .acct-me { position: relative; }
+  .acct-set { margin-left: auto; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--muted); border: 1px solid var(--line); }
+  .acct-set:hover { color: var(--text); border-color: var(--muted); }
+  .acct-btn2 { width: 100%; margin-top: 16px; text-align: center; text-decoration: none; display: block; }
+  .acct-btn2 + .acct-out { margin-top: 8px; }
+  .mini-av { width: 22px; height: 22px; flex: none; border-radius: 50%; display: inline-grid; place-items: center; background: var(--card2); color: var(--muted); font-size: 10px; font-weight: 800; }
+  .st-av { position: absolute; top: 18px; right: 18px; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 1px solid var(--line); font-family: var(--display); font-weight: 800; color: var(--muted); }
+  .setgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; align-items: start; }
+  .set h2 { font-size: 20px; margin: 0 0 16px; }
+  .prof { display: flex; gap: 18px; align-items: center; }
+  .prof-av { width: 96px; height: 96px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); font-family: var(--display); font-size: 34px; font-weight: 800; }
+  .prof-t b { display: block; font-size: 18px; } .prof-t small { color: var(--muted); }
+  @media (max-width: 900px) { .land { grid-template-columns: 1fr; gap: 32px; padding-top: 64px; min-height: 0; } .feats { grid-template-columns: 1fr; } }
   .empty { border: 1.5px dashed var(--line); border-radius: 16px; padding: 40px 20px; text-align: center; color: var(--muted); }
 
   .panel { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px; box-shadow: var(--shadow); }
@@ -2726,7 +2758,8 @@ const BOOT = null;
   const RPC = {
     studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']], studentStatus: ['student_status', ['p']],
     appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_user', 'p_pass']], login: ['login', ['p_user', 'p_pass']],
-    whoami: ['whoami', ['p_pin']], logout: ['logout', ['p_pin']], courseList: ['course_list', []],
+    whoami: ['whoami', ['p_pin']], logout: ['logout', ['p_pin']],
+    setMyPhoto: ['set_my_photo', ['p_pin', 'p_photo']], changeMyPassword: ['change_my_password', ['p_pin', 'p_old', 'p_new']], courseList: ['course_list', []],
     registerTa: ['register_ta', ['p_name', 'p_user', 'p_pass', 'p_courses']], approveTa: ['approve_ta', ['p_pin', 'p_name', 'p_courses']],
     rejectTa: ['reject_ta', ['p_pin', 'p_name']], setStaffLogin: ['set_staff_login', ['p_pin', 'p_name', 'p_user', 'p_pass']],
     addGroup: ['add_group', ['p_pin', 'p_course', 'p_group', 'p_ta', 'p_list']], importGroups: ['import_groups', ['p_pin', 'p_course', 'p_groups']],
@@ -2908,6 +2941,8 @@ const BOOT = null;
   let courseOnly = null;   // the course page being shown (#course/<name>), or null for the home page
   const courseHash = (c) => '#course/' + encodeURIComponent(c);
   const initials = (t) => String(t || '').replace(/\(.*?\)/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+  /* a profile photo when there is one, otherwise the initials */
+  const avatar = (name, photo, cls) => photo ? '<img class="' + cls + ' av-img" src="' + esc(photo) + '" alt="">' : '<span class="' + cls + '">' + esc(initials(name)) + '</span>';
   let courseView = {};
   try { courseView = JSON.parse(store.sget('tg_cview') || '{}') || {}; } catch (e) {}
   let PIN = store.get('tg_token') || '', D = null, tab = 'mine', timers = [], courseFilter = '', groupQuery = '';
@@ -2962,6 +2997,7 @@ const BOOT = null;
       toast('This group is not one of yours.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
+    if (location.hash === '#settings') { acct(); return settingsPage(); }
     const mc = location.hash.match(/^#course\/([^/]*)$/);
     courseOnly = mc ? decodeURIComponent(mc[1]) : null;
     stopTimers();
@@ -2979,14 +3015,32 @@ const BOOT = null;
   }
   function landingView() {
     stopTimers(); acct();
-    const card = (pill, title, text, id) => '<button class="door" id="' + id + '" type="button"><span class="pill">' + pill + '</span><span class="door-t">' + title + '</span><span class="door-d">' + text + '</span><span class="door-go" aria-hidden="true">&rarr;</span></button>';
-    app.innerHTML = '<div class="wrap"><div class="top"><div><h1 class="brand">Tally Grades</h1><p class="sub">Attendance and grades. Who are you?</p></div></div><div class="doors">' +
-      card('Student', 'I am a student', 'Register your phone once. In the section, scan the QR code on the screen to check in.', 'asStudent') +
-      card('TA', 'I am a TA', 'Log in with your username and password, or create an account. The admin confirms new accounts.', 'asTa') +
-      card('Admin', 'I am the admin', 'Log in with the admin account to manage courses, groups and TAs.', 'asAdmin') + '</div></div>';
+    const ic = (d) => '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+    const feat = (icon, title, text) => '<li><span class="fi">' + ic(icon) + '</span><div><b>' + title + '</b><span>' + text + '</span></div></li>';
+    app.innerHTML = '<div class="land">' +
+      '<section class="hero"><div class="hero-brand"><h1 class="brand">Tally Grades</h1></div>' +
+        '<p class="eyebrow">Lab attendance and grades</p>' +
+        '<h2 class="hero-t">Every section, counted.</h2>' +
+        '<p class="hero-d">Students check in with a QR code. TAs follow every group live, grade quizzes and project teams, and download the course sheet in one click.</p>' +
+        '<ul class="feats">' +
+          feat('<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3"/>', 'QR check-in', 'One scan per student, one phone per student.') +
+          feat('<path d="M3 12h4l3-8 4 16 3-8h4"/>', 'Live attendance', 'See who is in, group by group, as it happens.') +
+          feat('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', 'Groups and teams', 'Grade a whole project team in one row.') +
+          feat('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>', 'Excel in and out', 'Import attendance, export the final sheet.') +
+        '</ul></section>' +
+      '<section class="signin panel"><h2>Sign in</h2><p class="note">For TAs and the admin.</p>' +
+        '<form class="form" id="lf" style="margin-top:18px">' + loginFields() + '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Sign in</button></form>' +
+        '<p class="note" style="margin-top:14px">New TA? <button class="link" id="reg" type="button" style="font-size:14px">Create an account</button>. The admin confirms it.</p>' +
+        '<div class="or"><span>or</span></div>' +
+        '<button class="btn ghost stu-btn" id="asStudent" type="button"><span><b>I am a student</b><small>Register your phone and see your attendance</small></span><span aria-hidden="true">&rarr;</span></button>' +
+      '</section></div>';
     $('asStudent').onclick = () => registration(true);
-    $('asTa').onclick = () => loginView('TA');
-    $('asAdmin').onclick = () => loginView('Admin');
+    $('reg').onclick = registerView;
+    $('lf').onsubmit = async (e) => {
+      e.preventDefault(); $('er').textContent = ''; $('go').disabled = true; $('go').textContent = 'Signing in';
+      try { signedIn(await api('login', $('us').value, $('pw').value)); }
+      catch (err) { $('er').textContent = errMsg(err); $('go').disabled = false; $('go').textContent = 'Sign in'; }
+    };
   }
   /* ----- the circle at the top right: who is logged in, their courses and groups, and Log out (Log in when nobody is) ----- */
   function acct() {
@@ -2998,7 +3052,7 @@ const BOOT = null;
     }
     if (!PIN || !D) {
       el.innerHTML = '<button class="acct-btn out" id="acctb" type="button" title="Log in" aria-label="Log in"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></button>';
-      $('acctb').onclick = () => { stopTimers(); loginView('TA'); };
+      $('acctb').onclick = () => { stopTimers(); if (!$('lf')) landingView(); $('us').focus(); };
       return;
     }
     const me = D.me, isAdmin = me.role === 'Admin';
@@ -3006,21 +3060,92 @@ const BOOT = null;
     const myStaff = (D.staff || []).find(x => x.name === me.name);
     const courses = isAdmin ? (D.allCourses || []) : (me.courses && me.courses.length ? me.courses : [...new Set(D.groups.map(g => g.course))]);
     const tas = isAdmin ? (D.staff || []).filter(x => x.role !== 'Admin' && x.status === 'active') : [];
-    el.innerHTML = '<button class="acct-btn" id="acctb" type="button" aria-haspopup="true" aria-expanded="false" title="' + esc(me.name) + '">' + esc(initials(me.name)) + '</button>' +
+    el.innerHTML = '<button class="acct-btn' + (me.photo ? ' has-photo' : '') + '" id="acctb" type="button" aria-haspopup="true" aria-expanded="false" title="' + esc(me.name) + '">' + (me.photo ? '<img class="av-img" src="' + esc(me.photo) + '" alt="">' : esc(initials(me.name))) + '</button>' +
       '<div class="acct-panel" id="acctp" hidden role="dialog" aria-label="Account">' +
-        '<div class="acct-me"><span class="acct-av">' + esc(initials(me.name)) + '</span><div><b>' + esc(me.name) + '</b><small>' + (isAdmin ? 'Admin' : 'TA') + (myStaff && myStaff.username ? ', username ' + esc(myStaff.username) : '') + '</small></div></div>' +
+        '<div class="acct-me">' + avatar(me.name, me.photo, 'acct-av') + '<div><b>' + esc(me.name) + '</b><small>' + (isAdmin ? 'Admin' : 'TA') + ((me.username || (myStaff && myStaff.username)) ? ', username ' + esc(me.username || myStaff.username) : '') + '</small></div>' +
+          '<a class="acct-set" href="#settings" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a></div>' +
         '<div class="acct-sec"><h4>Courses</h4>' + (courses.length ? courses.map(c => '<a class="acct-row" href="' + courseHash(c) + '"><span>' + esc(c) + '</span><small>' + (n => n + (n === 1 ? ' group' : ' groups'))(D.groups.filter(g => g.course === c).length) + '</small></a>').join('') : '<p class="note">No courses yet.</p>') + '</div>' +
         '<div class="acct-sec"><h4>My groups (' + mine.length + ')</h4>' + (mine.length ? mine.map(g => '<a class="acct-row" href="' + pageHash('group', g) + '"><span>' + (g.live ? '<i class="odot"></i>' : '') + '<b>' + esc(g.group) + '</b> ' + esc(g.course) + '</span><small>' + g.count + ' students</small></a>').join('')
           : '<p class="note">' + (isAdmin ? 'No groups of your own. You see every group.' : 'No groups yet. Open a course and press This is my group.') + '</p>') + '</div>' +
         (isAdmin ? '<div class="acct-sec"><h4>TAs (' + tas.length + ')</h4>' + (tas.length ? tas.map(t => { const gs = D.groups.filter(g => g.ta === t.name);
-            return '<div class="acct-row static"><span><b>' + esc(t.name) + '</b><small class="acct-sub">' + (gs.length ? gs.map(g => esc(g.group)).join(', ') : 'no groups') + '</small></span><small>' + gs.length + '</small></div>'; }).join('') : '<p class="note">No TAs yet.</p>') +
+            return '<div class="acct-row static"><span>' + avatar(t.name, t.photo, 'mini-av') + '<b>' + esc(t.name) + '</b><small class="acct-sub">' + (gs.length ? gs.map(g => esc(g.group)).join(', ') : 'no groups') + '</small></span><small>' + gs.length + '</small></div>'; }).join('') : '<p class="note">No TAs yet.</p>') +
           '<button class="link" id="acctTas" type="button" style="margin-top:8px">Manage TAs &rarr;</button></div>' : '') +
-        '<button class="btn ghost acct-out" id="acctOut" type="button">Log out</button></div>';
+        '<a class="btn ghost acct-btn2" href="#settings">Settings</a><button class="btn ghost acct-out" id="acctOut" type="button">Log out</button></div>';
     const p = $('acctp'), b = $('acctb');
     b.onclick = (e) => { e.stopPropagation(); p.hidden = !p.hidden; b.setAttribute('aria-expanded', String(!p.hidden)); };
     p.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { p.hidden = true; }));
     $('acctOut').onclick = logout;
     if ($('acctTas')) $('acctTas').onclick = () => { p.hidden = true; tab = 'staff'; go(''); };
+  }
+  /** Make any image a small square JPEG (256 px), cropped from the middle, ready to save. */
+  function squarePhoto(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        const side = Math.min(img.naturalWidth, img.naturalHeight), c = document.createElement('canvas');
+        c.width = c.height = 256;
+        c.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+        URL.revokeObjectURL(url); resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('This file is not an image. Choose a JPG or PNG photo.')); };
+      img.src = url;
+    });
+  }
+  /* ----- each staff member's own settings: photo, password, light or dark ----- */
+  function settingsPage() {
+    stopTimers();
+    const me = D.me;
+    const draw = () => {
+      $('pav').innerHTML = avatar(me.name, me.photo, 'prof-av');
+      $('phx').hidden = !me.photo;
+    };
+    app.innerHTML = '<div class="wrap"><button class="back" id="bk" type="button">&larr; Home</button>' +
+      '<div class="top"><div><h1>Settings</h1><p class="sub">Your profile and password, and how the site looks on this device.</p></div></div>' +
+      '<div class="setgrid">' +
+      '<section class="panel set"><h2>Profile</h2><div class="prof"><div id="pav"></div><div class="prof-t"><b>' + esc(me.name) + '</b><small>' + (me.role === 'Admin' ? 'Admin' : 'TA') + (me.username ? ', username ' + esc(me.username) : '') + '</small>' +
+        '<div class="row" style="margin-top:12px;align-items:center"><label class="btn ghost" for="ph" tabindex="0">Upload a photo</label><input id="ph" type="file" accept="image/*" hidden>' +
+        '<button class="link danger" id="phx" type="button">Remove photo</button></div></div></div>' +
+        '<p class="note" style="margin-top:14px">A photo of your face works best. It is cropped to a square and made small before it is saved.</p><div class="err" id="per"></div></section>' +
+      '<section class="panel set"><h2>Password</h2><form class="form" id="pwf">' +
+        '<label class="f">Current password<input class="in" type="password" id="po" autocomplete="current-password"></label>' +
+        '<label class="f">New password<input class="in" type="password" id="pn" autocomplete="new-password"></label>' +
+        '<label class="f">New password again<input class="in" type="password" id="pn2" autocomplete="new-password"></label>' +
+        '<div class="err" id="pwer"></div><button class="btn" id="pwgo" type="submit">Change password</button></form>' +
+        '<p class="note" style="margin-top:12px">At least 6 characters. Other devices logged in as you are logged out.</p></section>' +
+      '<section class="panel set"><h2>Appearance</h2><div class="cview" style="margin-top:6px"><button type="button" data-th="dark">Dark</button><button type="button" data-th="light">Light</button></div>' +
+        '<p class="note" style="margin-top:12px">Saved on this device only.</p></section>' +
+      '</div></div>';
+    draw();
+    $('bk').onclick = () => go('');
+    $('ph').onchange = async () => {
+      const f = $('ph').files[0]; $('per').textContent = '';
+      if (!f) return;
+      try {
+        const photo = await squarePhoto(f);
+        D = await api('setMyPhoto', PIN, photo);
+        Object.assign(me, D.me); draw(); acct(); toast('Photo saved.');
+      } catch (e) { $('per').textContent = errMsg(e); }
+      $('ph').value = '';
+    };
+    $('ph').previousElementSibling.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('ph').click(); } };
+    $('phx').onclick = async () => {
+      if (!confirm('Remove your photo?')) return;
+      try { D = await api('setMyPhoto', PIN, ''); Object.assign(me, D.me); draw(); acct(); toast('Photo removed.'); } catch (e) { $('per').textContent = errMsg(e); }
+    };
+    $('pwf').onsubmit = async (e) => {
+      e.preventDefault(); $('pwer').textContent = '';
+      if ($('pn').value !== $('pn2').value) { $('pwer').textContent = 'The two new passwords are not the same.'; return; }
+      $('pwgo').disabled = true;
+      try { await api('changeMyPassword', PIN, $('po').value, $('pn').value); $('pwf').reset(); toast('Password changed.'); }
+      catch (err) { $('pwer').textContent = errMsg(err); }
+      $('pwgo').disabled = false;
+    };
+    const paint = () => app.querySelectorAll('[data-th]').forEach(b => b.setAttribute('aria-selected', String((document.documentElement.dataset.theme === 'light' ? 'light' : 'dark') === b.dataset.th)));
+    app.querySelectorAll('[data-th]').forEach(b => b.onclick = () => {
+      if ((document.documentElement.dataset.theme === 'light' ? 'light' : 'dark') !== b.dataset.th) document.getElementById('themeBtn').click();
+      paint();
+    });
+    paint();
   }
   function signedIn(r) { D = r.dash; PIN = r.token; store.set('tg_token', PIN); tab = 'mine'; route(true); }
   function loggedOut() { PIN = ''; D = null; store.set('tg_token', ''); stopTimers(); document.querySelectorAll('.overlay').forEach(o => o.remove()); landingView(); toast('Please log in again.'); }
@@ -3066,7 +3191,7 @@ const BOOT = null;
         courses.map(c => '<label class="pick"><input type="checkbox" class="crs" value="' + esc(c) + '"><span><b>' + esc(c) + '</b></span></label>').join('') + '</div>' : '') +
       '<p class="note">Username: 3 to 30 letters or numbers, no spaces. Password: at least 6 characters.</p>' +
       '<div class="err" id="er"></div><button class="btn" id="go" type="submit">Send request</button></form></div></div>';
-    $('bk').onclick = () => loginView('TA');
+    $('bk').onclick = landingView;
     $('nm').focus();
     $('f').onsubmit = async (e) => {
       e.preventDefault(); $('er').textContent = '';
@@ -3113,7 +3238,7 @@ const BOOT = null;
           '<div class="card" style="border-top-color:var(--warn)"><span class="pill" style="background:var(--warn-bg);color:var(--warn)">New request</span><h3>' + esc(st.name) + '</h3><p>Username: ' + esc(st.username) + '</p>' + crsText(st) +
           '<div class="links"><button class="link" data-ok="' + esc(st.name) + '">Confirm &rarr;</button><button class="link danger" data-no="' + esc(st.name) + '">Reject</button></div></div>').join('') + '</div>' : '') +
         '<div class="grid">' + D.staff.filter(st => st.status !== 'pending').map(st =>
-        '<div class="card"><span class="pill">' + (st.role === 'Admin' ? 'Admin' : 'TA') + '</span><h3>' + esc(st.name) + '</h3><p>' + (st.username ? 'Username: ' + esc(st.username) + '<br>' : '') + D.groups.filter(g => g.ta === st.name).length + ' groups</p>' +
+        '<div class="card">' + avatar(st.name, st.photo, 'st-av') + '<span class="pill">' + (st.role === 'Admin' ? 'Admin' : 'TA') + '</span><h3>' + esc(st.name) + '</h3><p>' + (st.username ? 'Username: ' + esc(st.username) + '<br>' : '') + D.groups.filter(g => g.ta === st.name).length + ' groups</p>' +
         (st.role === 'Admin' ? '' : crsText(st)) +
         '<div class="links">' + (st.role === 'Admin' ? '' : '<button class="link" data-crs="' + esc(st.name) + '">Courses</button>') +
         '<button class="link" data-pw="' + esc(st.name) + '">' + (st.username ? 'Password' : 'Set username') + '</button>' +
