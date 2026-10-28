@@ -196,12 +196,19 @@
   .ccard .go { margin-left: auto; color: var(--muted); font-size: 22px; transition: transform .15s; }
   .ccard:hover .go { color: var(--ink); transform: translateX(4px); }
   .gstat.gs-live { border-color: var(--ok); } .gstat.gs-live b { color: var(--ok); }
-  .acct { position: fixed; top: 16px; right: 16px; z-index: 30; }
+  .acct { position: fixed; top: 16px; right: 16px; z-index: 30; display: flex; align-items: center; gap: 10px; }
+  .acct-slot { position: relative; }
+  .theme-btn { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; padding: 0; background: var(--card); color: var(--text); border: 1px solid var(--line);
+    box-shadow: 0 8px 24px -12px rgba(0,0,0,.5); transition: border-color .2s, transform .2s; }
+  .theme-btn:hover { border-color: var(--muted); }
+  .theme-btn:active { transform: scale(.94); }
+  .theme-btn svg { transition: transform .5s cubic-bezier(.2,.7,.2,1); }
+  .theme-btn:hover svg { transform: rotate(-25deg); }
   .acct-btn { width: 46px; height: 46px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--accent) 40%, transparent); background: var(--accent); color: var(--on-accent);
     font-family: var(--display); font-weight: 800; font-size: 16px; display: grid; place-items: center; padding: 0; box-shadow: 0 8px 24px -10px rgba(0,0,0,.6); }
   .acct-btn.out { background: var(--card); color: var(--text); border-color: var(--line); }
   .acct-btn:hover { filter: brightness(1.08); }
-  .acct-panel { position: absolute; right: 0; top: 56px; width: min(340px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow: auto; background: var(--card); border: 1px solid var(--line);
+  .acct-panel { position: absolute; right: 0; top: 56px; transform-origin: top right; width: min(340px, calc(100vw - 32px)); max-height: min(80vh, 640px); overflow: auto; background: var(--card); border: 1px solid var(--line);
     border-radius: 16px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.7); padding: 18px; animation: rise .15s ease-out; }
   .acct-me { display: flex; align-items: center; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
   .acct-me b { display: block; font-size: 16px; } .acct-me small { color: var(--muted); font-size: 13px; }
@@ -394,8 +401,6 @@
 
   .foot { text-align: center; color: var(--muted); padding: 48px 16px 30px; font-size: 14px; line-height: 1.9; }
   .foot .by { font-family: var(--display); font-weight: 700; font-size: 16px; color: var(--text); }
-  .theme { margin-top: 10px; background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 5px 14px; font-size: 13px; font-weight: 600; }
-  .theme:hover { color: var(--text); border-color: var(--muted); }
   .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 20px; border-radius: 12px; z-index: 40; max-width: 92vw; font-weight: 600; font-size: 15px; box-shadow: 0 16px 40px rgba(0,0,0,.35); animation: rise .2s ease-out; }
   .toast a { color: inherit; text-decoration: underline; }
   .loading { text-align: center; color: var(--muted); padding: 18vh 0; font-family: var(--mono); font-size: 14px; letter-spacing: .1em; text-transform: uppercase; }
@@ -406,25 +411,34 @@
     .gtools .in { max-width: none; } .seg { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); } .seg span { grid-column: 1 / -1; padding: 8px 14px; }
     .seg button { border-left: 0; border-top: 1px solid var(--line); font-size: 13px; padding: 10px 6px; } .seg button + button { border-left: 1px solid var(--line); } .toolbar .filters .in { flex: 1 1 100%; }
     .door { grid-template-columns: 36px 1fr; grid-template-areas: "num title" "num desc"; padding: 24px 4px; } .door-go { display: none; } }
+  /* ----- motion: pages rise in, lists arrive one by one, bars fill ----- */
+  @keyframes pagein { from { opacity: 0; transform: translateY(10px); } }
+  @keyframes up { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes fromright { from { opacity: 0; transform: translateX(24px); } }
+  @keyframes fill { from { transform: scaleX(0); } }
+  @keyframes pop2 { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
+  .wrap, .land { animation: pagein .4s cubic-bezier(.2,.7,.2,1) both; }
+  .ccards > *, .letters > *, .gstats > *, .feats > li, .setgrid > *, .dist > *, .hero > *, .mystat > * { animation: up .5s cubic-bezier(.2,.7,.2,1) both; }
+  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(2) { animation-delay: .05s; }
+  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(3) { animation-delay: .1s; }
+  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(4) { animation-delay: .15s; }
+  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(5) { animation-delay: .2s; }
+  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(6) { animation-delay: .25s; }
+  :is(.ccards, .letters, .gstats, .feats, .setgrid, .dist, .hero, .mystat) > :nth-child(n+7) { animation-delay: .3s; }
+  .signin { animation: fromright .6s .15s cubic-bezier(.2,.7,.2,1) both; }
+  .gbar i, .dbar i, .mbar i { transform-origin: left; animation: fill .9s .2s cubic-bezier(.2,.7,.2,1) both; }
+  .acct-panel { animation: pop2 .18s ease-out; }
+  .tab { transition: color .2s, border-color .25s; }
+  .btn, .link, .ccard, .letter, .gstat, .pick, .tg-pick, .ochip { transition: background-color .2s, border-color .2s, color .2s, transform .2s, filter .2s; }
+  .letter:hover { border-color: color-mix(in srgb, var(--muted) 60%, var(--line)); }
+  .gstat:hover { transform: translateY(-2px); }
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <div id="app"><div class="loading">Loading</div></div>
-<footer class="foot"><div>Tally Grades &middot; Attendance and grades &middot; 2026-2027</div><div class="by">Made By: Toqa Hamdy</div><button class="theme" id="themeBtn" type="button"></button></footer>
-<script>
-(function () {
-  const root = document.documentElement, btn = document.getElementById('themeBtn');
-  const paint = () => { btn.textContent = root.dataset.theme === 'light' ? 'Dark mode' : 'Light mode'; };
-  btn.onclick = () => {
-    const light = root.dataset.theme !== 'light';
-    if (light) root.dataset.theme = 'light'; else delete root.dataset.theme;
-    try { localStorage.setItem('tg_theme', light ? 'light' : 'dark'); } catch (e) {}
-    paint();
-  };
-  paint();
-})();
-</script>
+<footer class="foot"><div>Tally Grades &middot; Attendance and grades &middot; 2026-2027</div><div class="by">Made By: Toqa Hamdy</div></footer>
 <div class="toast" id="toast" hidden></div>
 <script>//---------------------------------------------------------------------
 //
@@ -2741,6 +2755,46 @@ const BOOT = null;
   const SITE = STANDALONE ? location.origin + location.pathname : B.url;
   const $ = (id) => document.getElementById(id);
   const app = $('app');
+  /* ----- top right: the light/dark button, then the account circle (staff pages fill #acctSlot) ----- */
+  const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+  const isLight = () => document.documentElement.dataset.theme === 'light';
+  function paintTheme() {
+    const b = $('themeBtn'); if (!b) return;
+    b.innerHTML = isLight() ? MOON : SUN;
+    b.title = isLight() ? 'Dark mode' : 'Light mode'; b.setAttribute('aria-label', b.title);
+  }
+  /* the new colours spread from the button as a circle where the browser can do it */
+  function setTheme(light, x, y) {
+    const apply = () => {
+      if (light) document.documentElement.dataset.theme = 'light'; else delete document.documentElement.dataset.theme;
+      try { localStorage.setItem('tg_theme', light ? 'light' : 'dark'); } catch (e) {}
+      paintTheme();
+    };
+    if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return apply();
+    const t = document.startViewTransition(apply);
+    const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    t.ready.then(() => document.documentElement.animate({ clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + r + 'px at ' + x + 'px ' + y + 'px)'] },
+      { duration: 520, easing: 'cubic-bezier(.4,0,.2,1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+  }
+  (function topBar() {
+    const box = document.createElement('div'); box.id = 'acct'; box.className = 'acct hide-proj';
+    box.innerHTML = '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
+    document.body.appendChild(box);
+    paintTheme();
+    $('themeBtn').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(!isLight(), r.left + r.width / 2, r.top + r.height / 2); };
+  })();
+  /* numbers in the summary tiles count up once when a page opens */
+  function countUp(scope) {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    (scope || app).querySelectorAll('.gstat b').forEach(b => {
+      const t = b.firstChild; if (!t || t.nodeType !== 3) return;
+      const m = t.nodeValue.match(/^(\d+(?:\.\d+)?)(%?)$/); if (!m) return;
+      const end = Number(m[1]), dec = (m[1].split('.')[1] || '').length, t0 = performance.now();
+      const step = (now) => { const k = Math.min(1, (now - t0) / 700), v = end * (1 - Math.pow(1 - k, 3)); t.nodeValue = v.toFixed(dec) + m[2]; if (k < 1) requestAnimationFrame(step); };
+      t.nodeValue = (0).toFixed(dec) + m[2]; requestAnimationFrame(step);
+    });
+  }
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const store = {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -3044,9 +3098,9 @@ const BOOT = null;
   }
   /* ----- the circle at the top right: who is logged in, their courses and groups, and Log out (Log in when nobody is) ----- */
   function acct() {
-    let el = $('acct');
-    if (!el) {
-      el = document.createElement('div'); el.id = 'acct'; el.className = 'acct hide-proj'; document.body.appendChild(el);
+    const el = $('acctSlot');
+    if (!el.dataset.ready) {
+      el.dataset.ready = '1';
       document.addEventListener('click', (e) => { const p = $('acctp'); if (p && !p.hidden && !el.contains(e.target)) { p.hidden = true; $('acctb').setAttribute('aria-expanded', 'false'); } });
       document.addEventListener('keydown', (e) => { const p = $('acctp'); if (e.key === 'Escape' && p && !p.hidden) { p.hidden = true; $('acctb').setAttribute('aria-expanded', 'false'); $('acctb').focus(); } });
     }
@@ -3373,6 +3427,7 @@ const BOOT = null;
     if ($('addStaff')) $('addStaff').onclick = addStaffDialog;
     if ($('home')) $('home').onclick = () => go('');
     if (C && isAdmin) courseSettings(C, 0);
+    if (C) countUp();
     /* the group dialogs start on this course */
     if (C) {
       const preset = (open) => () => { open(); const co = document.querySelector('.overlay #co'); if (co) co.value = C; };
@@ -4022,6 +4077,7 @@ const BOOT = null;
         (mt ? tile((avgTotal === null ? '&ndash;' : Math.round(avgTotal * 10) / 10) + '<small>/' + mt + '</small>', 'average total') +
               tile((rows.length ? Math.max(...rows.map(r => Number(r.total))) : '&ndash;') + '<small>/' + mt + '</small>', 'highest total') : '') +
         tile(V.items.length, V.items.length === 1 ? 'grade item' : 'grade items');
+      if (!stats.done) { stats.done = true; countUp($('gst')); }
     }
     function render() {
       $('items').hidden = !V.canEditItems;
