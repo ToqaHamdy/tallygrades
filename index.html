@@ -897,6 +897,11 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .cal-ev.now { box-shadow: 0 0 0 2px var(--accent); } .cal-ev.past { opacity: .6; }
   .cal-ev.off { border-left-color: var(--muted); background: var(--card2); } .cal-ev.off:hover { background: var(--card2); }
   .tapick { position: relative; min-width: 300px; }
+  .ms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .ms-card { position: relative; display: block; padding: 14px 16px; border-radius: 14px; background: var(--card2); border: 1px solid var(--line); border-left: 3px solid var(--accent); color: var(--text); text-decoration: none; }
+  a.ms-card:hover { border-color: var(--accent); } .ms-card.now { box-shadow: 0 0 0 2px var(--accent); } .ms-card.off { border-left-color: var(--muted); }
+  .ms-card b { display: block; font-size: 17px; padding-right: 50px; } .ms-card span { display: block; font-size: 13px; margin-top: 4px; } .ms-card small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .ms-card .h-st { position: absolute; top: 12px; right: 12px; font-style: normal; font-size: 10.5px; padding: 1px 8px; }
   .tp-btn, .tp-it { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; color: var(--text); cursor: pointer; font: inherit; }
   .tp-btn:hover { border-color: var(--accent); }
   .tp-av { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--ink); font-weight: 800; font-size: 13px; }
@@ -3743,41 +3748,24 @@ const BOOT = null;
     const item = (href, icon, label, active, extra) => '<a class="sd-item' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span>' + (extra || '') + '</a>';
     const btn = (k, icon, label) => '<button class="sd-item" type="button" data-sd="' + k + '">' + svg(icon) + '<span>' + label + '</span></button>';
     const courses = [...new Set((isAdmin ? (D.allCourses || []) : []).concat(D.groups.map(g => g.course)))].sort();
-    /* your sections: from the schedule (groups taught together at the same time), or your groups */
-    const n = new Date(), today = n.getDay(), mins = n.getHours() * 60 + n.getMinutes();
-    const mineSched = (D.schedule || []).filter(x => isTaRow(x, me) && D.groups.some(g => g.course === x.course && g.group === x.group));
-    const secs = [];
-    mineSched.forEach(x => { const k = x.course + '|' + x.day + '|' + x.start; let sct = secs.find(y => y.k === k); if (!sct) { sct = { k: k, course: x.course, day: x.day, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sct); } sct.gs.push(x.group); });
-    secs.sort((a, b) => ((a.day - today + 7) % 7) - ((b.day - today + 7) % 7) || toMin(a.start) - toMin(b.start));
-    const groupHref = (course, grp) => { const g = D.groups.find(x => x.course === course && x.group === grp); return g ? pageHash('group', g) : courseHash(course); };
-    const inSec = (sct) => sct.gs.some(gr => h === pageHash('group', { course: sct.course, group: gr }) || h === pageHash('grades', { course: sct.course, group: gr }));
-    const secHtml = secs.length ? secs.map(sct => {
-        const now = sct.day === today && mins >= toMin(sct.start) - 20 && mins <= toMin(sct.end);
-        const live = sct.gs.some(gr => (D.groups.find(x => x.course === sct.course && x.group === gr) || {}).live);
-        return '<a class="sd-item sd-sec-item' + (inSec(sct) ? ' on' : '') + '" href="' + groupHref(sct.course, sct.gs[0]) + '"><span class="sd-code">' + esc(sct.gs.join(' + ')) + '</span><span class="sd-when">' + DAY3[sct.day] + ' ' + t12(sct.start) + (sct.room ? ' &middot; ' + esc(sct.room) : '') + '</span>' +
-          (live ? '<i class="sd-dot live" title="Check-in is live"></i>' : now ? '<i class="sd-dot" title="Now"></i>' : '') + '</a>';
-      }).join('')
-      : D.groups.filter(g => g.ta === me).sort((a, b) => numeric(a.course + a.group, b.course + b.group)).map(g => '<a class="sd-item sd-sec-item' + (h === pageHash('group', g) || h === pageHash('grades', g) ? ' on' : '') + '" href="' + pageHash('group', g) + '"><span class="sd-code">' + esc(g.group) + '</span><span class="sd-when">' + esc(g.course) + '</span>' + (g.live ? '<i class="sd-dot live"></i>' : '') + '</a>').join('');
     side.innerHTML = '<a class="sd-brand" href="#"><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a>' +
       '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + btn('take', 'qr', 'Take attendance') +
-        item('#calendar', 'calendar', 'My week', h.indexOf('#calendar') === 0) +
+        item('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) +
         item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
         item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + btn('ask', 'spark', 'Ask the assistant') +
         (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
-        (secHtml ? '<div class="sd-sec">My sections</div>' + secHtml : '') +
         '<div class="sd-sec">Tools</div>' + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
         (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '') + '</nav>' +
       '<div class="sd-foot">' + item('#settings', 'gear', 'Settings', h === '#settings') + '</div>';
-    /* the same menu as a bar along the top (wide screens): pages, then Courses, My sections and Tools as drop-down menus */
+    /* the same menu as a bar along the top (wide screens): pages, then Courses and Tools as drop-down menus. The admin opens My schedule from the account menu */
     const dd = (key, icon, label, body, active) => '<div class="tn-dd"><button type="button" title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" data-dd="' + key + '" aria-haspopup="true" aria-expanded="false">' + svg(icon) + '<span>' + label + '</span><svg class="tn-car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="tn-menu" hidden>' + body + '</div></div>';
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
     const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
     $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + '<button type="button" class="tn-a" title="Take attendance" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>' +
-      tnItem('#calendar', 'calendar', 'My week', h.indexOf('#calendar') === 0) +
+      (isAdmin ? '' : tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0)) +
       tnItem('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
       tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
       (courses.length ? dd('courses', 'book', 'Courses', courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join(''), courses.some(x => h === courseHash(x))) : '') +
-      (secHtml ? dd('secs', 'clock', 'My sections', secHtml, /^#(group|grades)\//.test(h)) : '') +
       dd('tools', 'archive', 'Tools', toolsBody, false);
     $('topnav').hidden = false; $('tnBrand').hidden = false;
     const closeDd = () => $('topnav').querySelectorAll('.tn-menu').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
@@ -3805,7 +3793,7 @@ const BOOT = null;
     }
   }
   const accIcon = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    ({ gear: TB_ICONS.gear, users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>', out: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>' })[n] + '</svg>';
+    ({ gear: TB_ICONS.gear, cal: TB_ICONS.calendar, users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>', out: '<path d="M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 17l5-5-5-5M15 12H3"/>' })[n] + '</svg>';
   function acct() {
     botFab(true);
     sideNav();
@@ -3830,6 +3818,7 @@ const BOOT = null;
         '<div class="acct-me">' + avatar(me.name, me.photo, 'acct-av') + '<div><b>' + esc(me.name) + '</b><small>' + (isAdmin ? 'Admin' : 'TA') + ((me.username || (myStaff && myStaff.username)) ? ', username ' + esc(me.username || myStaff.username) : '') + '</small></div>' +
           '</div>' +
         '<nav class="acct-menu">' +
+          '<a class="acct-item" href="#calendar">' + accIcon('cal') + '<span>My schedule</span><small>your sections this week</small></a>' +
           '<a class="acct-item" href="#settings">' + accIcon('gear') + '<span>Settings</span><small>photo, password, theme</small></a>' +
           (isAdmin ? '<button class="acct-item" id="acctTas" type="button">' + accIcon('users') + '<span>Manage TAs</span><small>' + tas.length + ' TAs' + ((D.staff || []).some(x => x.status === 'pending') ? ', ' + (D.staff || []).filter(x => x.status === 'pending').length + ' waiting' : '') + '</small></button>' : '') +
           '<button class="acct-item out" id="acctOut" type="button">' + accIcon('out') + '<span>Log out</span></button></nav></div>';
@@ -4002,7 +3991,7 @@ const BOOT = null;
         if (d === today) stt = live ? '<span class="h-st st-live">Live</span>' : mins > toMin(en) ? '<span class="h-st done">Done</span>' : mins >= toMin(st) - 20 ? '<span class="h-st now">Now</span>' : '<span class="h-st">Next</span>';
         const inApp = D.groups.some(g => g.course === c), tag = inApp ? 'a' : 'div';
         return '<' + tag + ' class="cal-ev' + (inApp ? '' : ' off') + (d === today ? ' today' : '') + (d === today && mins >= toMin(st) - 20 && mins <= toMin(en) ? ' now' : '') + (d === today && mins > toMin(en) ? ' past' : '') + '"' + (inApp ? ' href="' + (g0 ? pageHash('group', g0) : courseHash(c)) + '"' : '') + '>' +
-          '<b>' + esc(gs.join(' + ')) + '</b><small>' + (compact ? '' : esc(c) + ' &middot; ') + (xs[0].room ? 'Room ' + esc(xs[0].room) : '') + '</small>' + stt + '</' + tag + '>';
+          '<b>' + esc(gs.join(' + ')) + '</b><small>' + esc(c) + (xs[0].room ? ' &middot; ' : '') + (xs[0].room ? 'Room ' + esc(xs[0].room) : '') + '</small>' + stt + '</' + tag + '>';
       }).join('') + '</td>';
     };
     /* phones: the same week as a list of days */
@@ -4027,20 +4016,37 @@ const BOOT = null;
     const glance = '<div class="h-glance"><div><b>' + pool.length + '</b><span>' + (mine.length ? 'my groups' : 'groups') + '</span></div><div><b>' + studs + '</b><span>students</span></div>' +
       '<div><b>' + (studs ? Math.round(100 * reg / studs) : 0) + '%</b><span>phones registered</span></div><div' + (liveN ? ' class="ok"' : '') + '><b>' + liveN + '</b><span>check-ins live now</span></div></div>';
     const hasSched = (D.schedule || []).some(x => isTaRow(x, me));
-    return '<h2 class="h-sec">' + homeIcon('calendar') + 'My week <span class="h-date">' + todayLong() + '</span><a class="link h-more" href="#calendar">Open the calendar &rarr;</a></h2>' +
+    return '<h2 class="h-sec">' + homeIcon('calendar') + 'My schedule <span class="h-date">' + todayLong() + '</span><a class="link h-more" href="#calendar">Open my schedule &rarr;</a></h2>' +
       (hasSched ? '<p class="h-todayline">' + todayLine(me) + '</p>' + calendarHtml(me, true) : '<p class="note">Your sections are not in the schedule yet.</p>') + glance;
   }
-  /* My week page: the calendar of any TA (the admin can pick one) */
+  /* the sections of a TA in the order they come this week: groups taught together at the same time are one section */
+  function sectionsHtml(ta) {
+    const n = new Date(), today = n.getDay(), mins = n.getHours() * 60 + n.getMinutes(), secs = [];
+    (D.schedule || []).filter(x => isTaRow(x, ta)).forEach(x => { const k = x.course + '|' + x.day + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, course: x.course, day: x.day, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
+    secs.sort((a, b) => ((a.day - today + 7) % 7) - ((b.day - today + 7) % 7) || toMin(a.start) - toMin(b.start));
+    const own = ta === D.me.name ? D.groups.filter(g => g.ta === ta && !secs.some(sc => sc.course === g.course && sc.gs.indexOf(g.group) >= 0)) : [];
+    if (!secs.length && !own.length) return '';
+    const card = (course, gs, when, now, live) => {
+      const g = D.groups.find(x => x.course === course && gs.indexOf(x.group) >= 0), tag = g ? 'a' : 'div';
+      return '<' + tag + ' class="ms-card' + (g ? '' : ' off') + (now ? ' now' : '') + '"' + (g ? ' href="' + pageHash('group', g) + '"' : '') + '><b>' + esc(gs.sort(numeric).join(' + ')) + '</b><span>' + esc(course) + '</span><small>' + when + '</small>' +
+        (live ? '<i class="h-st st-live">Live</i>' : now ? '<i class="h-st now">Now</i>' : '') + '</' + tag + '>';
+    };
+    return '<h2 class="h-sec" style="margin-top:30px">' + homeIcon('clock') + (ta === D.me.name ? 'My sections' : 'Sections') + '</h2><div class="ms-grid">' +
+      secs.map(sc => card(sc.course, sc.gs, DAY3[sc.day] + ' ' + t12(sc.start) + '&ndash;' + t12(sc.end) + (sc.room ? ' &middot; Room ' + esc(sc.room) : ''),
+        sc.day === today && mins >= toMin(sc.start) - 20 && mins <= toMin(sc.end), sc.gs.some(gr => (D.groups.find(x => x.course === sc.course && x.group === gr) || {}).live))).join('') +
+      own.map(g => card(g.course, [g.group], 'Not in the schedule', false, !!g.live)).join('') + '</div>';
+  }
+  /* My schedule page: the calendar of any TA (the admin can pick one), then the TA's sections */
   function calendarPage(wantTa) {
     stopTimers();
     const tas = [...new Set((D.schedule || []).map(x => x.ta).filter(Boolean))].sort();
     const isAdmin = D.me.role === 'Admin';
     let ta = isAdmin && tas.indexOf(wantTa) >= 0 ? wantTa : D.me.name;
     const draw = () => {
-      app.innerHTML = '<div class="wrap"><div class="top"><div class="gtitle"><span class="gbadge q-ic" style="width:56px;height:56px">' + homeIcon('calendar') + '</span><div><h1>' + (ta === D.me.name ? 'My week' : esc(ta)) + '</h1><p class="sub">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') + '</p></div></div>' +
+      app.innerHTML = '<div class="wrap"><div class="top"><div class="gtitle"><span class="gbadge q-ic" style="width:56px;height:56px">' + homeIcon('calendar') + '</span><div><h1>' + (ta === D.me.name ? 'My schedule' : esc(ta)) + '</h1><p class="sub">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') + '</p></div></div>' +
         (isAdmin && tas.length ? taPicker(ta) : '') + '</div>' +
         '<p class="h-todayline">' + todayLine(ta) + '</p>' + calendarHtml(ta, false) +
-        '<p class="note" style="margin-top:12px">From the schedule. Press a section to open its group. Today\'s sections say Done, Now, Live (check-in open) or Next.</p></div>';
+        '<p class="note" style="margin-top:12px">From the schedule. Press a section to open its group. Today\'s sections say Done, Now, Live (check-in open) or Next.</p>' + sectionsHtml(ta) + '</div>';
       if ($('tpBtn')) bindTaPicker((v) => { ta = v; history.replaceState(null, '', '#calendar' + (ta === D.me.name ? '' : '/' + encodeURIComponent(ta))); lastHash = location.hash; draw(); });
     };
     /* each TA with the courses and groups they teach, from the schedule */
