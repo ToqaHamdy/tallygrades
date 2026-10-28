@@ -814,6 +814,21 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   @keyframes vt-in { from { opacity: 0; transform: translateY(10px); } }
   html.vt-theme::view-transition-old(root), html.vt-theme::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
   @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  .mk-row { display: flex; align-items: flex-start; gap: 14px; margin: 0 0 14px; }
+  .mk-lbl { flex: 0 0 80px; padding-top: 9px; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .mk-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .mk-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; border: 1.5px solid var(--line); background: var(--card2); color: var(--text); border-radius: 12px; padding: 8px 14px; font: inherit; font-weight: 600; cursor: pointer; transition: border-color .15s, background-color .15s; }
+  .mk-chip b { font-size: 15px; } .mk-chip small { color: var(--muted); font-size: 11.5px; font-weight: 500; }
+  .mk-chip.sm { padding: 7px 12px; flex-direction: row; }
+  .mk-chip:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+  .mk-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; } .mk-chip.on small { color: rgba(255,255,255,.85); }
+  .mk-all { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 12px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
+  .mk-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 10px; }
+  .mk-tools #mkid { flex: 1 1 320px; } .mk-tools #mksr { flex: 0 1 240px; }
+  .mk-stat { color: var(--muted); margin: 6px 0 12px; } .mk-stat b { color: var(--text); }
+  .mk-table th.num small { display: block; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .mk-table tr.flash-row td { background: color-mix(in srgb, var(--accent) 18%, transparent); transition: background-color .3s; }
+  @media (max-width: 640px) { .mk-row { flex-direction: column; gap: 6px; } .mk-lbl { flex: none; padding-top: 0; } }
   /* calmer home, account menu */
   .acct-menu { display: grid; gap: 2px; margin-top: 10px; }
   .acct-item { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; align-items: center; width: 100%; padding: 10px; border-radius: 10px; border: 0; background: none; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
@@ -3230,6 +3245,7 @@ const BOOT = null;
   })();
   /* the tools row at the top of the home and course pages: a button with an icon for each tool */
   const TB_ICONS = {
+    pen: '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
     home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5M8 7h7"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
@@ -3565,6 +3581,8 @@ const BOOT = null;
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
     if (location.hash === '#settings') { acct(); return swap(settingsPage); }
+    const mm = location.hash.match(/^#marks(?:\/([^/]*))?$/);
+    if (mm) { acct(); return swap(() => marksPage(mm[1] ? decodeURIComponent(mm[1]) : '')); }
     const mi = location.hash.match(/^#insights(?:\/([^/]*))?$/);
     if (mi) { acct(); return swap(() => insightsPage(mi[1] ? decodeURIComponent(mi[1]) : '')); }
     const mc = location.hash.match(/^#course\/([^/]*)$/);
@@ -3616,7 +3634,7 @@ const BOOT = null;
   /* ----- the circle at the top right: who is logged in, their courses and groups, and Log out (Log in when nobody is) ----- */
   /* the tools in the top bar, next to the light/dark button and the account circle; on a course's pages they work on that course */
   function navCourse() {
-    const m = location.hash.match(/^#(?:course|group|grades|insights|team)\/([^/]+)/);
+    const m = location.hash.match(/^#(?:course|group|grades|insights|team|marks)\/([^/]+)/);
     return m ? decodeURIComponent(m[1]) : '';
   }
   /* the menu on the left of every staff page: pages, courses, your sections, tools */
@@ -3647,6 +3665,7 @@ const BOOT = null;
       : D.groups.filter(g => g.ta === me).sort((a, b) => numeric(a.course + a.group, b.course + b.group)).map(g => '<a class="sd-item sd-sec-item' + (h === pageHash('group', g) || h === pageHash('grades', g) ? ' on' : '') + '" href="' + pageHash('group', g) + '"><span class="sd-code">' + esc(g.group) + '</span><span class="sd-when">' + esc(g.course) + '</span>' + (g.live ? '<i class="sd-dot live"></i>' : '') + '</a>').join('');
     side.innerHTML = '<a class="sd-brand" href="#"><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a>' +
       '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + btn('take', 'qr', 'Take attendance') +
+        item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
         item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + btn('ask', 'spark', 'Ask the assistant') +
         (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
         (secHtml ? '<div class="sd-sec">My sections</div>' + secHtml : '') +
@@ -3658,6 +3677,7 @@ const BOOT = null;
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
     const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
     $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + '<button type="button" class="tn-a" title="Take attendance" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>' +
+      tnItem('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
       tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
       (courses.length ? dd('courses', 'book', 'Courses', courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join(''), courses.some(x => h === courseHash(x))) : '') +
       (secHtml ? dd('secs', 'clock', 'My sections', secHtml, /^#(group|grades)\//.test(h)) : '') +
@@ -4266,6 +4286,138 @@ const BOOT = null;
     }
     return sheets;
   }
+  /* ----- Enter marks: one item (Midterm, Final, a quiz...) for many groups at once ----- */
+  async function marksPage(wantCourse) {
+    stopTimers();
+    const dirty = {};
+    let data = null, course = '', key = '', picked = [], q = '';
+    app.innerHTML = '<div class="wrap" id="mk"><div class="top"><div><h1>Enter marks</h1><p class="sub">Choose what you are marking and the groups, then type the marks. Enter moves to the next student.</p></div></div><div id="mkb"><p class="note">Loading</p></div></div>';
+    const unsaved = () => Object.keys(dirty).length;
+    leaveGuard = () => !unsaved() || confirm('You have marks that are not saved. Leave anyway?');
+    try { data = await api('askData', PIN); } catch (e) { $('mkb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
+    if (!$('mk')) return;
+    const courses = data.courses.filter(c => c.items.length);
+    if (!courses.length) { $('mkb').innerHTML = '<div class="empty">No grade items yet. The admin adds them in Courses (Grade items).</div>'; return; }
+    course = courses.some(c => c.course === wantCourse) ? wantCourse : (store.get('tg_mk_course') || '');
+    if (!courses.some(c => c.course === course)) course = courses[0].course;
+    const isAdmin = D.me.role === 'Admin';
+    const C = () => courses.find(c => c.course === course);
+    const item = () => C().items.find(it => it.key === key);
+    const groupsOf = () => [...new Set(C().rows.map(r => r.group))].sort(numeric);
+    const mineOf = () => groupsOf().filter(g => D.groups.some(x => x.course === course && x.group === g && x.ta === D.me.name));
+    const setCourse = (c) => {
+      course = c; store.set('tg_mk_course', c);
+      const its = C().items; key = store.get('tg_mk_item_' + c) || ''; if (!its.some(it => it.key === key)) key = its[0].key;
+      let saved = []; try { saved = JSON.parse(store.get('tg_mk_groups_' + c) || '[]'); } catch (e) {}
+      picked = saved.filter(g => groupsOf().indexOf(g) >= 0);
+      if (!picked.length) picked = mineOf().length ? mineOf() : groupsOf();
+    };
+    setCourse(course);
+    const val = (r) => { const k = r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
+    const shown = () => C().rows.filter(r => picked.indexOf(r.group) >= 0).sort((a, b) => numeric(a.group, b.group) || 0);
+    function draw() {
+      const it = item(), rows = shown(), gs = groupsOf(), mine = mineOf();
+      const filled = rows.filter(r => val(r) !== ''), nums = filled.map(r => Number(val(r))).filter(x => !isNaN(x));
+      $('mkb').innerHTML =
+        (courses.length > 1 ? '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips">' + courses.map(c => '<button type="button" class="mk-chip' + (c.course === course ? ' on' : '') + '" data-mc="' + esc(c.course) + '">' + esc(c.course) + '</button>').join('') + '</div></div>' : '') +
+        '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + C().items.map(x => '<button type="button" class="mk-chip' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '"><b>' + esc(x.item) + '</b><small>' + (x.check ? 'done / not done' : 'out of ' + x.max) + '</small></button>').join('') + '</div></div>' +
+        '<div class="mk-row"><span class="mk-lbl">Groups</span><div class="mk-chips">' +
+          '<button type="button" class="mk-all" data-mg="*all">All (' + gs.length + ')</button>' + (mine.length && mine.length !== gs.length ? '<button type="button" class="mk-all" data-mg="*mine">My groups (' + mine.length + ')</button>' : '') +
+          gs.map(g => '<button type="button" class="mk-chip sm' + (picked.indexOf(g) >= 0 ? ' on' : '') + '" data-mg="' + esc(g) + '">' + esc(g) + '</button>').join('') + '</div></div>' +
+        '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
+          '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
+          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button>' + (it.check ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done</button>' : '') + '</div>' +
+        '<p class="mk-stat"><b>' + filled.length + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(it.item) + '</b>' + (nums.length && !it.check ? ' &middot; average <b>' + Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 + '</b> of ' + it.max : '') + '</p>' +
+        '<div class="table-wrap"><table class="mk-table"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th><th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th></tr></thead><tbody>' +
+          (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
+            '<td class="num">' + markCell(it, (r.id + '|' + r.group + '|' + key) in dirty ? 'dirty' : '', val(r), 'data-i="' + C().rows.indexOf(r) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + '</td></tr>').join('')
+            : '<tr><td colspan="5" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
+        '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
+      bind(); status();
+    }
+    function status() {
+      const n = unsaved(), bad = !!$('mkb').querySelector('.cell.bad');
+      $('save').disabled = !n || bad; $('sbar').classList.toggle('dirty', n > 0);
+      window.onbeforeunload = n ? (e) => { e.preventDefault(); e.returnValue = ''; } : null;
+      $('st').textContent = bad ? 'A mark is out of range. Fix the red cell.' : n ? n + (n > 1 ? ' marks not saved' : ' mark not saved') : 'All marks saved';
+    }
+    function setMark(inp, raw) {
+      const r = C().rows[inp.dataset.i], k = r.id + '|' + r.group + '|' + key, orig = r.scores[key] == null ? '' : String(r.scores[key]);
+      const n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(item().max)));
+      if (raw === orig) delete dirty[k]; else dirty[k] = raw;
+      inp.classList.toggle('dirty', k in dirty); status();
+    }
+    function bind() {
+      const box = $('mkb');
+      box.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
+      box.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { key = b.dataset.mi; store.set('tg_mk_item_' + course, key); draw(); });
+      box.querySelectorAll('[data-mg]').forEach(b => b.onclick = () => {
+        const g = b.dataset.mg;
+        if (g === '*all') picked = groupsOf(); else if (g === '*mine') picked = mineOf();
+        else picked = picked.indexOf(g) >= 0 ? picked.filter(x => x !== g) : picked.concat(g);
+        store.set('tg_mk_groups_' + course, JSON.stringify(picked)); draw();
+      });
+      const cells = [...box.querySelectorAll('.mk-table .cell')];
+      cells.forEach(inp => {
+        inp.oninput = () => setMark(inp, cellVal(inp));
+        inp.onkeydown = (e) => {
+          const step = e.key === 'Enter' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
+          if (!step) return; e.preventDefault();
+          const vis = cells.filter(x => !x.closest('tr').hidden), next = vis[vis.indexOf(inp) + step];
+          if (next) { next.focus(); if (next.select) next.select(); }
+        };
+      });
+      $('mksr').oninput = () => { q = $('mksr').value.trim().toLowerCase(); box.querySelectorAll('.mk-table tr[data-q]').forEach(tr => { tr.hidden = q && tr.dataset.q.indexOf(q) < 0; }); };
+      /* type an ID (or its last digits): jump to that student's mark */
+      $('mkid').oninput = () => { $('mkid').value = $('mkid').value.replace(/\D/g, ''); };
+      $('mkid').onkeydown = (e) => {
+        if (e.key !== 'Enter') return; e.preventDefault();
+        const v = $('mkid').value; if (v.length < 3) { toast('Type at least 3 digits.'); return; }
+        const trs = [...box.querySelectorAll('.mk-table tr[data-id]')].filter(tr => tr.dataset.id === v || tr.dataset.id.slice(-v.length) === v);
+        if (!trs.length) { toast('No student shown has an ID ending in ' + v + '.'); return; }
+        if (trs.length > 1 && !trs.some(tr => tr.dataset.id === v)) { toast(trs.length + ' students end in ' + v + '. Type more digits.'); return; }
+        const tr = trs.find(x => x.dataset.id === v) || trs[0];
+        if (tr.hidden) { q = ''; $('mksr').value = ''; box.querySelectorAll('.mk-table tr[data-q]').forEach(x => { x.hidden = false; }); }
+        tr.scrollIntoView({ block: 'center', behavior: 'smooth' }); tr.classList.add('flash-row'); setTimeout(() => tr.classList.remove('flash-row'), 1400);
+        const inp = tr.querySelector('.cell'); $('mkid').value = '';
+        if (inp.type === 'checkbox') { inp.checked = true; inp.oninput(); $('mkid').focus(); } else { inp.focus(); inp.select(); }
+      };
+      if ($('mkalldone')) $('mkalldone').onclick = () => box.querySelectorAll('.mk-table tr:not([hidden]) .ck').forEach(x => { x.checked = true; x.oninput(); });
+      $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy two columns from Excel, the student ID and the mark of <b>' + esc(item().item) + '</b>, and paste them here. One student on each line.</p>' +
+        '<textarea class="in" id="pt" rows="10" style="width:100%;margin-top:12px;font-family:var(--mono)" placeholder="692601451&#9;14&#10;692601452&#9;17"></textarea><div class="err" id="pe"></div>' +
+        '<div class="row" style="margin-top:12px"><button class="btn" id="pgo" type="button">Fill the marks</button><button class="btn ghost" data-close type="button">Cancel</button></div>', (o, close) => {
+          o.querySelector('#pgo').onclick = () => {
+            let ok = 0; const miss = [];
+            o.querySelector('#pt').value.split(/\r?\n/).forEach(line => {
+              const m = line.trim().match(/^(\d{3,})\D+(\d+(?:[.,]\d+)?)\s*$/); if (!m) return;
+              const tr = box.querySelector('.mk-table tr[data-id="' + m[1] + '"]'); if (!tr) { miss.push(m[1]); return; }
+              const inp = tr.querySelector('.cell'), v = m[2].replace(',', '.');
+              if (inp.type === 'checkbox') inp.checked = Number(v) > 0; else inp.value = v;
+              inp.oninput(); ok++;
+            });
+            if (!ok && !miss.length) { o.querySelector('#pe').textContent = 'Nothing to fill. Each line needs an ID and a mark.'; return; }
+            close(); toast(ok + (ok === 1 ? ' mark filled' : ' marks filled') + (miss.length ? '. Not shown or not found: ' + miss.slice(0, 6).join(', ') + (miss.length > 6 ? '...' : '') : '') + '. Press Save.');
+          };
+        });
+      $('save').onclick = async () => {
+        const byGroup = {};
+        Object.keys(dirty).forEach(k => { const [id, g, ky] = k.split('|'); (byGroup[g] = byGroup[g] || []).push({ id: id, key: ky, score: dirty[k] }); });
+        $('save').disabled = true; $('save').textContent = 'Saving';
+        const failed = [];
+        for (const g of Object.keys(byGroup)) {
+          try { await api('saveScores', PIN, course, g, byGroup[g]); Object.keys(dirty).filter(k => k.split('|')[1] === g).forEach(k => delete dirty[k]); }
+          catch (e) { failed.push(g + ': ' + errMsg(e)); }
+        }
+        try { data = await api('askData', PIN); } catch (e) {}
+        $('save').textContent = 'Save';
+        if (!$('mk')) return;
+        draw();
+        toast(failed.length ? 'Not saved for ' + failed.join('; ') : 'Saved.');
+      };
+    }
+    draw();
+  }
+
   /* ----- Dashboard: attendance, grades, students at risk and teams, from the same data as Ask ----- */
   const WEEK_NAME = (n) => n === 7 ? 'Mid' : n === 14 ? 'Final' : 'W' + n;
   const absStreak = (r) => { let best = 0, cur = 0; r.weeks.forEach(v => { if (v === 'A') { cur++; best = Math.max(best, cur); } else if (v) cur = 0; }); return best; };
