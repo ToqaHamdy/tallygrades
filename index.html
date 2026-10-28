@@ -381,7 +381,23 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .side { position: fixed; top: 0; left: 0; bottom: 0; width: 256px; z-index: 36; display: flex; flex-direction: column; padding: 16px 12px 14px; overflow-y: auto;
     background: var(--card); border-right: 1px solid var(--line); scrollbar-width: thin; }
   .side[hidden] { display: none; }
-  body.has-side { padding-left: 256px; }
+  body.has-side .acct { top: 0; left: 0; right: 0; padding: 10px 18px; gap: 6px; background: color-mix(in srgb, var(--bg) 92%, transparent); border-bottom: 1px solid var(--line); }
+  body.has-side .wrap { padding-top: 96px; }
+  .tn-brand { display: inline-flex; align-items: center; gap: 10px; margin-right: 14px; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; white-space: nowrap; }
+  .tn-brand[hidden], .tn[hidden] { display: none; }
+  .tn { display: flex; align-items: center; gap: 2px; margin-right: auto; min-width: 0; }
+  .tn-a { display: inline-flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; white-space: nowrap; transition: background-color .15s, color .15s; }
+  .tn-a:hover, .tn-a[aria-expanded="true"] { background: var(--soft); color: var(--text); }
+  .tn-a.on { color: var(--text); background: color-mix(in srgb, var(--accent) 14%, transparent); } .tn-a.on > svg:first-child { color: var(--accent); }
+  .tn-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .tn-car { opacity: .7; transition: transform .2s; } .tn-a[aria-expanded="true"] .tn-car { transform: rotate(180deg); }
+  .tn-dd { position: relative; }
+  .tn-menu { position: absolute; left: 0; top: calc(100% + 8px); min-width: 250px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 8px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 24px 60px -16px rgba(0,0,0,.55); animation: fadein .15s ease-out; z-index: 2; }
+  .tn-menu[hidden] { display: none; }
+  .tn-menu .sd-item.on::before { display: none; }
+  body.has-side .side { display: none; }
+  @media (max-width: 1180px) { .tn-a > span { display: none; } .tn-a { padding: 9px 10px; } .tn-a.on > span { display: inline; } }
   .sd-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; color: var(--text); text-decoration: none; font-family: var(--display); font-size: 18px; letter-spacing: -.02em; white-space: nowrap; }
   .nb-mark { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, var(--grad2), var(--accent)); display: inline-flex; align-items: center; justify-content: center; gap: 3px; flex: 0 0 auto; }
   .nb-mark i { width: 3px; height: 13px; border-radius: 2px; background: #fff; }
@@ -407,7 +423,8 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .side-scrim { display: none; }
   @media (min-width: 901px) { .side-btn { display: none !important; } }
   @media (max-width: 900px) {
-    body.has-side { padding-left: 0; }
+    .tn { display: none; } .tn-brand b { display: none; } body.has-side .acct { justify-content: flex-end; } .tn-brand { margin-right: auto; }
+    body.has-side .side { display: flex; }
     .side { transform: translateX(-105%); transition: transform .3s cubic-bezier(.2,.8,.2,1); box-shadow: 24px 0 60px -20px rgba(0,0,0,.6); width: min(300px, 86vw); }
     body.side-open .side { transform: none; }
     body.side-open .side-scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(0,0,0,.45); animation: fadein .2s ease-out; }
@@ -3144,7 +3161,8 @@ const BOOT = null;
   }
   (function topBar() {
     const box = document.createElement('div'); box.id = 'acct'; box.className = 'acct hide-proj';
-    box.innerHTML = '<button class="theme-btn side-btn" id="sideOpen" type="button" hidden aria-label="Menu" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>' +
+    box.innerHTML = '<a class="tn-brand" id="tnBrand" href="#" hidden><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a><nav class="tn" id="topnav" aria-label="Main" hidden></nav>' +
+      '<button class="theme-btn side-btn" id="sideOpen" type="button" hidden aria-label="Menu" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>' +
       '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
     const side = document.createElement('aside'); side.id = 'side'; side.className = 'side hide-proj'; side.hidden = true; side.setAttribute('aria-label', 'Menu');
     const scrim = document.createElement('div'); scrim.id = 'sideScrim'; scrim.className = 'side-scrim';
@@ -3579,7 +3597,7 @@ const BOOT = null;
     const on = !!(PIN && D), side = $('side');
     document.body.classList.toggle('has-side', on);
     side.hidden = !on; $('sideOpen').hidden = !on;
-    if (!on) { side.innerHTML = ''; document.body.classList.remove('side-open'); return; }
+    if (!on) { side.innerHTML = ''; $('topnav').innerHTML = ''; $('topnav').hidden = true; $('tnBrand').hidden = true; document.body.classList.remove('side-open'); return; }
     const h = location.hash, c = navCourse(), isAdmin = D.me.role === 'Admin', me = D.me.name;
     const svg = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + TB_ICONS[n] + '</svg>';
     const item = (href, icon, label, active, extra) => '<a class="sd-item' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span>' + (extra || '') + '</a>';
@@ -3608,7 +3626,21 @@ const BOOT = null;
         '<div class="sd-sec">Tools</div>' + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
         (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '') + '</nav>' +
       '<div class="sd-foot">' + item('#settings', 'gear', 'Settings', h === '#settings') + '</div>';
-    const close = () => { document.body.classList.remove('side-open'); $('sideOpen').setAttribute('aria-expanded', 'false'); };
+    /* the same menu as a bar along the top (wide screens): pages, then Courses, My sections and Tools as drop-down menus */
+    const dd = (key, icon, label, body, active) => '<div class="tn-dd"><button type="button" title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" data-dd="' + key + '" aria-haspopup="true" aria-expanded="false">' + svg(icon) + '<span>' + label + '</span><svg class="tn-car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="tn-menu" hidden>' + body + '</div></div>';
+    const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
+    const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
+    $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + '<button type="button" class="tn-a" title="Take attendance" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>' +
+      tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
+      (courses.length ? dd('courses', 'book', 'Courses', courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join(''), courses.some(x => h === courseHash(x))) : '') +
+      (secHtml ? dd('secs', 'clock', 'My sections', secHtml, /^#(group|grades)\//.test(h)) : '') +
+      dd('tools', 'archive', 'Tools', toolsBody, false) +
+      '<button type="button" class="tn-a" title="Ask the assistant" data-sd="ask">' + svg('spark') + '<span>Ask</span></button>' + tnItem('#settings', 'gear', 'Settings', h === '#settings');
+    $('topnav').hidden = false; $('tnBrand').hidden = false;
+    const closeDd = () => $('topnav').querySelectorAll('.tn-menu').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); });
+    $('topnav').querySelectorAll('[data-dd]').forEach(b => b.onclick = (e) => { e.stopPropagation(); const m = b.nextElementSibling, open = m.hidden; closeDd(); m.hidden = !open; b.setAttribute('aria-expanded', String(open)); });
+    $('topnav').querySelectorAll('.tn-menu a').forEach(a => a.addEventListener('click', closeDd));
+    const close = () => { closeDd(); document.body.classList.remove('side-open'); $('sideOpen').setAttribute('aria-expanded', 'false'); };
     const take = () => {
       const show = () => { const el = $('quick'); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600); } };
       if ($('quick')) show(); else { go(c ? courseHash(c) : ''); setTimeout(show, 700); }
@@ -3619,11 +3651,13 @@ const BOOT = null;
       final: downloadFinal, regqr: registrationQrDialog, term: termDialog, backup: downloadBackup
     };
     side.querySelectorAll('[data-sd]').forEach(b => b.onclick = () => { close(); act[b.dataset.sd](); });
+    $('topnav').querySelectorAll('[data-sd]').forEach(b => b.onclick = () => { close(); act[b.dataset.sd](); });
     side.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
     if (!side.dataset.ready) {
       side.dataset.ready = '1';
       $('sideOpen').onclick = () => { const o = !document.body.classList.contains('side-open'); document.body.classList.toggle('side-open', o); $('sideOpen').setAttribute('aria-expanded', String(o)); };
       $('sideScrim').onclick = close;
+      document.addEventListener('click', (e) => { if (!$('topnav').contains(e.target)) $('topnav').querySelectorAll('.tn-menu').forEach(m => { m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false'); }); });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('side-open')) close(); });
     }
   }
