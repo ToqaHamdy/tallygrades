@@ -860,6 +860,16 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .mk-chip.sm { padding: 7px 12px; flex-direction: row; }
   .mk-chip:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
   .mk-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; } .mk-chip.on small { color: rgba(255,255,255,.85); }
+  .mk-chip.on { background: color-mix(in srgb, var(--accent) 16%, var(--card2)); border-color: var(--accent); color: var(--text); } .mk-chip.on small { color: var(--ink); }
+  .mk-fam { display: inline-flex; flex-wrap: wrap; max-width: 100%; align-items: center; gap: 4px; border: 1.5px solid var(--line); background: var(--card2); border-radius: 12px; padding: 5px 6px 5px 12px; }
+  .mk-fam.on { border-color: var(--accent); } .mk-fam-l { display: inline-flex; flex-direction: column; margin-right: 6px; line-height: 1.2; } .mk-fam-l b { font-size: 15px; } .mk-fam-l small { color: var(--muted); font-size: 11.5px; }
+  .mk-num { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .mk-num:hover { border-color: var(--accent); } .mk-num.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .mk-letters { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; margin-top: 4px; }
+  .mk-lg { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--card2); } .mk-lg.on, .mk-lg.some { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+  .mk-lg .mk-num { min-width: 28px; height: 28px; padding: 0 6px; font-size: 13px; }
+  .mk-L { width: 28px; height: 28px; border-radius: 7px; border: 0; background: var(--soft); color: var(--ink); font: inherit; font-weight: 800; cursor: pointer; } .mk-lg.on .mk-L { background: var(--accent); color: var(--on-accent); }
+  .mk-cnt { align-self: center; color: var(--muted); font-size: 13px; margin-left: 4px; }
   .mk-all { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 12px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
   .mk-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 10px; }
   .mk-tools #mkid { flex: 1 1 320px; } .mk-tools #mksr { flex: 0 1 240px; }
@@ -4730,6 +4740,27 @@ const BOOT = null;
     const item = () => C().items.find(it => it.key === key);
     const groupsOf = () => [...new Set(C().rows.map(r => r.group))].sort(numeric);
     const mineOf = () => groupsOf().filter(g => D.groups.some(x => x.course === course && x.group === g && x.ta === D.me.name));
+    /* grade items: "Assignment 1" to "Assignment 8" become one row "Assignment 1 2 3 ... 8" */
+    const itemsHtml = () => {
+      const fam = {}, order = [];
+      C().items.forEach(x => { const m = String(x.item).match(/^(.*?)\s*(\d+)$/), b = m ? m[1].trim() : null; const k = b && C().items.filter(y => (String(y.item).match(/^(.*?)\s*(\d+)$/) || [])[1] && String(y.item).match(/^(.*?)\s*(\d+)$/)[1].trim() === b).length > 1 ? 'f:' + b : 'i:' + x.key; if (!fam[k]) { fam[k] = { base: b, list: [] }; order.push(k); } fam[k].list.push(x); });
+      const sub = (x) => x.check ? 'done / not done' : (isBonus(x) ? 'extra, up to ' : 'out of ') + x.max;
+      return order.map(k => {
+        const f = fam[k];
+        if (k.indexOf('i:') === 0) { const x = f.list[0]; return '<button type="button" class="mk-chip' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '"><b>' + esc(x.item) + '</b><small>' + sub(x) + '</small></button>'; }
+        const on = f.list.some(x => x.key === key);
+        return '<div class="mk-fam' + (on ? ' on' : '') + '"><span class="mk-fam-l"><b>' + esc(f.base) + '</b><small>' + sub(f.list[0]) + '</small></span>' +
+          f.list.map(x => '<button type="button" class="mk-num' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '" title="' + esc(x.item) + '">' + esc(String(x.item).match(/(\d+)$/)[1]) + '</button>').join('') + '</div>';
+      }).join('');
+    };
+    /* groups by letter: "A 1 2 3 4"; the letter chooses or clears all of its groups */
+    const lettersHtml = (gs) => {
+      const L = [];
+      gs.forEach(g => { const m = String(g).match(/^([A-Za-z]+)(.*)$/), l = m ? m[1].toUpperCase() : '#'; let b = L.find(x => x.l === l); if (!b) { b = { l: l, gs: [] }; L.push(b); } b.gs.push(g); });
+      return L.map(b => { const all = b.gs.every(g => picked.indexOf(g) >= 0), some = b.gs.some(g => picked.indexOf(g) >= 0);
+        return '<div class="mk-lg' + (all ? ' on' : some ? ' some' : '') + '"><button type="button" class="mk-L" data-ml="' + esc(b.l) + '" title="Choose or clear every ' + esc(b.l) + ' group">' + esc(b.l) + '</button>' +
+          b.gs.map(g => { const m = String(g).match(/^[A-Za-z]+(.+)$/); return '<button type="button" class="mk-num' + (picked.indexOf(g) >= 0 ? ' on' : '') + '" data-mg="' + esc(g) + '" title="Group ' + esc(g) + '">' + esc(m ? m[1] : g) + '</button>'; }).join('') + '</div>'; }).join('');
+    };
     const setCourse = (c) => {
       course = c; store.set('tg_mk_course', c);
       const its = C().items; key = store.get('tg_mk_item_' + c) || ''; if (!its.some(it => it.key === key)) key = its.length ? its[0].key : '';
@@ -4763,10 +4794,11 @@ const BOOT = null;
       const filled = rows.filter(r => val(r) !== ''), nums = filled.map(r => Number(val(r))).filter(x => !isNaN(x));
       $('mkb').innerHTML =
         courseRow +
-        '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + C().items.map(x => '<button type="button" class="mk-chip' + (x.key === key ? ' on' : '') + '" data-mi="' + esc(x.key) + '"><b>' + esc(x.item) + '</b><small>' + (x.check ? 'done / not done' : 'out of ' + x.max) + '</small></button>').join('') + '</div></div>' +
+        '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + itemsHtml() + '</div></div>' +
         '<div class="mk-row"><span class="mk-lbl">Groups</span><div class="mk-chips">' +
           '<button type="button" class="mk-all" data-mg="*all">All (' + gs.length + ')</button>' + (mine.length && mine.length !== gs.length ? '<button type="button" class="mk-all" data-mg="*mine">My groups (' + mine.length + ')</button>' : '') +
-          gs.map(g => '<button type="button" class="mk-chip sm' + (picked.indexOf(g) >= 0 ? ' on' : '') + '" data-mg="' + esc(g) + '">' + esc(g) + '</button>').join('') + '</div></div>' +
+          (picked.length ? '<button type="button" class="mk-all" data-mg="*none">Clear</button>' : '') + '<span class="mk-cnt">' + picked.length + ' of ' + gs.length + ' chosen</span>' +
+          '<div class="mk-letters">' + lettersHtml(gs) + '</div></div></div>' +
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
           '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button><button class="btn ghost" id="mkhist" type="button">History</button>' + (it.check ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done</button>' : '') + '</div>' +
@@ -4795,9 +4827,14 @@ const BOOT = null;
       box.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
       $('mknew').onclick = uploadDialog;
       box.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => { key = b.dataset.mi; store.set('tg_mk_item_' + course, key); draw(); });
+      box.querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
+        const mine = groupsOf().filter(g => (String(g).match(/^([A-Za-z]+)/) || ['', '#'])[1].toUpperCase() === b.dataset.ml);
+        picked = mine.every(g => picked.indexOf(g) >= 0) ? picked.filter(g => mine.indexOf(g) < 0) : [...new Set(picked.concat(mine))];
+        store.set('tg_mk_groups_' + course, JSON.stringify(picked)); draw();
+      });
       box.querySelectorAll('[data-mg]').forEach(b => b.onclick = () => {
         const g = b.dataset.mg;
-        if (g === '*all') picked = groupsOf(); else if (g === '*mine') picked = mineOf();
+        if (g === '*all') picked = groupsOf(); else if (g === '*mine') picked = mineOf(); else if (g === '*none') picked = [];
         else picked = picked.indexOf(g) >= 0 ? picked.filter(x => x !== g) : picked.concat(g);
         store.set('tg_mk_groups_' + course, JSON.stringify(picked)); draw();
       });
