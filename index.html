@@ -866,7 +866,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .h-time { font-family: var(--mono); font-size: 12.5px; color: var(--muted); font-weight: 700; }
   .h-what b { display: block; font-size: 15px; } .h-what small { color: var(--muted); font-size: 12.5px; }
   .h-st { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--card); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
-  .h-st.now { color: #fff; background: var(--accent); border-color: var(--accent); } .h-st.live { color: var(--ok); background: var(--ok-bg); border-color: transparent; } .h-st.done { opacity: .7; }
+  .h-st.now { color: #fff; background: var(--accent); border-color: var(--accent); } .h-st.st-live { color: var(--ok); background: var(--ok-bg); border-color: transparent; } .h-st.done { opacity: .7; }
   .h-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
   .h-nums div { background: var(--card2); border-radius: 12px; padding: 10px 12px; } .h-nums b { display: block; font-family: var(--display); font-size: 24px; } .h-nums span { color: var(--muted); font-size: 12.5px; }
   .h-nums .ok b { color: var(--ok); }
@@ -877,6 +877,34 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .h-tool b { font-size: 15px; } .h-tool small { color: var(--muted); font-size: 13px; line-height: 1.45; }
   @media (max-width: 900px) { .h-grid { grid-template-columns: 1fr; } .h-tools { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 480px) { .h-today a { grid-template-columns: 1fr auto; } .h-time { grid-column: 1 / -1; } }
+  .h-more { margin-left: auto; font-size: 14px; }
+  .h-todayline { margin: 0 0 12px; color: var(--muted); } .h-todayline b { color: var(--text); }
+  .cal-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+  .cal { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 640px; }
+  .cal th, .cal td { border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); padding: 8px; vertical-align: top; text-align: left; }
+  .cal tr > :last-child { border-right: 0; } .cal tbody tr:last-child > * { border-bottom: 0; }
+  .cal thead th { font-weight: 700; padding: 10px; } .cal thead th b { display: block; font-size: 14px; } .cal thead th small { color: var(--muted); font-size: 12px; font-weight: 500; }
+  .cal th.cal-today { background: color-mix(in srgb, var(--accent) 14%, transparent); } .cal th.cal-today b { color: var(--accent); }
+  .cal td.cal-tdcol { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+  .cal .cal-time { width: 84px; font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 700; } .cal .cal-time small { display: block; font-weight: 500; opacity: .8; }
+  .cal-ev { display: block; position: relative; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 12%, var(--card2)); border-left: 3px solid var(--accent); color: var(--text); text-decoration: none; margin-bottom: 4px; }
+  .cal-ev:last-child { margin-bottom: 0; } .cal-ev:hover { background: color-mix(in srgb, var(--accent) 22%, var(--card2)); }
+  .cal-ev { overflow: hidden; } .cal-ev b { display: block; font-size: 14px; padding-right: 46px; } .cal-ev small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; white-space: normal; overflow-wrap: anywhere; }
+  .cal-ev .h-st { position: absolute; top: 6px; right: 6px; font-size: 10.5px; padding: 1px 8px; }
+  .cal-ev.now { box-shadow: 0 0 0 2px var(--accent); } .cal-ev.past { opacity: .6; }
+  .cal-agenda { display: none; }
+  @media (max-width: 640px) {
+    .cal-wrap { display: none; } .cal-agenda { display: grid; gap: 10px; }
+    .ag-day { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .ag-day.today { border-color: var(--accent); }
+    .ag-h { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; } .ag-h small { color: var(--muted); } .ag-day.today .ag-h b { color: var(--accent); }
+    .ag-row { display: grid; grid-template-columns: 62px 1fr; gap: 10px; align-items: start; margin-top: 6px; }
+    .ag-row .cal-time { font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 700; } .ag-row .cal-time small { display: block; font-weight: 500; }
+  }
+  .h-glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+  .h-glance div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; } .h-glance b { display: block; font-family: var(--display); font-size: 24px; } .h-glance span { color: var(--muted); font-size: 12.5px; }
+  .h-glance .ok b { color: var(--ok); }
+  @media (max-width: 700px) { .h-glance { grid-template-columns: 1fr 1fr; } }
   /* calmer home, account menu */
   .acct-menu { display: grid; gap: 2px; margin-top: 10px; }
   .acct-item { display: grid; grid-template-columns: 22px 1fr; column-gap: 10px; align-items: center; width: 100%; padding: 10px; border-radius: 10px; border: 0; background: none; color: var(--text); font: inherit; font-size: 14.5px; font-weight: 600; text-align: left; text-decoration: none; cursor: pointer; }
@@ -3628,6 +3656,8 @@ const BOOT = null;
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
     if (location.hash === '#settings') { acct(); return swap(settingsPage); }
+    const mcal = location.hash.match(/^#calendar(?:\/([^/]*))?$/);
+    if (mcal) { acct(); return swap(() => calendarPage(mcal[1] ? decodeURIComponent(mcal[1]) : '')); }
     const mm = location.hash.match(/^#marks(?:\/([^/]*))?$/);
     if (mm) { acct(); return swap(() => marksPage(mm[1] ? decodeURIComponent(mm[1]) : '')); }
     const mi = location.hash.match(/^#insights(?:\/([^/]*))?$/);
@@ -3712,6 +3742,7 @@ const BOOT = null;
       : D.groups.filter(g => g.ta === me).sort((a, b) => numeric(a.course + a.group, b.course + b.group)).map(g => '<a class="sd-item sd-sec-item' + (h === pageHash('group', g) || h === pageHash('grades', g) ? ' on' : '') + '" href="' + pageHash('group', g) + '"><span class="sd-code">' + esc(g.group) + '</span><span class="sd-when">' + esc(g.course) + '</span>' + (g.live ? '<i class="sd-dot live"></i>' : '') + '</a>').join('');
     side.innerHTML = '<a class="sd-brand" href="#"><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a>' +
       '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + btn('take', 'qr', 'Take attendance') +
+        item('#calendar', 'calendar', 'My week', h.indexOf('#calendar') === 0) +
         item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
         item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + btn('ask', 'spark', 'Ask the assistant') +
         (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
@@ -3724,6 +3755,7 @@ const BOOT = null;
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
     const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
     $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + '<button type="button" class="tn-a" title="Take attendance" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>' +
+      tnItem('#calendar', 'calendar', 'My week', h.indexOf('#calendar') === 0) +
       tnItem('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
       tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
       (courses.length ? dd('courses', 'book', 'Courses', courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join(''), courses.some(x => h === courseHash(x))) : '') +
@@ -3932,33 +3964,67 @@ const BOOT = null;
   /* home: what is on today, the numbers at a glance, and what each tool does */
   const homeIcon = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     (n === 'users' ? '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>' : TB_ICONS[n]) + '</svg>';
-  function homeExtras(mine) {
-    const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes(), me = D.me.name;
-    const pool = mine.length ? mine : D.groups;
-    /* today: your sections from the schedule */
-    const todays = (D.schedule || []).filter(x => x.day === d && x.ta === me && D.groups.some(g => g.course === x.course && g.group === x.group));
-    const secs = [];
-    todays.forEach(x => { const k = x.course + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, course: x.course, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
+  /* the week of one TA from the schedule: days across, sections down; today is marked, each of today's sections says Done, Now, Live or Next */
+  function calendarHtml(ta, compact) {
+    const rows = (D.schedule || []).filter(x => x.ta === ta);
+    const n = new Date(), today = n.getDay(), mins = n.getHours() * 60 + n.getMinutes();
+    if (!rows.length) return '<p class="note">No sections for ' + esc(ta) + ' in the schedule yet.</p>';
+    const slots = [...new Set(rows.map(x => x.start + '|' + x.end))].sort((a, b) => toMin(a.split('|')[0]) - toMin(b.split('|')[0]));
+    const days = [...new Set([0, 1, 2, 3, 4].concat(rows.map(x => x.day)))].sort((a, b) => a - b);
+    const sunday = new Date(n); sunday.setHours(0, 0, 0, 0); sunday.setDate(n.getDate() - today);
+    const dateOf = (d) => { const x = new Date(sunday); x.setDate(sunday.getDate() + d); return x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+    const cell = (d, slot) => {
+      const [st, en] = slot.split('|'), here = rows.filter(x => x.day === d && x.start === st);
+      if (!here.length) return '<td class="cal-free"></td>';
+      const byCourse = {}; here.forEach(x => { (byCourse[x.course] = byCourse[x.course] || []).push(x); });
+      return '<td>' + Object.keys(byCourse).map(c => {
+        const xs = byCourse[c], gs = xs.map(x => x.group).sort(numeric), g0 = D.groups.find(g => g.course === c && gs.indexOf(g.group) >= 0);
+        const live = gs.some(gr => (D.groups.find(g => g.course === c && g.group === gr) || {}).live);
+        let stt = '';
+        if (d === today) stt = live ? '<span class="h-st st-live">Live</span>' : mins > toMin(en) ? '<span class="h-st done">Done</span>' : mins >= toMin(st) - 20 ? '<span class="h-st now">Now</span>' : '<span class="h-st">Next</span>';
+        return '<a class="cal-ev' + (d === today ? ' today' : '') + (d === today && mins >= toMin(st) - 20 && mins <= toMin(en) ? ' now' : '') + (d === today && mins > toMin(en) ? ' past' : '') + '" href="' + (g0 ? pageHash('group', g0) : courseHash(c)) + '">' +
+          '<b>' + esc(gs.join(' + ')) + '</b><small>' + (compact ? '' : esc(c) + ' &middot; ') + (xs[0].room ? 'Room ' + esc(xs[0].room) : '') + '</small>' + stt + '</a>';
+      }).join('') + '</td>';
+    };
+    /* phones: the same week as a list of days */
+    const agenda = '<div class="cal-agenda">' + days.filter(d => rows.some(x => x.day === d)).map(d => '<div class="ag-day' + (d === today ? ' today' : '') + '"><div class="ag-h"><b>' + DAYS[d] + '</b><small>' + dateOf(d) + (d === today ? ' &middot; today' : '') + '</small></div>' +
+      slots.filter(sl => rows.some(x => x.day === d && x.start === sl.split('|')[0])).map(sl => '<div class="ag-row"><span class="cal-time">' + t12(sl.split('|')[0]) + '<small>' + t12(sl.split('|')[1]) + '</small></span>' + cell(d, sl).replace(/^<td[^>]*>/, '<div class="ag-evs">').replace(/<\/td>$/, '</div>') + '</div>').join('') + '</div>').join('') + '</div>';
+    return agenda + '<div class="cal-wrap"><table class="cal"><thead><tr><th class="cal-time"></th>' + days.map(d => '<th' + (d === today ? ' class="cal-today"' : '') + '><b>' + DAY3[d] + '</b><small>' + dateOf(d) + (d === today ? ' &middot; today' : '') + '</small></th>').join('') + '</tr></thead><tbody>' +
+      slots.map(sl => { const [st, en] = sl.split('|'); return '<tr><th class="cal-time">' + t12(st) + '<small>' + t12(en) + '</small></th>' + days.map(d => cell(d, sl).replace('<td', '<td' + (d === today ? ' class="cal-tdcol"' : ''))).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  }
+  /* one line on how today is going */
+  function todayLine(ta) {
+    const n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes();
+    const secs = []; (D.schedule || []).filter(x => x.ta === ta && x.day === d).forEach(x => { const k = x.course + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
+    if (!secs.length) return 'No sections today.';
     secs.sort((a, b) => toMin(a.start) - toMin(b.start));
-    const today = '<section class="h-card"><h3>' + homeIcon('clock') + 'Today</h3>' + (secs.length ? '<ul class="h-today">' + secs.map(sc => {
-        const g0 = D.groups.find(g => g.course === sc.course && g.group === sc.gs[0]), live = sc.gs.some(gr => (D.groups.find(g => g.course === sc.course && g.group === gr) || {}).live);
-        const st = live ? '<span class="h-st live">Live</span>' : m > toMin(sc.end) ? '<span class="h-st done">Done</span>' : m >= toMin(sc.start) - 20 ? '<span class="h-st now">Now</span>' : '<span class="h-st">' + t12(sc.start) + '</span>';
-        return '<li><a href="' + (g0 ? pageHash('group', g0) : '#') + '"><span class="h-time">' + t12(sc.start) + '&ndash;' + t12(sc.end) + '</span><span class="h-what"><b>' + esc(sc.gs.join(' + ')) + '</b><small>' + esc(sc.course) + (sc.room ? ' &middot; Room ' + esc(sc.room) : '') + '</small></span>' + st + '</a></li>';
-      }).join('') + '</ul>' : '<p class="note">No sections of yours today' + ((D.schedule || []).some(x => x.ta === me) ? '.' : ' in the schedule.') + '</p>') + '</section>';
-    /* at a glance */
+    const done = secs.filter(x => m > toMin(x.end)).length, now = secs.find(x => m >= toMin(x.start) - 20 && m <= toMin(x.end)), next = secs.find(x => toMin(x.start) - 20 > m);
+    return secs.length + (secs.length === 1 ? ' section' : ' sections') + ' today, ' + done + ' done' + (now ? ' &middot; now: <b>' + esc(now.gs.sort(numeric).join(' + ')) + '</b> in ' + esc(now.room || '') : '') +
+      (next ? ' &middot; next: <b>' + esc(next.gs.sort(numeric).join(' + ')) + '</b> at ' + t12(next.start) + (next.room ? ' in ' + esc(next.room) : '') : (now ? '' : ' &middot; no more sections today'));
+  }
+  function homeExtras(mine) {
+    const pool = mine.length ? mine : D.groups, me = D.me.name;
     const studs = pool.reduce((t, g) => t + g.count, 0), reg = pool.reduce((t, g) => t + (g.registered || 0), 0), liveN = pool.filter(g => g.live).length;
-    const glance = '<section class="h-card"><h3>' + homeIcon('chart') + 'At a glance</h3><div class="h-nums">' +
-      '<div><b>' + pool.length + '</b><span>' + (mine.length ? 'my groups' : 'groups') + '</span></div><div><b>' + studs + '</b><span>students</span></div>' +
-      '<div><b>' + (studs ? Math.round(100 * reg / studs) : 0) + '%</b><span>phones registered</span></div><div' + (liveN ? ' class="ok"' : '') + '><b>' + liveN + '</b><span>check-ins live now</span></div></div>' +
-      '<a class="link" href="#insights">See the dashboard &rarr;</a></section>';
-    /* what each tool does */
-    const sc = (k, href, icon, title, text) => (href ? '<a class="h-tool" href="' + href + '">' : '<button class="h-tool" type="button" data-ht="' + k + '">') + '<span class="h-tic">' + homeIcon(icon) + '</span><b>' + title + '</b><small>' + text + '</small>' + (href ? '</a>' : '</button>');
-    const tools = '<h2 class="h-sec">' + homeIcon('archive') + 'Shortcuts</h2><div class="h-tools">' +
-      sc('', '#marks', 'pen', 'Enter marks', 'Type the marks of a quiz, the midterm or the final, for many groups at once.') +
-      sc('', '#insights', 'chart', 'Dashboard', 'Attendance by week, grades, and the students at risk.') +
-      sc('impatt', '', 'upload', 'Import attendance', 'Upload an Excel sheet of attendance taken on paper.') +
-      sc('regqr', '', 'qr', 'Registration QR', 'Students scan it once to register their phone.') + '</div>';
-    return '<div class="h-grid">' + today + glance + '</div>' + tools;
+    const glance = '<div class="h-glance"><div><b>' + pool.length + '</b><span>' + (mine.length ? 'my groups' : 'groups') + '</span></div><div><b>' + studs + '</b><span>students</span></div>' +
+      '<div><b>' + (studs ? Math.round(100 * reg / studs) : 0) + '%</b><span>phones registered</span></div><div' + (liveN ? ' class="ok"' : '') + '><b>' + liveN + '</b><span>check-ins live now</span></div></div>';
+    const hasSched = (D.schedule || []).some(x => x.ta === me);
+    return '<h2 class="h-sec">' + homeIcon('calendar') + 'My week <a class="link h-more" href="#calendar">Open the calendar &rarr;</a></h2>' +
+      (hasSched ? '<p class="h-todayline">' + todayLine(me) + '</p>' + calendarHtml(me, true) : '<p class="note">Your sections are not in the schedule yet.</p>') + glance;
+  }
+  /* My week page: the calendar of any TA (the admin can pick one) */
+  function calendarPage(wantTa) {
+    stopTimers();
+    const tas = [...new Set((D.schedule || []).map(x => x.ta).filter(Boolean))].sort();
+    const isAdmin = D.me.role === 'Admin';
+    let ta = isAdmin && tas.indexOf(wantTa) >= 0 ? wantTa : D.me.name;
+    const draw = () => {
+      app.innerHTML = '<div class="wrap"><div class="top"><div class="gtitle"><span class="gbadge q-ic" style="width:56px;height:56px">' + homeIcon('calendar') + '</span><div><h1>' + (ta === D.me.name ? 'My week' : esc(ta)) + '</h1><p class="sub">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') + '</p></div></div>' +
+        (isAdmin && tas.length ? '<label class="f" style="min-width:260px;margin:0">TA<select class="in" id="calTa">' + [D.me.name].concat(tas.filter(x => x !== D.me.name)).map(x => '<option' + (x === ta ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label>' : '') + '</div>' +
+        '<p class="h-todayline">' + todayLine(ta) + '</p>' + calendarHtml(ta, false) +
+        '<p class="note" style="margin-top:12px">From the schedule. Press a section to open its group. Today\'s sections say Done, Now, Live (check-in open) or Next.</p></div>';
+      if ($('calTa')) $('calTa').onchange = () => { ta = $('calTa').value; history.replaceState(null, '', '#calendar' + (ta === D.me.name ? '' : '/' + encodeURIComponent(ta))); lastHash = location.hash; draw(); };
+    };
+    draw();
   }
   function dashboard() {
     stopTimers();
@@ -4086,7 +4152,6 @@ const BOOT = null;
     app.innerHTML = '<div class="wrap">' + head + body + '</div>';
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
     on('[data-tab]', b => { tab = b.dataset.tab; swap(dashboard); });
-    on('[data-ht]', b => ({ impatt: importAttendanceDialog, regqr: registrationQrDialog })[b.dataset.ht]());
     on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
     on('[data-claim]', async b => {
       const g = list[b.dataset.claim];
