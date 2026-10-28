@@ -5,7 +5,34 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}</script>
+<script>
+/* Vercel is the main address. The old GitHub Pages address checks that the Vercel site is up and is this app,
+   then moves the visitor there with what this device remembers (student ID, phone ID, login, theme), keeping the same link.
+   If the check fails, the old address simply keeps working. */
+(function () {
+  var PRIMARY = 'https://tallygrades.vercel.app', KEYS = ['att_id', 'att_name', 'att_groups', 'att_device', 'tg_token', 'tg_theme', 'tg_qhist', 'tg_qmin'];
+  try {
+    var m = location.hash.match(/^#tgmove=([^&]*)(?:&to=(.*))?$/);
+    if (m) {
+      var d = JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))));
+      KEYS.forEach(function (k) { if (d[k] != null && !localStorage.getItem(k)) localStorage.setItem(k, d[k]); });
+      history.replaceState(null, '', location.pathname + location.search + (m[2] ? decodeURIComponent(m[2]) : ''));
+    }
+  } catch (e) {}
+  if (!/\.github\.io$/i.test(location.hostname)) return;
+  var ctl = window.AbortController ? new AbortController() : null;
+  setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
+  fetch(PRIMARY + '/index.html?check=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+    .then(function (r) { return r.ok ? r.text() : ''; })
+    .then(function (t) {
+      if (t.indexOf('Made By: Toqa Hamdy') < 0 || t.indexOf('tgmove') < 0) return;
+      var d = {}; KEYS.forEach(function (k) { try { var v = localStorage.getItem(k); if (v != null) d[k] = v; } catch (e) {} });
+      var pack = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(d)))));
+      location.replace(PRIMARY + '/' + location.search + '#tgmove=' + pack + (location.hash ? '&to=' + encodeURIComponent(location.hash) : ''));
+    }).catch(function () {});
+})();
+try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
