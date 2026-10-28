@@ -395,8 +395,9 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   #hk button.on { background: var(--soft); color: var(--ink); }
   .hist-k.ot { background: var(--card2); color: var(--muted); } .hist-av.ot { background: var(--card2); color: var(--text); }
   td .by { display: block; font-size: 10.5px; line-height: 1.2; color: var(--muted); margin-top: 3px; min-height: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; margin-left: auto; margin-right: auto; cursor: default; }
-  .stu { background: none; border: 0; padding: 0; font: inherit; color: inherit; font-weight: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset: 3px; }
-  .stu:hover { color: var(--ink); text-decoration-color: var(--accent); } .hist-tx .stu { font-weight: 700; }
+  /* a student's name that opens their profile: plain text that turns red and underlined on hover */
+  .stl { display: inline; margin: 0; background: none; border: 0; padding: 0; font: inherit; color: inherit; font-weight: 600; text-align: left; cursor: pointer; text-decoration: none; border-bottom: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent); line-height: inherit; }
+  .stl:hover { color: var(--ink); border-bottom: 1px solid var(--accent); } .hist-tx .stl { font-weight: 700; }
   .sp-head { display: flex; gap: 14px; align-items: center; } .sp-av { flex: 0 0 auto; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(135deg, var(--grad2), var(--accent)); color: #fff; font-weight: 800; font-size: 18px; }
   .sp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 18px 0 6px; }
   .sp-tiles > div { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; } .sp-tiles b { display: block; font-size: 24px; font-family: var(--display); } .sp-tiles b small { font-size: 13px; color: var(--muted); font-family: inherit; }
@@ -678,11 +679,13 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .stats b { font-family: var(--display); color: var(--text); font-size: 30px; font-weight: 800; margin-right: 6px; letter-spacing: -.02em; }
   .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
   table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
   td:nth-child(2) { white-space: normal; min-width: 200px; }
   tbody tr:last-child td { border-bottom: 0; }
   tbody tr:hover td { background: var(--card2); }
-  th { color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; background: var(--card2); }
+  th { color: var(--text); font-family: var(--font); font-size: 13px; letter-spacing: .01em; font-weight: 700; background: color-mix(in srgb, var(--accent) 7%, var(--card2)); border-bottom: 2px solid color-mix(in srgb, var(--accent) 35%, var(--line)); padding-top: 13px; padding-bottom: 13px; }
+  thead th:first-child { color: var(--muted); }
+  td { font-size: 15px; } td:first-child { color: var(--muted); font-size: 13.5px; font-variant-numeric: tabular-nums; width: 44px; }
   td.mono { font-family: var(--mono); font-size: 14px; color: var(--muted); }
   .chip { min-width: 108px; border-radius: 8px; padding: 6px 12px; font-weight: 700; font-size: 14px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
   .chip.P { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
@@ -698,7 +701,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .cell:focus { outline: none; border-color: var(--text); box-shadow: 0 0 0 3px var(--focus); }
   .cell.dirty { border-color: var(--warn); background: var(--warn-bg); }
   .cell.bad { border-color: var(--err); color: var(--err); background: var(--err-bg); }
-  th small { display: block; font-weight: 500; opacity: .8; text-transform: none; }
+  th small { display: block; font-weight: 500; font-size: 11.5px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 2px; }
 
   /* grades page */
   .gtitle { display: flex; align-items: center; gap: 18px; }
@@ -885,6 +888,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .mk-ready { background: var(--card); border: 1px dashed var(--line); border-radius: 16px; padding: 22px 24px; margin-top: 8px; }
   .mk-ready b { font-size: 18px; } .mk-ready p { color: var(--muted); margin: 6px 0 14px; }
   .mk-stat { color: var(--muted); margin: 6px 0 12px; } .mk-stat b { color: var(--text); }
+  .mk-table th.num { text-align: center; } .mk-table td.num { text-align: center; }
   .mk-table th.num small { display: block; font-weight: 500; text-transform: none; letter-spacing: 0; }
   .mk-table tr.flash-row td { background: color-mix(in srgb, var(--accent) 18%, transparent); transition: background-color .3s; }
   @media (max-width: 640px) { .mk-row { flex-direction: column; gap: 6px; } .mk-lbl { flex: none; padding-top: 0; } }
@@ -4484,7 +4488,7 @@ const BOOT = null;
     return html;
   }
   /* a student's name that opens their profile */
-  const stuLink = (course, id, name) => course && id ? '<button type="button" class="stu" data-spc="' + esc(course) + '" data-spi="' + esc(id) + '" title="Open ' + esc(name) + '">' + esc(name) + '</button>' : '<b>' + esc(name) + '</b>';
+  const stuLink = (course, id, name) => course && id ? '<button type="button" class="stl" data-spc="' + esc(course) + '" data-spi="' + esc(id) + '" title="Open ' + esc(name) + '">' + esc(name) + '</button>' : '<b>' + esc(name) + '</b>';
   document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-spi]'); if (!b) return; e.preventDefault(); e.stopPropagation(); studentDialog(b.dataset.spc, b.dataset.spi); }, true);
   /* who changed what: every change of a group (or a whole course), newest first */
   function historyDialog(course, group) {
