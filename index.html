@@ -895,6 +895,21 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .cal-ev { overflow: hidden; } .cal-ev b { display: block; font-size: 14px; padding-right: 46px; } .cal-ev small { display: block; color: var(--muted); font-size: 12px; margin-top: 1px; white-space: normal; overflow-wrap: anywhere; }
   .cal-ev .h-st { position: absolute; top: 6px; right: 6px; font-size: 10.5px; padding: 1px 8px; }
   .cal-ev.now { box-shadow: 0 0 0 2px var(--accent); } .cal-ev.past { opacity: .6; }
+  .cal-ev.off { border-left-color: var(--muted); background: var(--card2); } .cal-ev.off:hover { background: var(--card2); }
+  .tapick { position: relative; min-width: 300px; }
+  .tp-btn, .tp-it { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; color: var(--text); cursor: pointer; font: inherit; }
+  .tp-btn:hover { border-color: var(--accent); }
+  .tp-av { flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--ink); font-weight: 800; font-size: 13px; }
+  .tp-txt { flex: 1 1 auto; min-width: 0; } .tp-txt b { display: block; font-size: 15px; } .tp-txt em { font-style: normal; font-size: 11px; color: var(--accent); margin-left: 6px; }
+  .tp-txt small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; white-space: normal; } .tp-txt small span { color: var(--text); font-weight: 600; }
+  .tp-chev { width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); margin: -4px 4px 0 0; }
+  .tp-pop { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: min(440px, 92vw); background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+  .tp-list { max-height: 380px; overflow: auto; margin-top: 10px; display: grid; gap: 6px; }
+  .tp-it { border-color: transparent; background: transparent; padding: 8px 10px; } .tp-it:hover, .tp-it.on { background: var(--card2); border-color: var(--line); }
+  .tp-it .tp-av { width: 32px; height: 32px; font-size: 12px; }
+  .tp-h { font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 2px; display: flex; justify-content: space-between; gap: 10px; } .tp-h span { text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .tp-none { color: var(--muted); padding: 10px; margin: 0; }
+  @media (max-width: 640px) { .tapick { min-width: 0; width: 100%; } .tp-pop { left: 0; right: auto; width: 100%; } }
   .cal-agenda { display: none; }
   @media (max-width: 640px) {
     .cal-wrap { display: none; } .cal-agenda { display: grid; gap: 10px; }
@@ -3985,8 +4000,9 @@ const BOOT = null;
         const live = gs.some(gr => (D.groups.find(g => g.course === c && g.group === gr) || {}).live);
         let stt = '';
         if (d === today) stt = live ? '<span class="h-st st-live">Live</span>' : mins > toMin(en) ? '<span class="h-st done">Done</span>' : mins >= toMin(st) - 20 ? '<span class="h-st now">Now</span>' : '<span class="h-st">Next</span>';
-        return '<a class="cal-ev' + (d === today ? ' today' : '') + (d === today && mins >= toMin(st) - 20 && mins <= toMin(en) ? ' now' : '') + (d === today && mins > toMin(en) ? ' past' : '') + '" href="' + (g0 ? pageHash('group', g0) : courseHash(c)) + '">' +
-          '<b>' + esc(gs.join(' + ')) + '</b><small>' + (compact ? '' : esc(c) + ' &middot; ') + (xs[0].room ? 'Room ' + esc(xs[0].room) : '') + '</small>' + stt + '</a>';
+        const inApp = D.groups.some(g => g.course === c), tag = inApp ? 'a' : 'div';
+        return '<' + tag + ' class="cal-ev' + (inApp ? '' : ' off') + (d === today ? ' today' : '') + (d === today && mins >= toMin(st) - 20 && mins <= toMin(en) ? ' now' : '') + (d === today && mins > toMin(en) ? ' past' : '') + '"' + (inApp ? ' href="' + (g0 ? pageHash('group', g0) : courseHash(c)) + '"' : '') + '>' +
+          '<b>' + esc(gs.join(' + ')) + '</b><small>' + (compact ? '' : esc(c) + ' &middot; ') + (xs[0].room ? 'Room ' + esc(xs[0].room) : '') + '</small>' + stt + '</' + tag + '>';
       }).join('') + '</td>';
     };
     /* phones: the same week as a list of days */
@@ -4022,11 +4038,46 @@ const BOOT = null;
     let ta = isAdmin && tas.indexOf(wantTa) >= 0 ? wantTa : D.me.name;
     const draw = () => {
       app.innerHTML = '<div class="wrap"><div class="top"><div class="gtitle"><span class="gbadge q-ic" style="width:56px;height:56px">' + homeIcon('calendar') + '</span><div><h1>' + (ta === D.me.name ? 'My week' : esc(ta)) + '</h1><p class="sub">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1]) : '') + '</p></div></div>' +
-        (isAdmin && tas.length ? '<label class="f" style="min-width:260px;margin:0">TA<select class="in" id="calTa">' + [D.me.name].concat(tas.filter(x => !sameTa(x, D.me.name))).map(x => '<option' + (x === ta ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label>' : '') + '</div>' +
+        (isAdmin && tas.length ? taPicker(ta) : '') + '</div>' +
         '<p class="h-todayline">' + todayLine(ta) + '</p>' + calendarHtml(ta, false) +
         '<p class="note" style="margin-top:12px">From the schedule. Press a section to open its group. Today\'s sections say Done, Now, Live (check-in open) or Next.</p></div>';
-      if ($('calTa')) $('calTa').onchange = () => { ta = $('calTa').value; history.replaceState(null, '', '#calendar' + (ta === D.me.name ? '' : '/' + encodeURIComponent(ta))); lastHash = location.hash; draw(); };
+      if ($('tpBtn')) bindTaPicker((v) => { ta = v; history.replaceState(null, '', '#calendar' + (ta === D.me.name ? '' : '/' + encodeURIComponent(ta))); lastHash = location.hash; draw(); });
     };
+    /* each TA with the courses and groups they teach, from the schedule */
+    const teach = {};
+    (D.schedule || []).forEach(x => { if (!x.ta) return; const t = teach[x.ta] || (teach[x.ta] = {}); (t[x.course] = t[x.course] || new Set()).add(x.group); });
+    const mineOf = (name) => name === D.me.name ? Object.assign({}, ...tas.filter(x => sameTa(x, name)).map(x => teach[x])) : teach[name] || {};
+    const gsText = (set) => [...set].sort(numeric).join(', ');
+    const courseLine = (t) => Object.keys(t).sort().map(c => esc(c) + ' <span>' + esc(gsText(t[c])) + '</span>').join(' &middot; ');
+    function taPicker(cur) {
+      const t = mineOf(cur), n = Object.values(t).reduce((a, s) => a + s.size, 0);
+      return '<div class="tapick" id="tapick"><button type="button" class="tp-btn" id="tpBtn" aria-haspopup="listbox"><span class="tp-av">' + esc(initials(cur)) + '</span>' +
+        '<span class="tp-txt"><b>' + esc(cur) + (cur === D.me.name ? ' <em>you</em>' : '') + '</b><small>' + (n ? Object.keys(t).length + (Object.keys(t).length === 1 ? ' course' : ' courses') + ' &middot; ' + n + (n === 1 ? ' group' : ' groups') : 'Not in the schedule') + '</small></span><span class="tp-chev" aria-hidden="true"></span></button>' +
+        '<div class="tp-pop" id="tpPop" hidden><input class="in" id="tpQ" type="search" placeholder="Search a TA or a course" autocomplete="off"><div class="tp-list" id="tpList"></div></div></div>';
+    }
+    function bindTaPicker(pick) {
+      const pop = $('tpPop'), q = $('tpQ'), list = $('tpList');
+      const item = (name, t) => '<button type="button" class="tp-it' + (name === ta ? ' on' : '') + '" data-ta="' + esc(name) + '"><span class="tp-av">' + esc(initials(name)) + '</span><span class="tp-txt"><b>' + esc(name) + (name === D.me.name ? ' <em>you</em>' : '') + '</b><small>' + (courseLine(t) || 'Not in the schedule') + '</small></span></button>';
+      const paint = () => {
+        const v = q.value.trim().toLowerCase(), people = [D.me.name].concat(tas.filter(x => !sameTa(x, D.me.name)));
+        let html = '';
+        const courses = v ? [...new Set((D.schedule || []).map(x => x.course))].filter(c => c.toLowerCase().indexOf(v) >= 0).sort() : [];
+        courses.forEach(c => {
+          const who = tas.filter(x => teach[x][c]);
+          html += '<div class="tp-h">' + esc(c) + '<span>' + who.length + (who.length === 1 ? ' TA' : ' TAs') + ' &middot; ' + new Set((D.schedule || []).filter(x => x.course === c).map(x => x.group)).size + ' groups</span></div>' +
+            who.map(x => item(x, { [c]: teach[x][c] })).join('');
+        });
+        const byName = people.filter(x => !v || x.toLowerCase().indexOf(v) >= 0);
+        if (byName.length) html += (courses.length ? '<div class="tp-h">TAs</div>' : '') + byName.map(x => item(x, mineOf(x))).join('');
+        list.innerHTML = html || '<p class="tp-none">No TA or course matches “' + esc(q.value) + '”.</p>';
+        list.querySelectorAll('[data-ta]').forEach(b => b.onclick = () => { close(); pick(b.dataset.ta); });
+      };
+      const close = () => { pop.hidden = true; document.removeEventListener('mousedown', outside); };
+      const outside = (e) => { if (!$('tapick') || !$('tapick').contains(e.target)) close(); };
+      $('tpBtn').onclick = () => { if (!pop.hidden) return close(); pop.hidden = false; q.value = ''; paint(); q.focus(); document.addEventListener('mousedown', outside); };
+      q.oninput = paint;
+      q.onkeydown = (e) => { if (e.key === 'Escape') close(); if (e.key === 'Enter') { const f = list.querySelector('[data-ta]'); if (f) f.click(); } };
+    }
     draw();
   }
   function dashboard() {
