@@ -202,6 +202,20 @@
   .cmp > span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
   .cmp-row { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; margin-top: 6px; font-size: 14px; }
   .cmp-row .meter { width: 100%; } .cmp-row small { color: var(--muted); }
+  td.wc { cursor: pointer; user-select: none; transition: background-color .15s, box-shadow .15s; }
+  td.wc:hover { background: var(--soft); }
+  td.wc.on { background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .wc-e { display: inline-block; min-width: 28px; text-align: center; color: var(--line); font-weight: 700; }
+  td.wc:hover .wc-e { color: var(--muted); } td.wc.on .wc-e { color: var(--accent); }
+  .wcol { border: 0; background: none; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; padding: 2px 4px; border-radius: 6px; white-space: nowrap; }
+  .wcol:hover { background: var(--soft); color: var(--text); }
+  .wrow { display: block; margin-top: 4px; border: 0; background: none; padding: 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer; }
+  .wrow:hover { text-decoration: underline; }
+  .wsel { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 43; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 12px 16px; box-shadow: 0 24px 60px -16px rgba(0,0,0,.6); max-width: calc(100vw - 120px); animation: fadein .25s ease-out; }
+  @keyframes fadein { from { opacity: 0; } }
+  .wsel .btn { padding: 10px 18px; }
+  @media (max-width: 640px) { .wsel { left: 12px; right: 84px; transform: none; max-width: none; bottom: 14px; } }
   .my-grade { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 6px; }
   .mg-head { display: flex; justify-content: space-between; align-items: baseline; }
   .mg-head span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
@@ -3049,7 +3063,7 @@ const BOOT = null;
     extendSession: ['extend_session', ['p_pin', 'p_id', 'p_minutes']], closeSession: ['close_session', ['p_pin', 'p_id']],
     randomCheck: ['random_check', ['p_pin', 'p_id', 'p_n']], sessionMark: ['session_mark', ['p_pin', 'p_id', 'p_sid']], groupState: ['group_state', ['p_pin', 'p_course', 'p_group', 'p_week']],
     groupSummary: ['group_summary', ['p_pin', 'p_course', 'p_group']], mark: ['mark', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id', 'p_status']],
-    markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
+    markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], markWeeks: ['mark_weeks', ['p_pin', 'p_course', 'p_group', 'p_items', 'p_status']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
     saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']],
     teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']]
@@ -4544,6 +4558,7 @@ const BOOT = null;
     /* the other groups of this course this user can open with it: P1 and P2 in the same room */
     const mates = D.groups.filter(x => x.course === g.course && x.group !== g.group && (D.me.role === 'Admin' || x.ta === D.me.name)).sort((a, b) => numeric(a.group, b.group));
     let week = wantWeek || defaultWeek(g), L = null, W = null, M = null, q = '', lastQr = '', busy = false, left = 0, codeLeft = 0;
+    let sel = {}; /* All weeks page: the chosen cells, student ID -> set of week numbers */
     const weekOpts = D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === week ? ' selected' : '') + '>' + esc(l) + (v === D.currentWeek ? ' (this week)' : '') + '</option>').join('');
     app.innerHTML = '<div class="wrap" id="gp"><button class="back hide-proj" id="bk" type="button">&larr; ' + esc(g.course) + '</button>' + openBar(g, 'group') +
       '<div class="top"><div><span class="pill">Group ' + esc(g.group) + '</span><span class="pill green" id="livepill" hidden>Live now</span><h1 style="margin-top:12px">' + esc(g.course) + '</h1></div>' +
@@ -4589,6 +4604,7 @@ const BOOT = null;
     async function load() {
       $('rows').innerHTML = '<tr><td colspan="6" style="color:var(--muted)">Loading</td></tr>';
       try {
+        sel = {}; if ($('wsel')) $('wsel').remove();
         if (week === 'all') { M = await api('groupSummary', PIN, g.course, g.group); W = null; L = null; }
         else { const st = await api('groupState', PIN, g.course, g.group, week); L = st.live; W = st.view; M = null; }
         renderStart(); renderLive(); renderList(); schedule();
@@ -4615,6 +4631,29 @@ const BOOT = null;
         if ((L.strict && codeLeft <= 0) || left <= 0) refresh();
       }, 1000));
       timers.push(setInterval(refresh, 4000));
+    }
+    /* the bar at the bottom of the All weeks page: how many squares are chosen, and the buttons that mark them */
+    function selBar() {
+      let bar = $('wsel');
+      const ids = Object.keys(sel), n = ids.reduce((t, id) => t + sel[id].size, 0);
+      if (!n || !M) { if (bar) bar.remove(); return; }
+      if (!bar) {
+        bar = document.createElement('div'); bar.id = 'wsel'; bar.className = 'wsel';
+        $('gp').appendChild(bar);
+      }
+      const who = ids.length === 1 ? esc((M.rows.find(r => r.id === ids[0]) || {}).name || '') : ids.length + ' students';
+      bar.innerHTML = '<span><b>' + n + (n === 1 ? ' week' : ' weeks') + '</b> chosen for ' + who + '</span>' +
+        '<button class="btn" type="button" data-st="P">Present</button><button class="btn ghost" type="button" data-st="A">Absent</button><button class="btn ghost" type="button" data-st="E">Excused</button><button class="link" type="button" id="wsx">Clear</button>';
+      $('wsx').onclick = () => { sel = {}; renderList(); };
+      bar.querySelectorAll('[data-st]').forEach(b => b.onclick = async () => {
+        bar.querySelectorAll('button').forEach(x => x.disabled = true);
+        const items = ids.map(id => ({ id: id, weeks: [...sel[id]].sort((a, b) => a - b) }));
+        try {
+          M = await api('markWeeks', PIN, g.course, g.group, items, b.dataset.st);
+          sel = {}; renderList();
+          toast(n + (n === 1 ? ' week' : ' weeks') + ' marked ' + ({ P: 'present', A: 'absent', E: 'excused' }[b.dataset.st]) + '.');
+        } catch (e) { toast(errMsg(e)); bar.querySelectorAll('button').forEach(x => x.disabled = false); }
+      });
     }
     function renderStart() {
       $('livepill').hidden = !(L && L.open);
@@ -4718,13 +4757,28 @@ const BOOT = null;
     }
     function renderList() {
       if (M) {
-        $('stt').innerHTML = '<span>P = present, A = absent, E = excused, empty = no check-in that week.</span>';
-        $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th>' + M.weeks.map(w => '<th>' + esc(w) + '</th>').join('') + '<th>Present</th><th>Absent</th><th>%</th></tr>';
+        const nowW = D.currentWeek || Math.max(1, ...M.rows.map(r => r.weeks.reduce((m, v, n) => v ? n + 1 : m, 0)));
+        const isOn = (id, w) => sel[id] && sel[id].has(w);
+        $('stt').innerHTML = '<span>P = present, A = absent, E = excused, empty = no check-in that week.</span><span style="color:var(--text);flex-basis:100%">Press week squares to choose them, then mark them all at once. Press a week name to choose that week for everyone.</span>';
+        $('th').innerHTML = '<tr><th>#</th><th>Student Name</th><th>ID</th>' + M.weeks.map((w, n) => '<th><button type="button" class="wcol" data-col="' + (n + 1) + '" title="Choose ' + esc(w) + ' for every student shown">' + esc(w) + '</button></th>').join('') + '<th>Present</th><th>Absent</th><th>%</th></tr>';
         $('rows').innerHTML = M.rows.map((r, i) => (q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0) ? '' :
-          '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="mono">' + esc(r.id) + '</td>' +
-          r.weeks.map(v => '<td>' + (v ? '<span class="chip ' + v + '" style="min-width:0;padding:3px 9px">' + v + '</span>' : '') + '</td>').join('') +
+          '<tr><td>' + (i + 1) + '</td><td>' + esc(r.name) + '<button type="button" class="wrow" data-row="' + i + '" title="Choose every week until week ' + nowW + ' that is not present yet">Choose missing weeks</button></td><td class="mono">' + esc(r.id) + '</td>' +
+          r.weeks.map((v, n) => '<td class="wc' + (isOn(r.id, n + 1) ? ' on' : '') + '" data-r="' + i + '" data-w="' + (n + 1) + '" title="Week ' + (n + 1) + ': press to choose">' + (v ? '<span class="chip ' + v + '" style="min-width:0;padding:3px 9px">' + v + '</span>' : '<span class="wc-e">+</span>') + '</td>').join('') +
           '<td>' + r.p + '</td><td>' + r.a + '</td><td><b>' + (r.pct === '' ? '' : Math.round(r.pct * 100) + '%') + '</b></td></tr>').join('');
         $('fl').innerHTML = '<li>Choose a single week to see flags.</li>';
+        const flip = (id, w, on) => { const st = sel[id] || (sel[id] = new Set()); if (on == null ? !st.has(w) : on) st.add(w); else st.delete(w); if (!st.size) delete sel[id]; };
+        $('rows').querySelectorAll('.wc').forEach(td => td.onclick = () => { flip(M.rows[td.dataset.r].id, Number(td.dataset.w)); td.classList.toggle('on', isOn(M.rows[td.dataset.r].id, Number(td.dataset.w))); selBar(); });
+        $('rows').querySelectorAll('.wrow').forEach(b => b.onclick = () => {
+          const r = M.rows[b.dataset.row]; let n = 0;
+          r.weeks.forEach((v, k) => { const w = k + 1; if (w <= nowW && w !== 7 && w !== 14 && v !== 'P' && v !== 'E') { flip(r.id, w, true); n++; } });
+          if (!n) toast(r.name + ' is present in every week until week ' + nowW + '.');
+          renderList();
+        });
+        $('th').querySelectorAll('.wcol').forEach(b => b.onclick = () => {
+          const w = Number(b.dataset.col), shown = M.rows.filter(r => !(q && r.name.toLowerCase().indexOf(q) < 0 && r.id.indexOf(q) < 0));
+          const all = shown.every(r => isOn(r.id, w)); shown.forEach(r => flip(r.id, w, !all)); renderList();
+        });
+        selBar();
         return;
       }
       if (!W) return;
