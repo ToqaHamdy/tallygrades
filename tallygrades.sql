@@ -470,18 +470,20 @@ begin
   update tg.staff set photo = v where name = me.name;
   return tg.dash((select st from tg.staff st where name = me.name));
 end $$;
-create or replace function public.change_my_password(p_pin text, p_old text, p_new text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
-declare me tg.staff := tg.who(p_pin);
+-- also sets or changes the username: accounts made with a PIN before usernames have none
+drop function if exists public.change_my_password(text, text, text);
+create or replace function public.change_my_password(p_pin text, p_old text, p_new text, p_user text default null) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); u text := coalesce(nullif(lower(btrim(coalesce(p_user, ''))), ''), lower(coalesce(me.username, '')));
 begin
   if not ((me.pass_hash is not null and me.pass_hash = extensions.crypt(coalesce(p_old, ''), me.pass_hash))
           or (me.pass_hash is null and me.pin is not null and me.pin = btrim(coalesce(p_old, '')))) then
     perform pg_sleep(1); raise exception 'The current password is wrong.';
   end if;
-  if coalesce(me.username, '') = '' then raise exception 'You have no username yet. Ask the admin to set one.'; end if;
-  if length(coalesce(p_new, '')) < 6 then raise exception 'The new password must be at least 6 characters.'; end if;
-  update tg.staff set pass_hash = extensions.crypt(p_new, extensions.gen_salt('bf')), pin = null where name = me.name;
+  if u = '' then raise exception 'Choose a username first.'; end if;
+  u := tg.good_login(u, p_new, me.name);
+  update tg.staff set username = u, pass_hash = extensions.crypt(p_new, extensions.gen_salt('bf')), pin = null where name = me.name;
   delete from tg.tokens where staff = me.name and token <> btrim(coalesce(p_pin, ''));
-  return jsonb_build_object('ok', true);
+  return jsonb_build_object('ok', true, 'username', u, 'dash', tg.dash((select st from tg.staff st where name = me.name)));
 end $$;
 
 create or replace function public.add_group(p_pin text, p_course text, p_group text, p_ta text, p_list jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
@@ -875,7 +877,7 @@ do $$
 declare f text;
 begin
   foreach f in array array['student_info(text)', 'check_in(jsonb)', 'register_phone(jsonb)', 'student_status(jsonb)', 'app_state()', 'setup_admin(text,text,text)', 'login(text,text)',
-    'whoami(text)', 'logout(text)', 'set_my_photo(text,text)', 'change_my_password(text,text,text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
+    'whoami(text)', 'logout(text)', 'set_my_photo(text,text)', 'change_my_password(text,text,text,text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
     'add_group(text,text,text,text,jsonb)', 'import_groups(text,text,jsonb)', 'claim_group(text,text,text)', 'assign_group(text,text,text,text)',
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',

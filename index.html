@@ -170,6 +170,10 @@
   .my-top b { display: block; font-size: 16px; } .my-top span { color: var(--muted); font-size: 13px; }
   .my-pct { font-family: var(--display); font-size: 34px; font-weight: 800; letter-spacing: -.03em; }
   .my-pct.hi { color: var(--ok); } .my-pct.mid { color: var(--warn); } .my-pct.lo { color: var(--err); }
+  .pw-wrap { position: relative; display: block; }
+  .pw-wrap .in { width: 100%; padding-right: 50px; }
+  .pw-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; border-radius: 10px; }
+  .pw-eye:hover { color: var(--text); background: var(--soft); }
   .my-grade { border-top: 1px dashed var(--line); padding-top: 12px; display: grid; gap: 6px; }
   .mg-head { display: flex; justify-content: space-between; align-items: baseline; }
   .mg-head span { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
@@ -2948,7 +2952,7 @@ const BOOT = null;
     studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']], studentStatus: ['student_status', ['p']],
     appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_user', 'p_pass']], login: ['login', ['p_user', 'p_pass']],
     whoami: ['whoami', ['p_pin']], askData: ['ask_data', ['p_pin']], logout: ['logout', ['p_pin']],
-    setMyPhoto: ['set_my_photo', ['p_pin', 'p_photo']], changeMyPassword: ['change_my_password', ['p_pin', 'p_old', 'p_new']], courseList: ['course_list', []],
+    setMyPhoto: ['set_my_photo', ['p_pin', 'p_photo']], changeMyPassword: ['change_my_password', ['p_pin', 'p_old', 'p_new', 'p_user']], courseList: ['course_list', []],
     registerTa: ['register_ta', ['p_name', 'p_user', 'p_pass', 'p_courses']], approveTa: ['approve_ta', ['p_pin', 'p_name', 'p_courses']],
     rejectTa: ['reject_ta', ['p_pin', 'p_name']], setStaffLogin: ['set_staff_login', ['p_pin', 'p_name', 'p_user', 'p_pass']],
     addGroup: ['add_group', ['p_pin', 'p_course', 'p_group', 'p_ta', 'p_list']], importGroups: ['import_groups', ['p_pin', 'p_course', 'p_groups']],
@@ -3012,6 +3016,26 @@ const BOOT = null;
     if (!device) { device = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2); store.set('att_device', device); }
     return device;
   }
+  /** Every password field gets a button to show or hide what is typed. */
+  function addEyes(root) {
+    (root || document).querySelectorAll('input[type="password"]:not([data-eye])').forEach(inp => {
+      inp.dataset.eye = '1';
+      const wrap = document.createElement('span'); wrap.className = 'pw-wrap';
+      inp.parentNode.insertBefore(wrap, inp); wrap.appendChild(inp);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'pw-eye'; b.setAttribute('aria-label', 'Show password'); b.title = 'Show password';
+      const eye = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+      const off = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+      b.innerHTML = eye;
+      b.onclick = () => {
+        const show = inp.type === 'password'; inp.type = show ? 'text' : 'password';
+        b.innerHTML = show ? off : eye; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); b.title = show ? 'Hide password' : 'Show password';
+        inp.focus();
+      };
+      wrap.appendChild(b);
+    });
+  }
+  new MutationObserver(() => addEyes()).observe(document.body, { childList: true, subtree: true });
+
   /** The marks of one course: the attendance mark, each grade the TA saved, and the total. */
   function myGrade(G) {
     if (!G) return '';
@@ -3305,12 +3329,14 @@ const BOOT = null;
         '<div class="row" style="margin-top:12px;align-items:center"><label class="btn ghost" for="ph" tabindex="0">Upload a photo</label><input id="ph" type="file" accept="image/*" hidden>' +
         '<button class="link danger" id="phx" type="button">Remove photo</button></div></div></div>' +
         '<p class="note" style="margin-top:14px">A photo of your face works best. It is cropped to a square and made small before it is saved.</p><div class="err" id="per"></div></section>' +
-      '<section class="panel set"><h2>Password</h2><form class="form" id="pwf">' +
+      '<section class="panel set"><h2>Username and password</h2><form class="form" id="pwf">' +
+        '<label class="f">Username<input class="in" id="pu" autocomplete="username" autocapitalize="none" spellcheck="false" value="' + esc(me.username || '') + '" placeholder="Choose a username"></label>' +
+        (me.username ? '' : '<p class="note" style="margin:-4px 0 4px">You log in with your name now. Choose a username and you log in with it from now on.</p>') +
         '<label class="f">Current password<input class="in" type="password" id="po" autocomplete="current-password"></label>' +
         '<label class="f">New password<input class="in" type="password" id="pn" autocomplete="new-password"></label>' +
         '<label class="f">New password again<input class="in" type="password" id="pn2" autocomplete="new-password"></label>' +
-        '<div class="err" id="pwer"></div><button class="btn" id="pwgo" type="submit">Change password</button></form>' +
-        '<p class="note" style="margin-top:12px">At least 6 characters. Other devices logged in as you are logged out.</p></section>' +
+        '<div class="err" id="pwer"></div><button class="btn" id="pwgo" type="submit">Save</button></form>' +
+        '<p class="note" style="margin-top:12px">Username: 3 to 30 letters, numbers, dots or dashes. Password: at least 6 characters. Other devices logged in as you are logged out.</p></section>' +
       '<section class="panel set"><h2>Appearance</h2><div class="cview" style="margin-top:6px"><button type="button" data-th="dark">Dark</button><button type="button" data-th="light">Light</button></div>' +
         '<p class="note" style="margin-top:12px">Saved on this device only.</p></section>' +
       '</div></div>';
@@ -3335,7 +3361,12 @@ const BOOT = null;
       e.preventDefault(); $('pwer').textContent = '';
       if ($('pn').value !== $('pn2').value) { $('pwer').textContent = 'The two new passwords are not the same.'; return; }
       $('pwgo').disabled = true;
-      try { await api('changeMyPassword', PIN, $('po').value, $('pn').value); $('pwf').reset(); toast('Password changed.'); }
+      try {
+        const r = await api('changeMyPassword', PIN, $('po').value, $('pn').value, $('pu').value.trim());
+        if (r.dash) D = r.dash;
+        Object.assign(me, D.me); $('pwf').reset(); $('pu').value = r.username || me.username;
+        toast('Saved. Log in next time with the username ' + (r.username || me.username) + '.');
+      }
       catch (err) { $('pwer').textContent = errMsg(err); }
       $('pwgo').disabled = false;
     };
