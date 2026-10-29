@@ -5021,14 +5021,16 @@ const BOOT = null;
   /* Attendance from a photo of a paper sheet: Gemini reads the names and IDs (free key, set by the admin in Settings),
      each line is matched to a student of the course (by ID checked by first name, else by name), and the TA saves it after a look. */
   const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
-  async function geminiRead(key, b64, mime) {
-    const prompt = 'This is a photo of a handwritten attendance sheet from a university section. Read every student line on it. ' +
+  /* several photos go in one request (one request of the free limit for up to 6 pages); each line says which page it came from */
+  async function geminiRead(key, photos) {
+    const prompt = (photos.length > 1 ? 'These are ' + photos.length + ' photos, pages 1 to ' + photos.length + ' in this order, ' : 'This is a photo ') + 'of a handwritten attendance sheet from a university section. Read every student line on ' + (photos.length > 1 ? 'every page' : 'it') + '. ' +
+      'For each line say which page it is on (1 for the first photo). ' +
       'For each line give the name as written (in English letters) and the student ID: digits only, usually 9 digits starting with 6923, 6924, 6925 or 6926; when a digit is hard to read give your best reading. ' +
       'Give the group code if it is written on the line (like A3, F3, G2), else an empty string. Set crossed to true only when that line itself is struck through; ignore signatures or scribbles drawn across the page. ' +
       'If the page says which week it is (like "Week 3"), give that number as week, else 0. Do not invent lines.';
-    const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: b64 } }] }],
+    const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }].concat(photos.map(b64 => ({ inline_data: { mime_type: 'image/jpeg', data: b64 } }))) }],
       generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { week: { type: 'INTEGER' },
-        lines: { type: 'ARRAY', items: { type: 'OBJECT', properties: { name: { type: 'STRING' }, id: { type: 'STRING' }, group: { type: 'STRING' }, crossed: { type: 'BOOLEAN' } }, required: ['name', 'id'] } } }, required: ['lines'] } } });
+        lines: { type: 'ARRAY', items: { type: 'OBJECT', properties: { page: { type: 'INTEGER' }, name: { type: 'STRING' }, id: { type: 'STRING' }, group: { type: 'STRING' }, crossed: { type: 'BOOLEAN' } }, required: ['name', 'id'] } } }, required: ['lines'] } } });
     let last = '';
     for (const model of GEMINI_MODELS) {
       let res;
@@ -5080,11 +5082,14 @@ const BOOT = null;
           if (!CC || !CC.rows.length) { err('No students of ' + course + ' were found.'); b.disabled = false; return; }
           let lines = [], weekSeen = 0;
           try {
-            for (let i = 0; i < files.length; i++) {
-              b.textContent = 'Reading photo ' + (i + 1) + ' of ' + files.length + '...';
-              const r = await geminiRead(K.key, await shrinkPhoto(files[i]), 'image/jpeg');
+            /* up to 6 pages in one request, so a whole sheet costs one request of the free limit */
+            for (let i = 0; i < files.length; i += 6) {
+              const part = files.slice(i, i + 6);
+              b.textContent = files.length > 6 ? 'Reading pages ' + (i + 1) + ' to ' + (i + part.length) + ' of ' + files.length + '...' : 'Reading ' + (part.length > 1 ? 'the ' + part.length + ' pages' : 'the photo') + '...';
+              const photos = []; for (const f of part) photos.push(await shrinkPhoto(f));
+              const r = await geminiRead(K.key, photos);
               if (r.week) weekSeen = r.week;
-              lines = lines.concat(r.lines.filter(x => !x.crossed).map(x => Object.assign({ page: i + 1 }, x)));
+              lines = lines.concat(r.lines.filter(x => !x.crossed).map(x => Object.assign({}, x, { page: i + Math.min(part.length, Math.max(1, Number(x.page) || 1)) })));
             }
           } catch (e) { err(errMsg(e)); b.disabled = false; b.textContent = 'Read with Gemini'; return; }
           b.hidden = true;
