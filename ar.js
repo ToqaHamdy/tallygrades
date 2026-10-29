@@ -471,6 +471,8 @@
     '{} of {} groups': function (a, b) { return a + ' من ' + pl(b, N.gr); }, '{} of {} students': function (a, b) { return a + ' من ' + pl(b, N.st); },
     ', {} missed': '، {} غياب', '{} missed': '{} غياب', '{} changes': function (n) { return pl(n, N.ch); }, 'changes by': 'تغييرات بواسطة',
     'The student (QR)': 'الطالب (QR)', 'with {}': 'مع {}', 'or': 'أو',
+    'by {}': 'بواسطة {}', '. Come to the next section, and talk to your TA if something is wrong.': '. احضر السكشن القادم، وكلّم معيدك لو فيه مشكلة.',
+    'Come to the next section, and talk to your TA if something is wrong.': 'احضر السكشن القادم، وكلّم معيدك لو فيه مشكلة.',
     'No checkbox': 'بدون خانة', 'Not present': 'غير حاضر', 'Attendance checkbox week': 'أسبوع خانة الحضور',
     'Tick a student to mark them present in {}, untick to remove it.': 'علّم على الطالب لتسجيله حاضرًا في {}، وألغِ العلامة لحذف حضوره.',
     'Choose a week to tick attendance from here.': 'اختر أسبوعًا لتسجيل الحضور من هنا بعلامة.', '{} PM': '{} م', '{} AM': '{} ص',
