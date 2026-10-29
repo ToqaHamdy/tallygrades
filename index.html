@@ -559,6 +559,9 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .overlay { position: fixed; inset: 0; background: rgba(5,5,4,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; z-index: 40; animation: fade .15s ease-out; }
   .overlay .panel { width: min(560px, 100%); max-height: 92vh; overflow: auto; animation: rise .18s ease-out; }
   .overlay .panel.wide { width: min(860px, 100%); }
+  .overlay.drawer { place-items: stretch end; padding: 0; background: rgba(5,5,4,.35); backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .overlay.drawer .panel { width: min(640px, 100%); height: 100vh; max-height: 100vh; border-radius: 18px 0 0 18px; background: var(--card); backdrop-filter: none; box-shadow: -30px 0 60px -20px rgba(0,0,0,.6); animation: slidein .22s ease-out; overflow-y: auto; }
+  @keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
   @keyframes fade { from { opacity: 0; } }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
   .picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; max-height: 42vh; overflow: auto; padding: 2px; }
@@ -886,6 +889,27 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .mk-multi input:checked + .sw { background: var(--accent); } .mk-multi input:checked + .sw::after { transform: translateX(14px); } .mk-multi input:focus-visible + .sw { outline: 2px solid var(--accent); outline-offset: 2px; }
   .mk-multi:has(input:checked) { color: var(--text); }
   .mk-st1 { display: inline-block; margin-right: 16px; } .mk-table.multi th.num, .mk-table.multi td.num { min-width: 92px; }
+  .wrap.wide { max-width: min(1500px, 100%); }
+  .gb-gsum { display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card2)); color: var(--text); font: inherit; cursor: pointer; }
+  .gb-gsum small { color: var(--muted); font-size: 12.5px; } .gb-gsum svg { transition: transform .2s; } .gb-gsum.open svg { transform: rotate(180deg); }
+  .gb-wrap { max-height: calc(100vh - 150px); overflow: auto; }
+  .gb thead th { position: sticky; top: 0; z-index: 2; }
+  .gb .gb-name { position: sticky; left: 0; z-index: 1; background: var(--card); min-width: 210px; white-space: normal; box-shadow: inset -1px 0 0 var(--line); }
+  .gb thead .gb-name { z-index: 3; background: color-mix(in srgb, var(--accent) 7%, var(--card2)); }
+  .gb .gb-tot { position: sticky; right: 0; z-index: 1; background: var(--card2); box-shadow: inset 1px 0 0 var(--line); } .gb thead .gb-tot { z-index: 3; }
+  .gb td.gb-tot b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .gb-id { display: block; font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .gb-pct { font-weight: 800; } .gb-pct.hi { color: var(--ok); } .gb-pct.mid { color: var(--warn); } .gb-pct.lo { color: var(--err); }
+  .gb-ro { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .gb td.num, .gb th.num { min-width: 84px; } .gb tbody tr:hover td.gb-name { background: var(--card2); }
+  #mk .mk-row > .mk-chips { flex: 1 1 auto; min-width: 0; }
+  .gb-course { flex: 0 1 460px; width: auto; min-width: 0; font-weight: 600; }
+  .gb-menu { position: relative; } .gb-menu summary { list-style: none; cursor: pointer; } .gb-menu summary::-webkit-details-marker { display: none; }
+  .gb-mlist { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; width: 320px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 50px -16px rgba(0,0,0,.55); }
+  .gb-mlist button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; cursor: pointer; } .gb-mlist button:hover { background: var(--card2); }
+  .gb-mlist small { display: block; color: var(--muted); font-size: 12.5px; }
+  .mk .mk-chip, #mk .mk-chip { padding: 6px 12px; } #mk .mk-chip b, #mk .mk-fam-l b { font-size: 14px; } #mk .mk-num { min-width: 28px; height: 28px; font-size: 13px; }
+  #mk .top { margin-bottom: 14px; } #mk h1 { font-size: clamp(30px, 4vw, 44px); }
   .mk-cnt { align-self: center; color: var(--muted); font-size: 13px; margin-left: 4px; }
   .mk-all { border: 1px dashed var(--line); background: none; color: var(--ink); border-radius: 12px; padding: 7px 12px; font: inherit; font-weight: 700; cursor: pointer; }
   .mk-tools { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 10px; }
@@ -3791,7 +3815,7 @@ const BOOT = null;
     } else if (m) {
       const c = decodeURIComponent(m[2]), gr = decodeURIComponent(m[3]);
       const g = D.groups.find(x => x.course === c && x.group === gr);
-      if (g) { remember(g); acct(); return swap(() => m[1] === 'grades' ? gradesPage(g) : groupPage(g)); }
+      if (g) { remember(g); acct(); return swap(() => m[1] === 'grades' ? marksPage(g.course, g.group) : groupPage(g)); }
       toast('This group is not one of yours.');
       history.replaceState(null, '', location.pathname + location.search); lastHash = '';
     }
@@ -4643,7 +4667,7 @@ const BOOT = null;
   function studentDialog(course, id) {
     document.querySelectorAll('.overlay.stu-o').forEach(x => x.remove());
     dialog('<div id="spb"><p class="note">Loading</p></div><div class="row" style="margin-top:18px"><button class="btn ghost" data-close type="button">Close</button><button class="btn danger" id="sprm" type="button" hidden style="margin-left:auto">Remove from the group</button></div>', async (o, close) => {
-      o.classList.add('stu-o'); o.querySelector('.panel').classList.add('wide');
+      o.classList.add('stu-o', 'drawer');   /* a drawer from the side: the table behind stays in view */
       let S;
       try { S = await api('studentProfile', PIN, course, id); } catch (e) { o.querySelector('#spb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
       const items = (S.items || []).filter(it => it.kind !== 'Attendance' && it.key !== 'attendance');
@@ -4840,10 +4864,11 @@ const BOOT = null;
   const markOk = (max, v) => { if (v === '' || v == null) return true; const n = Number(String(v).replace(',', '.')); return !isNaN(n) && n >= 0 && n <= Number(max); };
 
   /* ----- Enter marks: one item (Midterm, Final, a quiz...) for many groups at once ----- */
-  async function marksPage(wantCourse) {
+  /* the gradebook: every student of the chosen groups down, every grade item across, the total at the end; type the marks in place */
+  async function marksPage(wantCourse, wantGroup) {
     stopTimers();
     const dirty = {};
-    let data = null, course = '', keys = [], picked = [], q = '', multi = store.get('tg_mk_multi') === '1';
+    let data = null, course = '', keys = [], picked = [], q = '', gOpen = store.get('tg_gb_gopen') === '1';
     const rowOf = (k) => { const [c, id, gr] = k.split('|'), cc = (data && data.courses.find(x => x.course === c)); return cc ? cc.rows.find(r => r.id === id && r.group === gr) : null; };
     const saver = makeSaver({ id: 'marks', dirty,
       valid: (k, v) => { const [c, , , ky] = k.split('|'), cc = data && data.courses.find(x => x.course === c), it = cc && cc.items.find(x => x.key === ky); return !!it && markOk(it.max, v); },
@@ -4865,7 +4890,7 @@ const BOOT = null;
         if (!(k in dirty) && $('mkb')) { const inp = $('mkb').querySelector('.mk-table .cell[data-i="' + C().rows.indexOf(r) + '"][data-k="' + CSS.escape(ky) + '"]'); if (inp && k.split('|')[0] === course) { inp.classList.remove('dirty'); const sm = inp.closest('td').querySelector('.by'), b = r.by && r.by[ky]; if (sm) { sm.textContent = b ? b.by.split(' ')[0] : ''; sm.title = b ? 'Entered by ' + b.by + ', ' + b.t : ''; } } }
       });
     }
-    app.innerHTML = '<div class="wrap" id="mk"><div class="top"><div><h1>Enter marks</h1><p class="sub">Choose what you are marking and the groups, then type the marks. Enter moves to the next student.</p></div></div><div id="mkb"><p class="note">Loading</p></div></div>';
+    app.innerHTML = '<div class="wrap wide" id="mk"><div class="top"><div><h1>Enter marks</h1><p class="sub">Every mark of the course in one table. Type in any box: it saves on its own, and Enter goes down to the next student.</p></div></div><div id="mkb"><p class="note">Loading</p></div></div>';
     const unsaved = () => Object.keys(dirty).length;
     leaveGuard = () => { if (unsaved()) saver.flush(); return true; };
     try { data = await api('askData', PIN); } catch (e) { $('mkb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
@@ -4911,22 +4936,26 @@ const BOOT = null;
     };
     const setCourse = (c) => {
       course = c; store.set('tg_mk_course', c);
-      const all = C().items; let ks = []; try { ks = JSON.parse(store.get('tg_mk_items_' + c) || '[]'); } catch (e) {}
-      if (!Array.isArray(ks) || !ks.length) ks = [store.get('tg_mk_item_' + c) || ''];
-      keys = ks.filter(k => all.some(it => it.key === k)); if (!multi) keys = keys.slice(0, 1);
-      if (!keys.length && all.length) keys = [all[0].key];
+      /* the columns shown: every grade item, unless some were hidden here before */
+      const all = C().items; let ks = null; try { ks = JSON.parse(store.get('tg_gb_cols_' + c) || 'null'); } catch (e) {}
+      keys = Array.isArray(ks) ? all.map(it => it.key).filter(k => ks.indexOf(k) >= 0) : all.map(it => it.key);
+      if (!keys.length && all.length) keys = all.map(it => it.key);
       let saved = []; try { saved = JSON.parse(store.get('tg_mk_groups_' + c) || '[]'); } catch (e) {}
       picked = saved.filter(g => groupsOf().indexOf(g) >= 0);
       if (!picked.length) picked = mineOf().length ? mineOf() : groupsOf();
     };
     setCourse(course);
+    if (wantGroup && groupsOf().indexOf(wantGroup) >= 0) { picked = [wantGroup]; store.set('tg_mk_groups_' + course, JSON.stringify(picked)); }
     const val = (r, key) => { const k = course + '|' + r.id + '|' + r.group + '|' + key; return k in dirty ? dirty[k] : (r.scores[key] == null ? '' : String(r.scores[key])); };
-    const saveKeys = () => { store.set('tg_mk_items_' + course, JSON.stringify(keys)); store.set('tg_mk_item_' + course, keys[0] || ''); };
+    const saveKeys = () => store.set('tg_gb_cols_' + course, JSON.stringify(keys));
+    /* the total of a row as it is now on screen: the attendance mark plus every mark, typed ones included */
+    const totalOf = (r) => { let t = r.attGrade === '' || r.attGrade == null ? 0 : Number(r.attGrade); C().items.forEach(it => { const v = val(r, it.key); if (v !== '' && !isNaN(Number(v))) t += Number(v); }); return Math.round(t * 100) / 100; };
+    const maxOf = () => (C().attendanceMax || 0) + C().items.reduce((t, it) => t + (isBonus(it) ? 0 : Number(it.max)), 0);
     const shown = () => C().rows.filter(r => picked.indexOf(r.group) >= 0).sort((a, b) => numeric(a.group, b.group) || 0);
     function draw() {
-      const courseRow = '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips">' + courses.map(c => '<button type="button" class="mk-chip' + (c.course === course ? ' on' : '') + '" data-mc="' + esc(c.course) + '"><b>' + esc(c.course) + '</b><small>' +
-          (c.items.length ? c.items.length + (c.items.length === 1 ? ' item' : ' items') : 'no grade items yet') + (c.rows.length ? '' : ', no students yet') + '</small></button>').join('') +
-        '<button type="button" class="mk-all" id="mknew">+ New course</button></div></div>';
+      const courseRow = '<div class="mk-row"><span class="mk-lbl">Course</span><div class="mk-chips"><select class="in gb-course" id="gbc" aria-label="Course">' +
+          courses.map(c => '<option value="' + esc(c.course) + '"' + (c.course === course ? ' selected' : '') + '>' + esc(c.course) + ' (' + (c.items.length ? c.items.length + (c.items.length === 1 ? ' item' : ' items') : 'no grade items yet') + (c.rows.length ? '' : ', no students yet') + ')</option>').join('') +
+        '</select><button type="button" class="mk-all" id="mknew">+ New course</button></div></div>';
       if (!item() || !C().rows.length) {
         const noItems = !item(), adm = D.me.role === 'Admin';
         $('mkb').innerHTML = courseRow + '<div class="mk-ready"><b>' + esc(course) + ' is ready.</b><p>' +
@@ -4936,35 +4965,37 @@ const BOOT = null;
           (noItems ? (adm ? '<button class="btn" id="mkitems" type="button">Set grade items</button>' : '<span class="note">Only the admin can add the grade items.</span>') : '') +
           (!C().rows.length ? '<button class="btn ghost" id="mkupl" type="button">+ Upload an Excel sheet</button>' : '') + '</div></div>';
         const b2 = $('mkb');
-        b2.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
+        $('gbc').onchange = () => { setCourse($('gbc').value); draw(); };
         $('mknew').onclick = uploadDialog;
         if ($('mkitems')) $('mkitems').onclick = () => itemsDialog(course, { items: C().items, attendanceMax: C().attendanceMax || 0 }, async () => { try { data = await api('askData', PIN); const nc = data.courses.find(x => x.course === course); if (nc) Object.assign(C(), nc); setCourse(course); } catch (e) {} if ($('mk')) draw(); });
         if ($('mkupl')) $('mkupl').onclick = () => { uploadDialog(); const co = document.querySelector('.overlay #co'); if (co) co.value = course; };
         return;
       }
-      const IT = its(), rows = shown(), gs = groupsOf(), mine = mineOf(), checks = IT.filter(x => x.check);
-      const statOf = (it) => { const filled = rows.filter(r => val(r, it.key) !== ''), nums = filled.map(r => Number(val(r, it.key))).filter(x => !isNaN(x));
-        return [filled.length, nums.length && !it.check ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length * 10) / 10 : null]; };
-      const stat = IT.length === 1
-        ? (([n, avg]) => '<b>' + n + '</b> of ' + rows.length + ' students have a mark for <b>' + esc(IT[0].item) + '</b>' + (avg != null ? ' &middot; average <b>' + avg + '</b> of ' + IT[0].max : ''))(statOf(IT[0]))
-        : IT.map(it => { const [n] = statOf(it); return '<span class="mk-st1"><b>' + esc(it.item) + '</b> ' + n + ' of ' + rows.length + '</span>'; }).join('');
+      const IT = its(), rows = shown(), gs = groupsOf(), mine = mineOf(), checks = IT.filter(x => x.check), CC = C(), mx = maxOf(), hidden = CC.items.length - IT.length;
+      const tots = rows.map(totalOf), avg = tots.length ? Math.round(tots.reduce((a, b) => a + b, 0) / tots.length * 10) / 10 : 0;
+      const pickedTxt = picked.length === gs.length ? 'All ' + gs.length + ' groups' : picked.length <= 6 ? picked.slice().sort(numeric).join(', ') : picked.length + ' of ' + gs.length + ' groups';
+      const lv = (f) => f === '' || f == null ? '' : f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
       $('mkb').innerHTML =
         courseRow +
-        '<div class="mk-row"><span class="mk-lbl">Marking</span><div class="mk-chips">' + itemsHtml() +
-          '<label class="mk-multi" title="Choose several grade items and type them side by side"><input type="checkbox" id="mkmulti"' + (multi ? ' checked' : '') + '><span class="sw" aria-hidden="true"></span>Several at once</label>' +
-          (multi && IT.length > 1 ? '<button type="button" class="mk-all" id="mkone">Only ' + esc(IT[0].item) + '</button>' : '') + '</div></div>' +
         '<div class="mk-row"><span class="mk-lbl">Groups</span><div class="mk-chips">' +
+          '<button type="button" class="gb-gsum' + (gOpen ? ' open' : '') + '" id="gbg"><b>' + esc(pickedTxt) + '</b><small>' + rows.length + ' students</small><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>' +
           '<button type="button" class="mk-all" data-mg="*all">All (' + gs.length + ')</button>' + (mine.length && mine.length !== gs.length ? '<button type="button" class="mk-all" data-mg="*mine">My groups (' + mine.length + ')</button>' : '') +
-          (picked.length ? '<button type="button" class="mk-all" data-mg="*none">Clear</button>' : '') + '<span class="mk-cnt">' + picked.length + ' of ' + gs.length + ' chosen</span>' +
-          '<div class="mk-letters">' + lettersHtml(gs) + '</div></div></div>' +
+          (gOpen ? '<button type="button" class="mk-all" data-mg="*none">Clear</button><div class="mk-letters">' + lettersHtml(gs) + '</div>' : '') + '</div></div>' +
+        '<div class="mk-row"><span class="mk-lbl">Columns</span><div class="mk-chips">' + itemsHtml() + (hidden ? '<button type="button" class="mk-all" id="mkallc">Show all ' + CC.items.length + '</button>' : '') + (isAdmin ? '<button type="button" class="mk-all" id="mkitems2">Edit grade items</button>' : '') + '</div></div>' +
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
-          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button><button class="btn ghost" id="mkhist" type="button">History</button>' + (checks.length ? '<button class="btn ghost" id="mkalldone" type="button">Mark all shown done' + (IT.length > 1 ? ' (' + checks.map(x => esc(x.item)).join(', ') + ')' : '') + '</button>' : '') + '</div>' +
-        '<p class="mk-stat">' + stat + '</p>' +
-        '<div class="table-wrap"><table class="mk-table' + (IT.length > 1 ? ' multi' : '') + '"><thead><tr><th>#</th><th>Student</th><th>ID</th><th>Group</th>' + IT.map(it => '<th class="num">' + esc(it.item) + '<small>' + (it.check ? 'done = ' + it.max : (isBonus(it) ? 'extra, up to ' : 'out of ') + it.max) + '</small></th>').join('') + '</tr></thead><tbody>' +
-          (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td><td>' + stuLink(course, r.id, r.name) + '</td><td class="mono">' + esc(r.id) + '</td><td>' + esc(r.group) + '</td>' +
-            IT.map(it => '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + it.key) in dirty ? 'dirty' : '', val(r, it.key), 'data-i="' + C().rows.indexOf(r) + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, it.key) + '</td>').join('') + '</tr>').join('')
-            : '<tr><td colspan="' + (4 + IT.length) + '" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
+          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button>' +
+          '<details class="gb-menu"><summary class="btn ghost">Copy for Excel</summary><div class="gb-mlist"><button type="button" id="cpsec"><b>Section attendance</b><small>W1 to W12: 1 for present or excused, empty otherwise</small></button><button type="button" id="cpgr"><b>Marks</b><small>the mark columns shown, no names</small></button><button type="button" id="cpall"><b>Whole table</b><small>names, IDs, groups, attendance, marks and total</small></button></div></details>' +
+          '<button class="btn ghost" id="mkhist" type="button">History</button></div>' +
+        '<p class="mk-stat"><b>' + rows.length + '</b> students &middot; average total <b id="gbavg">' + avg + '</b> of ' + mx + (hidden ? ' &middot; ' + hidden + (hidden === 1 ? ' column' : ' columns') + ' hidden' : '') + '</p>' +
+        '<div class="table-wrap gb-wrap"><table class="mk-table gb"><thead><tr><th>#</th><th class="gb-name">Student</th><th>Group</th><th class="num">Attendance</th>' + (CC.attendanceMax ? '<th class="num">Att.<small>out of ' + CC.attendanceMax + '</small></th>' : '') +
+          IT.map(it => itemHead(it)).join('') + '<th class="num gb-tot">Total<small>out of ' + mx + '</small></th></tr></thead><tbody>' +
+          (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td>' +
+            '<td class="gb-name">' + stuLink(course, r.id, r.name) + '<small class="gb-id">' + esc(r.id) + '</small></td><td>' + esc(r.group) + '</td>' +
+            '<td class="num"><span class="gb-pct ' + lv(r.pct) + '">' + (r.pct === '' || r.pct == null ? '&ndash;' : Math.round(r.pct * 100) + '%') + '</span></td>' + (CC.attendanceMax ? '<td class="num gb-ro">' + (r.attGrade === '' || r.attGrade == null ? '&ndash;' : esc(String(r.attGrade))) + '</td>' : '') +
+            IT.map(it => '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + it.key) in dirty ? 'dirty' : '', val(r, it.key), 'data-i="' + CC.rows.indexOf(r) + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, it.key) + '</td>').join('') +
+            '<td class="num gb-tot"><b data-tot="' + CC.rows.indexOf(r) + '">' + tots[i] + '</b></td></tr>').join('')
+            : '<tr><td colspan="' + (6 + IT.length) + '" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
         '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
       bind(); status();
     }
@@ -4979,20 +5010,32 @@ const BOOT = null;
       const n = Number(raw); inp.classList.toggle('bad', raw !== '' && (isNaN(n) || n < 0 || n > Number(it.max)));
       if (raw === orig) delete dirty[k]; else dirty[k] = raw;
       inp.classList.toggle('dirty', k in dirty); status(); saver.kick();
+      const tb = $('mkb').querySelector('[data-tot="' + inp.dataset.i + '"]'); if (tb) tb.textContent = totalOf(r);
+      const ts = shown().map(totalOf); if ($('gbavg')) $('gbavg').textContent = ts.length ? Math.round(ts.reduce((a, b) => a + b, 0) / ts.length * 10) / 10 : 0;
     }
     function bind() {
       const box = $('mkb');
-      box.querySelectorAll('[data-mc]').forEach(b => b.onclick = () => { setCourse(b.dataset.mc); draw(); });
+      $('gbc').onchange = () => { setCourse($('gbc').value); draw(); };
       $('mknew').onclick = uploadDialog;
       box.querySelectorAll('[data-mi]').forEach(b => b.onclick = () => {
+        /* a column is shown or hidden; at least one stays */
         const k = b.dataset.mi;
-        if (!multi) keys = [k];
-        else if (keys.indexOf(k) < 0) keys = C().items.map(x => x.key).filter(x => x === k || keys.indexOf(x) >= 0);   /* keep the course order */
+        if (keys.indexOf(k) < 0) keys = C().items.map(x => x.key).filter(x => x === k || keys.indexOf(x) >= 0);   /* keep the course order */
         else if (keys.length > 1) keys = keys.filter(x => x !== k);
         saveKeys(); draw();
       });
-      $('mkmulti').onchange = () => { multi = $('mkmulti').checked; store.set('tg_mk_multi', multi ? '1' : '0'); if (!multi) keys = keys.slice(0, 1); saveKeys(); draw(); };
-      if ($('mkone')) $('mkone').onclick = () => { keys = keys.slice(0, 1); saveKeys(); draw(); };
+      if ($('mkallc')) $('mkallc').onclick = () => { keys = C().items.map(x => x.key); saveKeys(); draw(); };
+      $('gbg').onclick = () => { gOpen = !gOpen; store.set('tg_gb_gopen', gOpen ? '1' : '0'); draw(); };
+      if ($('mkitems2')) $('mkitems2').onclick = () => itemsDialog(course, { items: C().items, attendanceMax: C().attendanceMax || 0 }, async () => { try { data = await api('askData', PIN); const nc = data.courses.find(x => x.course === course); if (nc) Object.assign(C(), nc); setCourse(course); } catch (e) {} if ($('mk')) draw(); });
+      /* copy for Excel: only the students shown, in this order; an empty mark stays empty so Paste Special with Skip blanks keeps what is there */
+      const vis = () => shown().filter(r => !(q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0));
+      $('cpsec').onclick = () => copyText(vis().map(r => (r.section || []).map(v => Number(v) === 1 ? 1 : '').join('\t')).join('\n'), 'Copied W1 to W12 of ' + vis().length + ' students. In Excel: first student\'s W1 cell, Paste Special, tick Skip blanks.');
+      $('cpgr').onclick = () => copyText(vis().map(r => its().map(it => { const v = val(r, it.key); return v; }).join('\t')).join('\n'), 'Copied the ' + its().length + ' mark columns shown, in the same student order.');
+      $('cpall').onclick = () => {
+        const IT2 = its(), CC2 = C();
+        const head = ['Student Name', 'ID', 'Group', 'Attendance %'].concat(CC2.attendanceMax ? ['Attendance /' + CC2.attendanceMax] : [], IT2.map(it => it.item + ' /' + it.max), ['Total /' + maxOf()]);
+        copyText([head.join('\t')].concat(vis().map(r => [r.name, r.id, r.group, r.pct === '' || r.pct == null ? '' : Math.round(r.pct * 100) + '%'].concat(CC2.attendanceMax ? [r.attGrade] : [], IT2.map(it => val(r, it.key)), [totalOf(r)]).join('\t'))).join('\n'), 'Copied the whole table. Paste it in Excel or Google Sheets.');
+      };
       box.querySelectorAll('[data-ml]').forEach(b => b.onclick = () => {
         const mine = groupsOf().filter(g => (String(g).match(/^([A-Za-z]+)/) || ['', '#'])[1].toUpperCase() === b.dataset.ml);
         picked = mine.every(g => picked.indexOf(g) >= 0) ? picked.filter(g => mine.indexOf(g) < 0) : [...new Set(picked.concat(mine))];
@@ -5030,7 +5073,12 @@ const BOOT = null;
         const inp = tr.querySelector('.cell'); $('mkid').value = '';
         if (inp.type === 'checkbox') { inp.checked = true; inp.oninput(); $('mkid').focus(); } else { inp.focus(); inp.select(); }
       };
-      if ($('mkalldone')) $('mkalldone').onclick = () => box.querySelectorAll('.mk-table tr:not([hidden]) .ck').forEach(x => { if (!x.checked) { x.checked = true; x.oninput(); } });
+      /* "all" above a done / not done column: tick it for every student shown, or untick it if they are all ticked */
+      box.querySelectorAll('.ckall').forEach(b => b.onclick = () => {
+        const cs = [...box.querySelectorAll('.mk-table tr:not([hidden]) .ck[data-k="' + CSS.escape(b.dataset.ck) + '"]')], on = !cs.every(x => x.checked);
+        cs.forEach(x => { if (x.checked !== on) { x.checked = on; x.oninput(); } });
+      });
+      box.querySelectorAll('.gb-mlist button').forEach(x => x.addEventListener('click', () => { const d = x.closest('details'); if (d) d.open = false; }));
       $('mkhist').onclick = () => historyDialog(course, picked.length === 1 ? picked[0] : null);
       const IT = its();
       $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy from Excel the student ID and then ' + (IT.length > 1 ? 'one column for each of <b>' + IT.map(x => esc(x.item)).join('</b>, <b>') + '</b>, in this order' : 'the mark of <b>' + esc(IT[0].item) + '</b>') + ', and paste them here. One student on each line. An empty cell is left as it is.</p>' +
