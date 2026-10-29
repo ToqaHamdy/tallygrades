@@ -4996,6 +4996,141 @@ const BOOT = null;
         };
       });
   }
+  /* The university's own sheet, filled from the site: the file is opened as it is (its formatting, merged cells and formulas stay),
+     every student is found by ID, and only the chosen columns are written: section attendance (1 for present or excused) and marks. */
+  const JSZIP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  function loadJszip() {
+    if (window.JSZip) return Promise.resolve();
+    return new Promise((resolve, reject) => { const sc = document.createElement('script'); sc.src = JSZIP_URL; sc.onload = resolve; sc.onerror = () => reject(new Error('Could not load the Excel reader. Check your internet and try again.')); document.head.appendChild(sc); });
+  }
+  const colNum = (L) => L.split('').reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
+  const colName = (n) => { let s = ''; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+  function uniSheetDialog(CC, totalOf) {
+    const items = CC.items || [], NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const byId = {}; CC.rows.forEach(r => { byId[r.id] = r; });
+    let zip = null, fname = '', shared = [], sheets = [], keys = [], map = {};
+    const xml = (t) => new DOMParser().parseFromString(t, 'application/xml');
+    const txt = (c) => { if (!c) return ''; const t = c.getAttribute('t'), v = c.getElementsByTagName('v')[0];
+      if (t === 's') return v ? shared[Number(v.textContent)] || '' : ''; if (t === 'inlineStr') return [...c.getElementsByTagName('t')].map(x => x.textContent).join(''); return v ? v.textContent : ''; };
+    const findItem = (re) => items.find(it => re.test(it.item));
+    /* what a column of the university sheet is, from its two header rows */
+    const guess = (top, sub) => {
+      const T = top.toLowerCase(), S = sub.toLowerCase(), n = (S.match(/(\d+)/) || [])[1];
+      if (/attendance/.test(T) && /section/.test(T) && /^w\s*\d+$/.test(S)) return 'sec' + n;
+      if (/attendance|lecture/.test(T) || /^(name|id|total)$/.test(T)) return 'skip';
+      let it = null;
+      if (/mid/.test(T)) it = findItem(/mid/i);
+      else if (/final/.test(T)) it = findItem(/final/i);
+      else if (/quiz/.test(T) && n) it = findItem(new RegExp('quiz\\s*' + n + '$', 'i'));
+      else if (/assign|sheet/.test(T + ' ' + S) && n) it = findItem(new RegExp('(assignment|sheet)\\s*' + n + '$', 'i'));
+      else if (/project/.test(T)) it = findItem(/project/i);
+      else if (/bonus/.test(T)) it = findItem(/bonus/i);
+      return it ? it.key : 'skip';
+    };
+    dialog('<span class="pill">' + esc(CC.course) + '</span><h1 style="font-size:26px;margin-top:12px">Fill the university sheet</h1>' +
+      '<p class="sub">Upload the university\'s Excel file as it is. Every student is found by ID, the site writes section attendance (1 for present or excused) and the marks you choose, and you download the same file back, with its look untouched.</p>' +
+      '<div id="ub"><label class="f" style="margin-top:16px">University Excel file<input class="in" id="uf" type="file" accept=".xlsx"></label><div class="err" id="ue"></div></div>' +
+      '<div class="row" style="margin-top:16px"><button class="btn" id="ugo" type="button" hidden>Fill and download</button><button class="btn ghost" data-close type="button">Close</button></div>',
+      (o) => {
+        o.querySelector('.panel').classList.add('wide');
+        const box = o.querySelector('#ub'), err = (t) => { const e = o.querySelector('#ue'); if (e) e.textContent = t; };
+        o.querySelector('#uf').onchange = async (e) => {
+          const f = e.target.files[0]; if (!f) return; fname = f.name;
+          try {
+            await loadJszip(); zip = await JSZip.loadAsync(await f.arrayBuffer());
+            const ss = zip.file('xl/sharedStrings.xml');
+            shared = ss ? [...xml(await ss.async('string')).getElementsByTagName('si')].map(si => [...si.getElementsByTagName('t')].map(t => t.textContent).join('')) : [];
+            const wbx = xml(await zip.file('xl/workbook.xml').async('string')), rels = xml(await zip.file('xl/_rels/workbook.xml.rels').async('string'));
+            const target = {}; [...rels.getElementsByTagName('Relationship')].forEach(r => { target[r.getAttribute('Id')] = r.getAttribute('Target'); });
+            sheets = [];
+            for (const sh of [...wbx.getElementsByTagName('sheet')]) {
+              const rid = sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+              const path = 'xl/' + String(target[rid] || '').replace(/^\/?xl\//, '').replace(/^\//, '');
+              if (!zip.file(path)) continue;
+              const doc = xml(await zip.file(path).async('string')), cells = {};
+              [...doc.getElementsByTagName('c')].forEach(c => { cells[c.getAttribute('r')] = c; });
+              /* the header: the row with "ID", and the row under it; merged top labels cover all their columns */
+              let h = 0, idCol = 0;
+              for (let r = 1; r <= 12 && !h; r++) for (let cn = 1; cn <= 40; cn++) if (/^(student\s*)?id$/i.test(txt(cells[colName(cn) + r]).trim())) { h = r; idCol = cn; break; }
+              if (!h) continue;
+              const top = {};
+              for (let cn = 1; cn <= 80; cn++) top[cn] = txt(cells[colName(cn) + h]).trim();
+              [...doc.getElementsByTagName('mergeCell')].forEach(m => { const [a, b] = m.getAttribute('ref').split(':'); if (!b) return; const ma = a.match(/^([A-Z]+)(\d+)$/), mb = b.match(/^([A-Z]+)(\d+)$/);
+                if (Number(ma[2]) <= h && Number(mb[2]) >= h) for (let cn = colNum(ma[1]); cn <= colNum(mb[1]); cn++) top[cn] = top[colNum(ma[1])]; });
+              const cols = [];
+              for (let cn = idCol + 1; cn <= 80; cn++) { const t = top[cn] || '', sb = txt(cells[colName(cn) + (h + 1)]).trim(); if (!t && !sb) continue; cols.push({ cn: cn, key: t + (sb ? ' · ' + sb : ''), top: t, sub: sb }); }
+              sheets.push({ name: sh.getAttribute('name'), path: path, doc: doc, cells: cells, h: h, idCol: idCol, cols: cols });
+            }
+            if (!sheets.length) { err('No sheet with an "ID" column was found in this file.'); return; }
+            keys = []; sheets.forEach(sh => sh.cols.forEach(c => { if (!keys.some(k => k.key === c.key)) keys.push(c); }));
+            map = {}; keys.forEach(k => { map[k.key] = guess(k.top, k.sub); });
+            const secN = keys.filter(k => /^sec/.test(map[k.key])).length;
+            const opt = (k) => '<option value="skip">Leave as it is</option>' + items.map(it => '<option value="' + esc(it.key) + '"' + (map[k] === it.key ? ' selected' : '') + '>' + esc(it.item) + '</option>').join('') + '<option value="total"' + (map[k] === 'total' ? ' selected' : '') + '>Total (from the site)</option>';
+            box.innerHTML = '<p class="note" style="margin:14px 0 8px"><b>' + sheets.length + '</b> sheets (' + sheets.map(x => esc(x.name)).join(', ') + '). ' +
+              (secN ? '<b>Attendance Section W1 to W' + secN + '</b> is filled from the section weeks (week 7, the midterm week, is left out). ' : '') + 'Choose what goes in the other columns:</p>' +
+              '<div class="table-wrap im-cols"><table><thead><tr><th>Column in the university sheet</th><th>Filled with</th></tr></thead><tbody>' +
+              keys.filter(k => !/^sec/.test(map[k.key]) && !/lecture/i.test(k.top)).map(k => '<tr><td><b>' + esc(k.top) + '</b>' + (k.sub ? ' &middot; ' + esc(k.sub) : '') + '</td><td><select class="in u-map" data-k="' + esc(k.key) + '">' + opt(k.key) + '</select></td></tr>').join('') + '</tbody></table></div>' +
+              '<label class="check" style="margin-top:12px"><input type="checkbox" id="urep"> Also replace cells that already have a different value (otherwise only empty cells are filled)</label><div class="err" id="ue"></div>';
+            box.querySelectorAll('.u-map').forEach(sl => sl.onchange = () => { map[sl.dataset.k] = sl.value; });
+            o.querySelector('#ugo').hidden = false;
+          } catch (x) { err(errMsg(x)); }
+        };
+        o.querySelector('#ugo').onclick = async () => {
+          const rep = o.querySelector('#urep').checked, b = o.querySelector('#ugo'); b.disabled = true;
+          let filled = 0, same = 0, kept = 0, students = 0; const missing = [], seen = {};
+          for (const sh of sheets) {
+            const { doc, cells, h, idCol } = sh;
+            const rowsEl = {}; [...doc.getElementsByTagName('row')].forEach(r => { rowsEl[r.getAttribute('r')] = r; });
+            const setCell = (ref, v) => {
+              let c = cells[ref];
+              if (!c) {   /* a cell that is not in the file yet: made in its row, in column order, with the style of the cell before it */
+                const rn = ref.replace(/^[A-Z]+/, ''), rowEl = rowsEl[rn]; if (!rowEl) return false;
+                c = doc.createElementNS(NS, 'c'); c.setAttribute('r', ref);
+                const cn = colNum(ref.replace(/\d+$/, '')), after = [...rowEl.getElementsByTagName('c')].find(x => colNum(x.getAttribute('r').replace(/\d+$/, '')) > cn);
+                const before = [...rowEl.getElementsByTagName('c')].filter(x => colNum(x.getAttribute('r').replace(/\d+$/, '')) < cn).pop();
+                if (before && before.getAttribute('s')) c.setAttribute('s', before.getAttribute('s'));
+                rowEl.insertBefore(c, after || null); cells[ref] = c;
+              }
+              c.removeAttribute('t'); while (c.firstChild) c.removeChild(c.firstChild);
+              const ve = doc.createElementNS(NS, 'v'); ve.textContent = String(v); c.appendChild(ve); return true;
+            };
+            Object.keys(rowsEl).map(Number).filter(r => r > h + 1).forEach(rn => {
+              const id = txt(cells[colName(idCol) + rn]).replace(/\D/g, ''); if (id.length < 6) return;
+              const r = byId[id]; if (!r) { missing.push(id + ' (' + sh.name + ')'); return; }
+              students++; seen[id] = 1;
+              sh.cols.forEach(c => {
+                const m = map[c.key]; if (!m || m === 'skip') return;
+                let v = null;
+                if (/^sec\d+$/.test(m)) { const n = Number(m.slice(3)), wk = n <= 6 ? n : n + 1, st = (r.weeks || [])[wk - 1]; v = st === 'P' || st === 'E' ? 1 : null; }
+                else if (m === 'total') v = totalOf(r);
+                else v = r.scores[m] == null ? null : Number(r.scores[m]);
+                if (v == null) return;
+                const ref = colName(c.cn) + rn, old = txt(cells[ref]).trim();
+                if (old !== '' && Number(old) === v) { same++; return; }
+                if (old !== '' && !rep) { kept++; return; }
+                if (setCell(ref, v)) filled++;
+              });
+            });
+            zip.file(sh.path, new XMLSerializer().serializeToString(doc));
+          }
+          /* Excel works the totals out again when the file opens */
+          let wbt = await zip.file('xl/workbook.xml').async('string');
+          if (/<calcPr\b[^>]*fullCalcOnLoad=/.test(wbt)) wbt = wbt.replace(/fullCalcOnLoad="[^"]*"/, 'fullCalcOnLoad="1"');
+          else if (/<calcPr\b/.test(wbt)) wbt = wbt.replace(/<calcPr\b/, '<calcPr fullCalcOnLoad="1"');
+          else wbt = wbt.replace(/<\/definedNames>|<\/sheets>/, (m) => m + '<calcPr fullCalcOnLoad="1"/>');
+          zip.file('xl/workbook.xml', wbt);
+          const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname.replace(/\.xlsx$/i, '') + ' - filled.xlsx'; document.body.appendChild(a); a.click(); a.remove();
+          const notInSheet = CC.rows.filter(r => !seen[r.id]).length;
+          box.innerHTML = '<div class="im-sum" style="margin-top:16px"><span><b>' + filled + '</b> cells filled</span><span><b>' + students + '</b> students found</span>' + (same ? '<span><b>' + same + '</b> already the same</span>' : '') +
+            (kept ? '<span class="warn"><b>' + kept + '</b> cells kept as they were (they had another value)</span>' : '') + (missing.length ? '<span class="bad"><b>' + missing.length + '</b> IDs in the sheet are not in the site</span>' : '') +
+            (notInSheet ? '<span><b>' + notInSheet + '</b> students of the site are not in the sheet</span>' : '') + '</div>' +
+            (missing.length ? '<p class="note">Not in the site: ' + missing.slice(0, 30).map(esc).join(', ') + (missing.length > 30 ? '...' : '') + '</p>' : '') +
+            '<p class="note">Downloaded: <b>' + esc(a.download) + '</b>. Open it in Excel and check a few students before you send it.</p>';
+          b.hidden = true;
+        };
+      });
+  }
   function courseFromFile(name) {
     return name.replace(/\.(xlsx|xlsm|xls|csv)$/i, '')
       .replace(/__([A-Za-z]{2,5}\d{3,5})_?$/, ' ($1)')
@@ -5225,7 +5360,7 @@ const BOOT = null;
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
           '<button class="btn ghost" id="mkimp" type="button">Import from Excel</button><button class="btn ghost" id="mkpaste" type="button">Paste</button>' +
-          '<details class="gb-menu"><summary class="btn ghost">Copy for Excel</summary><div class="gb-mlist"><button type="button" id="cpsec"><b>Section attendance</b><small>W1 to W12: 1 for present or excused, empty otherwise</small></button><button type="button" id="cpgr"><b>Marks</b><small>the mark columns shown, no names</small></button><button type="button" id="cpall"><b>Whole table</b><small>names, IDs, groups, attendance, marks and total</small></button></div></details>' +
+          '<details class="gb-menu"><summary class="btn ghost">Copy for Excel</summary><div class="gb-mlist"><button type="button" id="cpsec"><b>Section attendance</b><small>W1 to W12: 1 for present or excused, empty otherwise</small></button><button type="button" id="cpgr"><b>Marks</b><small>the mark columns shown, no names</small></button><button type="button" id="cpall"><b>Whole table</b><small>names, IDs, groups, attendance, marks and total</small></button><button type="button" id="cpuni"><b>Fill the university sheet</b><small>upload their Excel file, get it back filled</small></button></div></details>' +
           '<button class="btn ghost" id="mkhist" type="button">History</button></div>' +
         '<p class="mk-stat"><b>' + rows.length + '</b> students &middot; average total <b id="gbavg">' + avg + '</b> of ' + mx + (hidden ? ' &middot; ' + hidden + (hidden === 1 ? ' column' : ' columns') + ' hidden' : '') + '</p>' +
         '<div class="table-wrap gb-wrap"><table class="mk-table gb"><thead><tr><th>#</th><th class="gb-name">Student</th><th>Group</th><th class="num">Attendance</th>' + (CC.attendanceMax ? '<th class="num">Att.<small>out of ' + CC.attendanceMax + '</small></th>' : '') +
@@ -5271,6 +5406,7 @@ const BOOT = null;
       const vis = () => shown().filter(r => !(q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0));
       $('cpsec').onclick = () => copyText(vis().map(r => (r.section || []).map(v => Number(v) === 1 ? 1 : '').join('\t')).join('\n'), 'Copied W1 to W12 of ' + vis().length + ' students. In Excel: first student\'s W1 cell, Paste Special, tick Skip blanks.');
       $('cpgr').onclick = () => copyText(vis().map(r => its().map(it => { const v = val(r, it.key); return v; }).join('\t')).join('\n'), 'Copied the ' + its().length + ' mark columns shown, in the same student order.');
+      $('cpuni').onclick = () => uniSheetDialog(C(), totalOf);
       $('cpall').onclick = () => {
         const IT2 = its(), CC2 = C();
         const head = ['Student Name', 'ID', 'Group', 'Attendance %'].concat(CC2.attendanceMax ? ['Attendance /' + CC2.attendanceMax] : [], IT2.map(it => it.item + ' /' + it.max), ['Total /' + maxOf()]);
