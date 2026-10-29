@@ -4162,6 +4162,7 @@ const BOOT = null;
       let rows;
       try { rows = await api('taActivity', PIN, name); } catch (e) { if ($('taHist')) $('taHist').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
       if (!$('taHist') || ta !== name) return;
+      if (!Array.isArray(rows)) rows = [];
       let kind = '', q = '', more = 120;
       const box = $('taHist');
       const cnt = (k) => rows.filter(x => x.kind === k).length;
