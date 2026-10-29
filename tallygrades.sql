@@ -684,6 +684,23 @@ begin
   return tg.dash(me);
 end $$;
 
+-- the Gemini key (free, from aistudio.google.com) that reads photos of paper attendance sheets.
+-- Only the admin sets it; any TA who is logged in gets it to send a photo; it is never in the page itself.
+create or replace function public.set_gemini_key(p_pin text, p_key text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.admin(p_pin); v text := btrim(coalesce(p_key, ''));
+begin
+  if v <> '' and v !~ '^[A-Za-z0-9_\-]{20,80}$' then raise exception 'This does not look like a Gemini key. Copy it again from aistudio.google.com.'; end if;
+  if v = '' then delete from tg.settings where key = 'Gemini key';
+  else insert into tg.settings (key, value) values ('Gemini key', v) on conflict (key) do update set value = excluded.value; end if;
+  perform tg.note('', '', case when v = '' then 'Removed the Gemini key' else 'Saved a Gemini key' end, me.name);
+  return jsonb_build_object('set', v <> '', 'hint', case when v = '' then '' else left(v, 4) || '...' || right(v, 4) end);
+end $$;
+create or replace function public.gemini_key(p_pin text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); v text := (select value from tg.settings where key = 'Gemini key');
+begin
+  return jsonb_build_object('key', coalesce(v, ''), 'set', coalesce(v, '') <> '', 'hint', case when coalesce(v, '') = '' then '' else left(v, 4) || '...' || right(v, 4) end);
+end $$;
+
 -- ---------------------------------------------------------------- check-in sessions
 drop function if exists public.open_session(text, text, text, int, int, boolean, boolean);
 -- p_also: other groups of the course that check in together with p_group (one QR, one code)
@@ -1068,7 +1085,7 @@ begin
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'session_mark(text,text,text)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'mark_weeks(text,text,text,jsonb,text)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
-    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)', 'ta_activity(text,text)', 'add_student(text,text,text,text,text)', 'remove_student(text,text,text,text)'] loop
+    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)', 'ta_activity(text,text)', 'add_student(text,text,text,text,text)', 'remove_student(text,text,text,text)', 'set_gemini_key(text,text)', 'gemini_key(text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;

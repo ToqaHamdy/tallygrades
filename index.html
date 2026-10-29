@@ -907,7 +907,8 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .gb-menu { position: relative; } .gb-menu summary { list-style: none; cursor: pointer; } .gb-menu summary::-webkit-details-marker { display: none; }
   .gb-mlist { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; width: 320px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 50px -16px rgba(0,0,0,.55); }
   .gb-mlist button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; cursor: pointer; } .gb-mlist button:hover { background: var(--card2); }
-  .im-cols select { min-width: 220px; } .im-cols td, .im-prev td { white-space: normal; vertical-align: top; } .im-prev { max-height: 52vh; overflow: auto; margin-top: 12px; }
+  .im-tag:not(.warn):not(.bad) { background: var(--card2); color: var(--muted); margin-left: 4px; }
+  .im-cols select { min-width: 220px; } .pa-pick { margin-top: 6px; font-size: 13.5px; padding: 6px 10px; } .im-cols td, .im-prev td { white-space: normal; vertical-align: top; } .im-prev { max-height: 52vh; overflow: auto; margin-top: 12px; }
   .im-sum { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; color: var(--muted); } .im-sum b { color: var(--text); } .im-sum .warn b { color: var(--warn); } .im-sum .bad b { color: var(--err); }
   .im-tag { display: inline-block; margin-top: 4px; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 6px; } .im-tag.warn { background: var(--warn-bg); color: var(--warn); } .im-tag.bad { background: var(--err-bg); color: var(--err); }
   .im-ch { display: inline-block; margin: 0 6px 4px 0; padding: 2px 8px; border-radius: 6px; background: var(--card2); font-size: 13px; } .im-ch s { color: var(--muted); }
@@ -3564,7 +3565,7 @@ const BOOT = null;
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], markWeeks: ['mark_weeks', ['p_pin', 'p_course', 'p_group', 'p_items', 'p_status']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
     saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']],
-    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']], studentProfile: ['student_profile', ['p_pin', 'p_course', 'p_id']], taActivity: ['ta_activity', ['p_pin', 'p_ta']], addStudent: ['add_student', ['p_pin', 'p_course', 'p_group', 'p_name', 'p_id']], removeStudent: ['remove_student', ['p_pin', 'p_course', 'p_group', 'p_id']]
+    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']], studentProfile: ['student_profile', ['p_pin', 'p_course', 'p_id']], setGeminiKey: ['set_gemini_key', ['p_pin', 'p_key']], geminiKey: ['gemini_key', ['p_pin']], taActivity: ['ta_activity', ['p_pin', 'p_ta']], addStudent: ['add_student', ['p_pin', 'p_course', 'p_group', 'p_name', 'p_id']], removeStudent: ['remove_student', ['p_pin', 'p_course', 'p_group', 'p_id']]
   };
   async function api(fn, ...args) {
     const [name, params] = RPC[fn];
@@ -3940,13 +3941,13 @@ const BOOT = null;
       '<nav class="sd-nav">' + item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + item('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) + btn('take', 'qr', 'Take attendance') +
         item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) + btn('ask', 'spark', 'Ask the assistant') +
         (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
-        '<div class="sd-sec">Tools</div>' + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
+        '<div class="sd-sec">Tools</div>' + btn('photo', 'upload', 'Attendance from a photo') + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
         (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '') + '</nav>' +
       '<div class="sd-foot">' + item('#settings', 'gear', 'Settings', h === '#settings') + '</div>';
     /* the same menu as a bar along the top (wide screens): pages, then Courses and Tools as drop-down menus */
     const dd = (key, icon, label, body, active) => '<div class="tn-dd"><button type="button" title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" data-dd="' + key + '" aria-haspopup="true" aria-expanded="false">' + svg(icon) + '<span>' + label + '</span><svg class="tn-car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="tn-menu" hidden>' + body + '</div></div>';
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
-    const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
+    const toolsBody = btn('photo', 'upload', 'Attendance from a photo') + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
     /* a calm bar: the logo goes home, two pages in words, everything else under More, then the two jobs as big buttons: Enter marks and Take attendance */
     const moreBody = (courses.length ? '<div class="tn-h">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join('') : '') + '<div class="tn-h">Tools</div>' + toolsBody;
     $('topnav').innerHTML = tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) +
@@ -3963,7 +3964,7 @@ const BOOT = null;
       if ($('quick')) show(); else { go(c ? courseHash(c) : ''); setTimeout(show, 700); }
     };
     const act = {
-      take: take, ask: () => BOT && BOT.toggle(true),
+      take: take, ask: () => BOT && BOT.toggle(true), photo: () => photoAttendanceDialog(c),
       impatt: () => { importAttendanceDialog(); const co = document.querySelector('.overlay #co'); if (c && co) co.value = c; },
       final: downloadFinal, regqr: registrationQrDialog, term: termDialog, backup: downloadBackup
     };
@@ -4051,11 +4052,20 @@ const BOOT = null;
         '<label class="f">New password again<input class="in" type="password" id="pn2" autocomplete="new-password"></label>' +
         '<div class="err" id="pwer"></div><button class="btn" id="pwgo" type="submit">Save</button></form>' +
         '<p class="note" style="margin-top:12px">Username: 3 to 30 letters, numbers, dots or dashes. Password: at least 6 characters. Other devices logged in as you are logged out.</p></section>' +
+      (me.role === 'Admin' ? '<section class="panel set"><h2>Paper sheets with Gemini</h2><p class="note" style="margin-top:0">A free Gemini key lets every TA turn a photo of a paper attendance sheet into attendance. Make one at <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener">aistudio.google.com/api-keys</a> (Create API key), then paste it here. It is kept in the database, never in the page, and only TAs who are logged in can use it.</p>' +
+        '<form class="form" id="gkf"><label class="f">Gemini API key<input class="in" type="password" id="gk" autocomplete="off" spellcheck="false" placeholder="Paste the key"></label><p class="note" id="gks" style="margin:-4px 0 6px"></p><div class="err" id="gke"></div>' +
+        '<div class="row"><button class="btn" type="submit">Save the key</button><button class="link danger" id="gkx" type="button" hidden>Remove the key</button></div></form></section>' : '') +
       '<section class="panel set"><h2>Appearance</h2><div class="cview" style="margin-top:6px"><button type="button" data-th="dark">Dark</button><button type="button" data-th="light">Light</button></div>' +
         '<p class="note" style="margin-top:12px">Saved on this device only.</p></section>' +
       '</div></div>';
     draw();
     $('bk').onclick = () => go('');
+    if ($('gkf')) {
+      const show = (r) => { $('gks').textContent = r.set ? 'A key is saved (' + r.hint + ').' : 'No key yet.'; $('gkx').hidden = !r.set; };
+      api('geminiKey', PIN).then(show).catch(() => {});
+      $('gkf').onsubmit = async (e) => { e.preventDefault(); $('gke').textContent = ''; try { show(await api('setGeminiKey', PIN, $('gk').value)); $('gk').value = ''; toast('Saved. Every TA can now use Attendance from a photo.'); } catch (x) { $('gke').textContent = errMsg(x); } };
+      $('gkx').onclick = async () => { if (!confirm('Remove the Gemini key? Attendance from a photo stops working until a new key is saved.')) return; try { show(await api('setGeminiKey', PIN, '')); toast('Removed.'); } catch (x) { $('gke').textContent = errMsg(x); } };
+    }
     $('ph').onchange = async () => {
       const f = $('ph').files[0]; $('per').textContent = '';
       if (!f) return;
@@ -4993,6 +5003,130 @@ const BOOT = null;
           close();
           toast(done + (done === 1 ? ' change' : ' changes') + ' saved' + (failed.length ? '. Not saved: ' + failed.join('; ') : '.'));
           if (onDone) onDone();
+        };
+      });
+  }
+  /* Attendance from a photo of a paper sheet: Gemini reads the names and IDs (free key, set by the admin in Settings),
+     each line is matched to a student of the course (by ID checked by first name, else by name), and the TA saves it after a look. */
+  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+  async function geminiRead(key, b64, mime) {
+    const prompt = 'This is a photo of a handwritten attendance sheet from a university section. Read every student line on it. ' +
+      'For each line give the name as written (in English letters) and the student ID: digits only, usually 9 digits starting with 6923, 6924, 6925 or 6926; when a digit is hard to read give your best reading. ' +
+      'Give the group code if it is written on the line (like A3, F3, G2), else an empty string. Set crossed to true only when that line itself is struck through; ignore signatures or scribbles drawn across the page. ' +
+      'If the page says which week it is (like "Week 3"), give that number as week, else 0. Do not invent lines.';
+    const body = JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: mime, data: b64 } }] }],
+      generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { week: { type: 'INTEGER' },
+        lines: { type: 'ARRAY', items: { type: 'OBJECT', properties: { name: { type: 'STRING' }, id: { type: 'STRING' }, group: { type: 'STRING' }, crossed: { type: 'BOOLEAN' } }, required: ['name', 'id'] } } }, required: ['lines'] } } });
+    let last = '';
+    for (const model of GEMINI_MODELS) {
+      let res;
+      try { res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(key), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body }); }
+      catch (e) { throw new Error('Could not reach Gemini. Check your internet.'); }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const t = (((data.candidates || [])[0] || {}).content || { parts: [] }).parts.map(p => p.text || '').join('');
+        try { const j = JSON.parse(t); return { week: Number(j.week) || 0, lines: Array.isArray(j.lines) ? j.lines : [] }; } catch (e) { throw new Error('Gemini did not give a list. Try a clearer photo.'); }
+      }
+      last = (data.error && data.error.message) || ('Gemini answered ' + res.status);
+      if (res.status === 400 && /api key/i.test(last)) throw new Error('The Gemini key is not valid. The admin can save a new one in Settings.');
+      if (res.status === 429) throw new Error('The free Gemini limit is used up for now. Try again in a minute (or tomorrow).');
+      if (res.status !== 404) break;   /* only a missing model tries the next one */
+    }
+    throw new Error(last || 'Gemini could not read the photo.');
+  }
+  /* a photo made smaller (long side 2000 pixels, JPEG) so it goes fast and stays inside the free limits */
+  function shrinkPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 2000 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+        resolve(cv.toDataURL('image/jpeg', .85).split(',')[1]); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(file.name + ' is not a photo this browser can open.')); };
+      img.src = url;
+    });
+  }
+  async function photoAttendanceDialog(courseHint) {
+    let K; try { K = await api('geminiKey', PIN); } catch (e) { toast(errMsg(e)); return; }
+    if (!K.set) { dialog('<h1 style="font-size:24px">Attendance from a photo</h1><p class="sub">' + (D.me.role === 'Admin' ? 'Save a free Gemini key first: Settings, then Paper sheets with Gemini.' : 'The admin has not saved a Gemini key yet. Ask them to add it in Settings.') + '</p><div class="row" style="margin-top:16px">' + (D.me.role === 'Admin' ? '<a class="btn" href="#settings" data-close>Open Settings</a>' : '') + '<button class="btn ghost" data-close type="button">Close</button></div>', () => {}); return; }
+    const courses = [...new Set(D.groups.map(g => g.course))].sort();
+    let course = courses.indexOf(courseHint) >= 0 ? courseHint : (store.get('tg_ph_course') || courses[0]), plan = [];
+    dialog('<h1 style="font-size:26px">Attendance from a photo</h1><p class="sub">Take a photo of the paper sheet (one or more pages). Gemini reads the names and IDs, you check every line, then it is saved as present, each student in their own group.</p>' +
+      '<div id="pab"><div class="row" style="margin-top:16px;align-items:flex-end"><label class="f" style="flex:1 1 260px">Course<select class="in" id="pac">' + courses.map(c => '<option' + (c === course ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select></label>' +
+        '<label class="f" style="flex:0 1 200px">Week<select class="in" id="paw">' + D.weeks.map(([v, l]) => '<option value="' + v + '"' + (v === D.currentWeek ? ' selected' : '') + '>' + esc(l) + '</option>').join('') + '</select></label></div>' +
+        '<label class="f">Photos of the sheet<input class="in" id="paf" type="file" accept="image/*" multiple></label><div class="err" id="pae"></div></div>' +
+      '<div class="row" style="margin-top:16px"><button class="btn" id="pago" type="button">Read with Gemini</button><button class="btn" id="pasave" type="button" hidden>Save as present</button><button class="btn ghost" data-close type="button">Close</button></div>',
+      (o, close) => {
+        o.querySelector('.panel').classList.add('wide');
+        const box = o.querySelector('#pab'), err = (t) => { o.querySelector('#pae').textContent = t; };
+        o.querySelector('#pac').onchange = (e) => { course = e.target.value; store.set('tg_ph_course', course); };
+        o.querySelector('#pago').onclick = async () => {
+          const files = [...o.querySelector('#paf').files]; err('');
+          if (!files.length) { err('Choose a photo of the sheet first.'); return; }
+          const b = o.querySelector('#pago'); b.disabled = true;
+          let d; try { d = await getAsk(); } catch (e) { err(errMsg(e)); b.disabled = false; return; }
+          const CC = (d.courses || []).find(c => c.course === course);
+          if (!CC || !CC.rows.length) { err('No students of ' + course + ' were found.'); b.disabled = false; return; }
+          let lines = [], weekSeen = 0;
+          try {
+            for (let i = 0; i < files.length; i++) {
+              b.textContent = 'Reading photo ' + (i + 1) + ' of ' + files.length + '...';
+              const r = await geminiRead(K.key, await shrinkPhoto(files[i]), 'image/jpeg');
+              if (r.week) weekSeen = r.week;
+              lines = lines.concat(r.lines.filter(x => !x.crossed).map(x => Object.assign({ page: i + 1 }, x)));
+            }
+          } catch (e) { err(errMsg(e)); b.disabled = false; b.textContent = 'Read with Gemini'; return; }
+          b.hidden = true;
+          if (weekSeen && weekSeen !== Number(o.querySelector('#paw').value)) toast('The sheet says Week ' + weekSeen + '. Check the week before you save.');
+          const week = Number(o.querySelector('#paw').value), lat = (v) => String(v || '').toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+          const ids = lines.map(x => String(x.id || '').replace(/\D/g, '')).filter(Boolean);
+          plan = lines.map((x, li) => {
+            const id = String(x.id || '').replace(/\D/g, ''), w = lat(x.name);
+            let st = null, how = '';
+            const byId = id ? CC.rows.find(r => r.id === id) : null;
+            if (byId && (!w.length || (lat(byId.name)[0] || '').slice(0, 2) === w[0].slice(0, 2))) { st = byId; how = 'id'; }
+            else if (w.length) {
+              const c = CC.rows.filter(r => { const v = lat(r.name); return (v[0] || '').slice(0, 3) === w[0].slice(0, 3) && (!w[1] || (v[1] || '').slice(0, 3) === w[1].slice(0, 3)) && (r.id === id || ids.indexOf(r.id) < 0); });
+              if (c.length === 1) { st = c[0]; how = 'name'; } else how = c.length > 1 ? 'many' : 'none';
+            } else how = 'none';
+            /* not sure who it is: the students it could be (same first name, or an ID ending the same), to pick by hand */
+            const pick = st ? [] : CC.rows.filter(r => { const v = lat(r.name); return (w[0] && (v[0] || '').slice(0, 3) === w[0].slice(0, 3)) || (id.length >= 4 && r.id.slice(-4) === id.slice(-4)); })
+              .sort((a, b) => ((lat(b.name)[1] || '').slice(0, 2) === (w[1] || '').slice(0, 2)) - ((lat(a.name)[1] || '').slice(0, 2) === (w[1] || '').slice(0, 2))).slice(0, 10);
+            const was = st ? (st.weeks || [])[week - 1] || '' : '';
+            return { li: li, page: x.page, name: x.name, id: id, st: st, how: how, pick: pick, already: was === 'P' || was === 'E', on: !!st && !(was === 'P' || was === 'E') };
+          });
+          /* the same student read twice (two pages): once is enough */
+          const seen = {}; plan.forEach(p => { if (!p.st) return; if (seen[p.st.id]) { p.on = false; p.dup = true; } seen[p.st.id] = 1; });
+          const hows = { id: '', name: '<span class="im-tag warn">found by name: check it</span>', many: '<span class="im-tag bad">several students have this name</span>', none: '<span class="im-tag bad">not in the course</span>' };
+          const nOn = plan.filter(p => p.on).length;
+          box.innerHTML = '<div class="im-sum" style="margin-top:12px"><span>Gemini read <b>' + plan.length + '</b> lines</span><span><b>' + nOn + '</b> to save as present in ' + esc(D.weeks[week - 1][1]) + '</span>' +
+            (plan.some(p => p.how === 'name') ? '<span class="warn"><b>' + plan.filter(p => p.how === 'name').length + '</b> found by name</span>' : '') + (plan.some(p => !p.st) ? '<span class="bad"><b>' + plan.filter(p => !p.st).length + '</b> not found</span>' : '') +
+            (plan.some(p => p.already) ? '<span><b>' + plan.filter(p => p.already).length + '</b> already present</span>' : '') + '</div>' +
+            '<p class="note">Handwriting can be misread: look at the orange and red lines against the paper. Untick anyone who should not be saved.</p>' +
+            '<div class="table-wrap im-prev"><table><thead><tr><th></th><th>On the paper (as Gemini read it)</th><th>Student</th></tr></thead><tbody>' +
+            plan.slice().sort((a, b) => (a.st ? 1 : 0) - (b.st ? 1 : 0) || (a.how === 'name' ? 0 : 1) - (b.how === 'name' ? 0 : 1) || a.li - b.li).map(p =>
+              '<tr class="' + (p.st ? (p.on ? '' : 'im-same') : 'im-no') + '"><td><input type="checkbox" class="pa-on" data-l="' + p.li + '"' + (p.on ? ' checked' : '') + (p.st && !p.already ? '' : ' disabled') + '></td>' +
+              '<td>' + esc(p.name || '') + '<small class="gb-id">' + esc(p.id || 'no ID') + (files.length > 1 ? ' &middot; page ' + p.page : '') + '</small></td>' +
+              '<td>' + (p.st ? '<b>' + esc(p.st.name) + '</b><small class="gb-id">' + esc(p.st.id) + ' &middot; group ' + esc(p.st.group) + '</small>' : '') + hows[p.how] +
+                (!p.st ? '<select class="in pa-pick" data-l="' + p.li + '"><option value="">' + (p.pick.length ? 'Choose who it is...' : 'Choose a student...') + '</option>' +
+                  (p.pick.length ? p.pick : CC.rows.slice().sort((a, b) => a.name.localeCompare(b.name))).map(r => '<option value="' + esc(r.id) + '">' + esc(r.name) + ' (' + esc(r.id) + ', ' + esc(r.group) + ')</option>').join('') + '</select>' : '') +
+                (p.already ? '<span class="im-tag">already present</span>' : '') + (p.dup ? '<span class="im-tag">read twice</span>' : '') + '</td></tr>').join('') + '</tbody></table></div>';
+          box.querySelectorAll('.pa-on').forEach(cb => cb.onchange = () => { plan.find(p => p.li === Number(cb.dataset.l)).on = cb.checked; });
+          box.querySelectorAll('.pa-pick').forEach(sl => sl.onchange = () => {
+            const p = plan.find(x => x.li === Number(sl.dataset.l)), r = CC.rows.find(x => x.id === sl.value), cb = box.querySelector('.pa-on[data-l="' + p.li + '"]');
+            p.st = r || null; const was = r ? (r.weeks || [])[week - 1] || '' : ''; p.already = was === 'P' || was === 'E'; p.on = !!r && !p.already;
+            cb.disabled = !r || p.already; cb.checked = p.on; sl.closest('tr').classList.toggle('im-no', !r);
+            o.querySelector('#pasave').hidden = !plan.some(x => x.on);
+            if (p.already) toast(r.name + ' is already present in this week.');
+          });
+          o.querySelector('#pasave').hidden = !nOn;
+          o.querySelector('#pasave').onclick = async () => {
+            const sv = o.querySelector('#pasave'); sv.disabled = true;
+            const by = {}; plan.filter(p => p.on && p.st).forEach(p => { (by[p.st.group] = by[p.st.group] || []).push({ id: p.st.id, weeks: [week] }); });
+            let n = 0; const failed = [];
+            for (const g of Object.keys(by)) { sv.textContent = 'Saving group ' + g; try { await api('markWeeks', PIN, course, g, by[g], 'P'); n += by[g].length; } catch (e) { failed.push(g + ': ' + errMsg(e)); } }
+            ASK_AT = 0; SEARCH_AT = 0; close();
+            toast(n + (n === 1 ? ' student' : ' students') + ' saved as present in ' + D.weeks[week - 1][1] + (failed.length ? '. Not saved: ' + failed.join('; ') : '.'));
+          };
         };
       });
   }
