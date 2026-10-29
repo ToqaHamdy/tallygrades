@@ -389,15 +389,33 @@ end $$;
 create or replace function tg.student_grade(c text, g text, v_sid text, v_pct numeric) returns jsonb language sql stable as $$
   with att as (select coalesce((select max from tg.items where course = c and kind = 'Attendance'), 0) as mx),
   it as (select i.item, i.max, i.ord, i.kind = 'Check' as chk,
-           (select gr.score from tg.grades gr where gr.course = c and gr.grp = g and gr.sid = v_sid and gr.key = i.key order by gr.id desc limit 1) as score
+           (select gr.score from tg.grades gr where gr.course = c and gr.grp = g and gr.sid = v_sid and gr.key = i.key order by gr.id desc limit 1) as score,
+           (select jsonb_build_object('by', gr.by_ta, 't', to_char(gr.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI')) from tg.grades gr
+              where gr.course = c and gr.grp = g and gr.sid = v_sid and gr.key = i.key order by gr.id desc limit 1) as who
          from tg.items i where i.course = c and i.kind <> 'Attendance')
   select case when att.mx = 0 and not exists (select 1 from it) then null else jsonb_build_object(
     'attMax', att.mx,
     'attGrade', case when att.mx > 0 and v_pct is not null then to_jsonb(round(v_pct * att.mx, 2)) else '""'::jsonb end,
-    'items', coalesce((select jsonb_agg(jsonb_build_object('item', it.item, 'max', it.max, 'check', it.chk, 'score', coalesce(to_jsonb(it.score), '""'::jsonb)) order by it.ord) from it), '[]'),
+    'items', coalesce((select jsonb_agg(jsonb_build_object('item', it.item, 'max', it.max, 'check', it.chk, 'score', coalesce(to_jsonb(it.score), '""'::jsonb),
+                   'by', case when it.score is not null then it.who->>'by' else '' end, 't', case when it.score is not null then it.who->>'t' else '' end) order by it.ord) from it), '[]'),
     'total', round(coalesce((select sum(it.score) from it), 0) + case when att.mx > 0 and v_pct is not null then round(v_pct * att.mx, 2) else 0 end, 2),
     'max', att.mx + coalesce((select sum(it.max) from it where it.item !~* '^\s*bonus\M'), 0)) end
   from att $$;
+
+-- every mark and attendance change of one student in one course, newest first, with who made it
+create or replace function tg.student_history(c text, v_sid text, n int default 300) returns jsonb language sql stable as $$
+  select coalesce((select jsonb_agg(v.j order by v.ts desc, v.id desc) from (select * from (
+    select y.ts, y.id, jsonb_build_object('t', to_char(y.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Mark', 'group', y.grp, 'id', y.sid, 'name', y.name,
+             'what', y.item, 'from', coalesce(y.prev::text, ''), 'to', coalesce(y.score::text, ''), 'by', y.by_ta) as j
+    from (select g.*, coalesce(i.item, g.key) as item, lag(g.score) over (partition by g.key order by g.id) as prev, row_number() over (partition by g.key order by g.id) as k
+          from tg.grades g left join tg.items i on i.course = g.course and i.key = g.key where g.course = c and g.sid = v_sid) y
+    where y.prev is distinct from y.score and not (y.k = 1 and y.score is null)
+    union all
+    select z.ts, z.id, jsonb_build_object('t', to_char(z.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Attendance', 'group', z.grp, 'id', z.sid, 'name', z.name,
+             'what', tg.week_label(z.week), 'from', coalesce(z.prev, ''), 'to', z.status, 'how', z.method, 'by', case when z.method = 'Self' then 'The student (QR)' else z.by_ta end) as j
+    from (select l.*, lag(l.status) over (partition by l.grp, l.week order by l.id) as prev from tg.log l where l.course = c and l.sid = v_sid) z
+    where z.prev is distinct from z.status and not (z.prev is null and z.status = 'A')
+  ) u order by u.ts desc, u.id desc limit n) v), '[]') $$;
 
 create or replace function public.student_status(p jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare v_id text := tg.norm_id(p->>'id'); v_dev text := left(regexp_replace(coalesce(p->>'device', ''), '[^\w-]', '', 'g'), 80); v_out jsonb;
@@ -412,6 +430,10 @@ begin
                from tg.team_members m join tg.teams t on t.course = m.course and t.num = m.num where m.course = st.course and m.sid = st.sid),
       'weeks', to_jsonb(mx.weeks), 'p', mx.p, 'a', mx.a, 'e', mx.e, 'missed', to_jsonb(mx.missed), 'pct', coalesce(to_jsonb(mx.pct), '""'::jsonb),
       'grade', tg.student_grade(st.course, st.grp, st.sid, mx.pct),
+      'ta', tg.group_ta(st.course, st.grp),
+      'schedule', coalesce((select jsonb_agg(jsonb_build_object('day', sc.day, 'start', to_char(sc.starts, 'HH24:MI'), 'end', to_char(sc.ends, 'HH24:MI'), 'room', sc.room, 'ta', sc.ta) order by sc.day, sc.starts)
+                   from tg.schedule sc where sc.course = st.course and sc.grp = st.grp), '[]'),
+      'history', tg.student_history(st.course, st.sid, 100),
       'groupAvg', (select jsonb_build_object('pct', avg((r->>'pct')::numeric) filter (where r->>'pct' <> ''), 'total', round(avg((r->>'total')::numeric), 2), 'n', count(*))
                    from jsonb_array_elements(tg.grade_rows(st.course, st.grp)) r)) order by st.course, st.grp), '[]')
     into v_out
@@ -894,6 +916,31 @@ begin
   ) u order by u.ts desc, u.id desc limit 600) v), '[]');
 end $$;
 
+-- everything one TA wrote in the courses this staff member can see: marks, attendance and the other changes, newest first
+create or replace function public.ta_activity(p_pin text, p_ta text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); t text := lower(btrim(coalesce(p_ta, '')));
+begin
+  if t = '' then return '[]'; end if;
+  return coalesce((select jsonb_agg(v.j order by v.ts desc, v.id desc) from (select * from (
+    select y.ts, y.id, jsonb_build_object('t', to_char(y.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Mark', 'course', y.course, 'group', y.grp, 'id', y.sid, 'name', y.name,
+             'what', y.item, 'from', coalesce(y.prev::text, ''), 'to', coalesce(y.score::text, ''), 'by', y.by_ta) as j
+    from (select g.*, coalesce(i.item, g.key) as item, lag(g.score) over (partition by g.course, g.sid, g.key order by g.id) as prev,
+                 row_number() over (partition by g.course, g.sid, g.key order by g.id) as k
+          from tg.grades g left join tg.items i on i.course = g.course and i.key = g.key where tg.can_see(me, g.course)) y
+    where (lower(y.by_ta) = t or lower(y.by_ta) like t || ' %' or t like lower(y.by_ta) || ' %') and y.prev is distinct from y.score and not (y.k = 1 and y.score is null)
+    union all
+    select z.ts, z.id, jsonb_build_object('t', to_char(z.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Attendance', 'course', z.course, 'group', z.grp, 'id', z.sid, 'name', z.name,
+             'what', tg.week_label(z.week), 'from', coalesce(z.prev, ''), 'to', z.status, 'how', z.method, 'by', z.by_ta) as j
+    from (select l.*, lag(l.status) over (partition by l.course, l.grp, l.sid, l.week order by l.id) as prev from tg.log l where tg.can_see(me, l.course)) z
+    where z.method <> 'Self' and (lower(z.by_ta) = t or lower(z.by_ta) like t || ' %' or t like lower(z.by_ta) || ' %')
+      and z.prev is distinct from z.status and not (z.prev is null and z.status = 'A')
+    union all
+    select a.ts, a.id, jsonb_build_object('t', to_char(a.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Other', 'course', a.course, 'group', a.grp, 'id', '', 'name', '',
+             'what', a.what, 'from', '', 'to', '', 'by', a.by_ta) as j
+    from tg.audit a where (a.course = '' or tg.can_see(me, a.course)) and (lower(a.by_ta) = t or lower(a.by_ta) like t || ' %' or t like lower(a.by_ta) || ' %')
+  ) u order by u.ts desc, u.id desc limit 600) v), '[]');
+end $$;
+
 -- one student: group, TA, team, every mark with who wrote it, every week with who marked it, and the whole history of the student
 create or replace function public.student_profile(p_pin text, p_course text, p_id text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin); st tg.students; r jsonb;
@@ -911,17 +958,7 @@ begin
                   'by', case when l.method = 'Self' then 'The student (QR)' else coalesce(l.by_ta, '') end, 'note', coalesce(l.note, ''),
                   't', coalesce(to_char(l.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), '')) order by n)
                 from generate_series(1, 14) n left join lateral (select * from tg.log g where g.course = p_course and g.grp = st.grp and g.sid = st.sid and g.week = n order by g.id desc limit 1) l on true),
-    'history', coalesce((select jsonb_agg(v.j order by v.ts desc, v.id desc) from (
-        select y.ts, y.id, jsonb_build_object('t', to_char(y.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Mark', 'group', y.grp, 'id', y.sid, 'name', y.name,
-                 'what', y.item, 'from', coalesce(y.prev::text, ''), 'to', coalesce(y.score::text, ''), 'by', y.by_ta) as j
-        from (select g.*, coalesce(i.item, g.key) as item, lag(g.score) over (partition by g.key order by g.id) as prev, row_number() over (partition by g.key order by g.id) as n
-              from tg.grades g left join tg.items i on i.course = g.course and i.key = g.key where g.course = p_course and g.sid = st.sid) y
-        where y.prev is distinct from y.score and not (y.n = 1 and y.score is null)
-        union all
-        select z.ts, z.id, jsonb_build_object('t', to_char(z.ts at time zone 'Africa/Cairo', 'YYYY-MM-DD HH24:MI'), 'kind', 'Attendance', 'group', z.grp, 'id', z.sid, 'name', z.name,
-                 'what', tg.week_label(z.week), 'from', coalesce(z.prev, ''), 'to', z.status, 'how', z.method, 'by', case when z.method = 'Self' then 'The student (QR)' else z.by_ta end) as j
-        from (select l.*, lag(l.status) over (partition by l.grp, l.week order by l.id) as prev from tg.log l where l.course = p_course and l.sid = st.sid) z
-        where z.prev is distinct from z.status and not (z.prev is null and z.status = 'A')) v), '[]'));
+    'history', tg.student_history(p_course, st.sid));
 end $$;
 
 -- a project team: every member with attendance and marks, whatever their group, for grading the team together
@@ -1000,7 +1037,7 @@ begin
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'session_mark(text,text,text)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'mark_weeks(text,text,text,jsonb,text)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
-    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)'] loop
+    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)', 'ta_activity(text,text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
