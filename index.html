@@ -1069,6 +1069,13 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .td-st { font-style: normal; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--card2); color: var(--muted); }
   .td-now { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); } .td-now .td-st { background: var(--accent); color: var(--on-accent); }
   .td-live .td-st { background: var(--ok-bg); color: var(--ok); } .td-live { border-color: var(--ok); }
+  .fu-list { display: grid; gap: 8px; }
+  .fu-it { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); }
+  .fu-tx { flex: 1 1 200px; min-width: 0; } .fu-tx small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .fu-why { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: 1 1 260px; }
+  .fu-tag { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; } .fu-tag.lo { background: var(--err-bg); color: var(--err); } .fu-tag.mid { background: var(--warn-bg); color: var(--warn); }
+  .fu-ok { padding: 12px 16px; border-radius: 14px; background: var(--ok-bg); color: var(--ok); }
+  @media (max-width: 640px) { .fu-it { flex-wrap: wrap; } .fu-why { justify-content: flex-start; } }
   .td-done { opacity: .6; } .td-next .td-st { color: var(--text); }
   @media (max-width: 700px) { .h-glance { grid-template-columns: 1fr 1fr; } }
   /* calmer home, account menu */
@@ -3660,6 +3667,9 @@ const BOOT = null;
   function myCompare(c) {
     const A = c.groupAvg || {}, out = [];
     const left = 3 - c.a; /* 12 section weeks: 3 absences keep a student at 75% */
+    /* the longest run of section weeks missed one after another (the midterm week does not break it) */
+    let run = 0, best = 0, prev = -9; (c.missed || []).slice().sort((a, b) => a - b).forEach(w => { run = (w === prev + 1 || (prev === 6 && w === 8)) ? run + 1 : 1; best = Math.max(best, run); prev = w; });
+    const streak = best >= 2 ? '<p class="my-budget lo">You missed <b>' + best + ' section weeks in a row</b>. Come to the next section, and talk to your TA if something is wrong.</p>' : '';
     const budget = left > 0 ? '<p class="my-budget ok">You can miss <b>' + left + (left === 1 ? ' more week' : ' more weeks') + '</b> and stay at 75% or above.</p>'
       : left === 0 ? '<p class="my-budget warn">Do not miss any more weeks. One more absence takes you below 75%.</p>'
       : '<p class="my-budget lo">You are below 75%. Talk to your TA.</p>';
@@ -3667,7 +3677,7 @@ const BOOT = null;
       '<div class="cmp-row"><small>Group</small><span class="meter grp"><i style="width:' + Math.round(100 * Math.min(1, (them || 0) / max)) + '%"></i></span><b>' + fmt(them) + '</b></div></div>';
     if (c.pct !== '' && A.pct != null) out.push(bar('Attendance', Number(c.pct), Number(A.pct), 1, v => Math.round(v * 100) + '%'));
     if (c.grade && c.grade.max && A.total != null) out.push(bar('Total marks', Number(c.grade.total), Number(A.total), c.grade.max, v => (Math.round(v * 10) / 10) + ' / ' + c.grade.max));
-    return budget + (out.length ? '<div class="my-cmp">' + out.join('') + '<p class="note" style="margin:0">Group: the average of the ' + (A.n || '') + ' students in group ' + esc(c.group) + '.</p></div>' : '');
+    return streak + budget + (out.length ? '<div class="my-cmp">' + out.join('') + '<p class="note" style="margin:0">Group: the average of the ' + (A.n || '') + ' students in group ' + esc(c.group) + '.</p></div>' : '');
   }
   /** The marks of one course: the attendance mark, each grade the TA saved, and the total. */
   function myGrade(G) {
@@ -4198,6 +4208,43 @@ const BOOT = null;
     return secs.length + (secs.length === 1 ? ' section' : ' sections') + ' today, ' + done + ' done' + (now ? ' &middot; now: <b>' + esc(now.gs.sort(numeric).join(' + ')) + '</b> in ' + esc(now.room || '') : '') +
       (next ? ' &middot; next: <b>' + esc(next.gs.sort(numeric).join(' + ')) + '</b> at ' + t12(next.start) + (next.room ? ' in ' + esc(next.room) : '') : (now ? '' : ' &middot; no more sections today'));
   }
+  /* students who need a word from their TA: attendance under 75%, two section weeks missed in a row, or two done / not done items
+     not done that most of the course has done. From my groups (or every group when I have none), worst first. */
+  let ASK = null, ASK_AT = 0;
+  async function getAsk() {
+    if (!ASK || Date.now() - ASK_AT > 180000) { ASK = await api('askData', PIN); ASK_AT = Date.now(); }
+    return ASK;
+  }
+  async function followUp(mine) {
+    let d; try { d = await getAsk(); } catch (e) { return; }
+    const box = $('fu'); if (!box) return;
+    const pool = (mine.length ? mine : D.groups).map(g => g.course + '|' + g.group);
+    const list = [];
+    (d.courses || []).forEach(c => {
+      const rows = c.rows || [], checks = (c.items || []).filter(it => it.check);
+      /* an item counts once most of the course has it done (so a new assignment does not flag everyone) */
+      const due = checks.filter(it => rows.filter(r => Number(r.scores[it.key]) > 0).length >= .3 * rows.length);
+      rows.filter(r => pool.indexOf(c.course + '|' + r.group) >= 0).forEach(r => {
+        const why = [], held = (r.p || 0) + (r.e || 0) + (r.a || 0), st = absStreak(r), notDone = due.filter(it => !(Number(r.scores[it.key]) > 0));
+        if (r.pct !== '' && r.pct != null && held >= 2 && r.pct < .75) why.push(['lo', 'Attendance ' + Math.round(r.pct * 100) + '%']);
+        if (st >= 2) why.push(['lo', 'Missed ' + st + ' weeks in a row']);
+        if (notDone.length >= 2) why.push(['mid', notDone.length + ' not done: ' + notDone.map(it => it.item).slice(0, 3).join(', ') + (notDone.length > 3 ? '...' : '')]);
+        if (why.length) list.push({ c: c.course, r: r, why: why, score: why.length * 10 + (st || 0) + (r.pct === '' || r.pct == null ? 0 : (1 - r.pct) * 5) });
+      });
+    });
+    list.sort((a, b) => b.score - a.score);
+    let all = false;
+    const paint = () => {
+      const shown = all ? list : list.slice(0, 6);
+      box.innerHTML = '<h2 class="h-sec">' + homeIcon('users') + 'Needs follow-up <span class="h-date">' + (list.length ? list.length + (list.length === 1 ? ' student' : ' students') + ' in ' + (mine.length ? 'your groups' : 'all groups') : '') + '</span></h2>' +
+        (list.length ? '<div class="fu-list">' + shown.map(x => '<div class="fu-it"><span class="gs-av">' + esc(initials(x.r.name)) + '</span><div class="fu-tx">' + stuLink(x.c, x.r.id, x.r.name) +
+            '<small>' + esc(x.c) + ' &middot; group ' + esc(x.r.group) + '</small></div><div class="fu-why">' + x.why.map(([k, t]) => '<span class="fu-tag ' + k + '">' + esc(t) + '</span>').join('') + '</div></div>').join('') + '</div>' +
+          (list.length > 6 ? '<button class="link" id="fuall" type="button" style="margin-top:10px">' + (all ? 'Show fewer' : 'Show all ' + list.length) + '</button>' : '')
+          : '<p class="note fu-ok">Everyone is on track: nobody under 75%, nobody missing two weeks in a row.</p>');
+      if ($('fuall')) $('fuall').onclick = () => { all = !all; paint(); };
+    };
+    paint();
+  }
   /* the four numbers of the day, counted up when the page opens */
   function homeGlance(mine) {
     const pool = mine.length ? mine : D.groups;
@@ -4432,7 +4479,7 @@ const BOOT = null;
           '<p class="hero-sub rise" style="--d:120ms">' + todayLine(D.me.name) +
           (isAdmin && waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' &rarr;</button>' : '') + '</p>' +
           '<div class="rise" style="--d:180ms">' + homeGlance(mine) + '</div></div></section>' +
-        '<div class="rise" style="--d:160ms">' + quickHtml(null) + '</div>' + homeExtras(mine) +
+        '<div class="rise" style="--d:160ms">' + quickHtml(null) + '</div>' + homeExtras(mine) + '<div id="fu" class="rise" style="--d:260ms"></div>' +
         '<h2 class="h-sec rise" style="--d:300ms">' + homeIcon('users') + 'Groups</h2>' +
         '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
     }
@@ -4440,6 +4487,7 @@ const BOOT = null;
     const fresh = !C && (!homeShownAt || Date.now() - homeShownAt > 60000 || lastHomeHash !== location.hash);
     app.innerHTML = '<div class="wrap' + (fresh ? '' : ' no-rise') + '">' + head + body + '</div>';
     if (fresh) countUp(app);
+    if (!C && $('fu')) followUp(mine);
     if (!C) { homeShownAt = Date.now(); lastHomeHash = location.hash; }
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
     on('[data-tab]', b => { tab = b.dataset.tab; swap(dashboard); });
