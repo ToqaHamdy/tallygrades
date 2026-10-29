@@ -907,6 +907,11 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .gb-menu { position: relative; } .gb-menu summary { list-style: none; cursor: pointer; } .gb-menu summary::-webkit-details-marker { display: none; }
   .gb-mlist { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; width: 320px; padding: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 50px -16px rgba(0,0,0,.55); }
   .gb-mlist button { display: block; width: 100%; text-align: left; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; cursor: pointer; } .gb-mlist button:hover { background: var(--card2); }
+  .im-cols select { min-width: 220px; } .im-cols td, .im-prev td { white-space: normal; vertical-align: top; } .im-prev { max-height: 52vh; overflow: auto; margin-top: 12px; }
+  .im-sum { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; color: var(--muted); } .im-sum b { color: var(--text); } .im-sum .warn b { color: var(--warn); } .im-sum .bad b { color: var(--err); }
+  .im-tag { display: inline-block; margin-top: 4px; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 6px; } .im-tag.warn { background: var(--warn-bg); color: var(--warn); } .im-tag.bad { background: var(--err-bg); color: var(--err); }
+  .im-ch { display: inline-block; margin: 0 6px 4px 0; padding: 2px 8px; border-radius: 6px; background: var(--card2); font-size: 13px; } .im-ch s { color: var(--muted); }
+  .im-no td { background: color-mix(in srgb, var(--err) 6%, transparent); } .im-same { opacity: .55; }
   .gb-mlist small { display: block; color: var(--muted); font-size: 12.5px; }
   .mk .mk-chip, #mk .mk-chip { padding: 6px 12px; } #mk .mk-chip b, #mk .mk-fam-l b { font-size: 14px; } #mk .mk-num { min-width: 28px; height: 28px; font-size: 13px; }
   #mk .top { margin-bottom: 14px; } #mk h1 { font-size: clamp(30px, 4vw, 44px); }
@@ -4819,6 +4824,130 @@ const BOOT = null;
       document.head.appendChild(sc);
     });
   }
+  /* Import marks and attendance from any Excel sheet of a course: the columns are guessed (ID, name, a grade item, Week N),
+     every line is matched to a student (by ID, checked by first name; else by name), and nothing is saved before the TA sees the preview. */
+  function importMarksDialog(CC, onDone) {
+    const course = CC.course, items = CC.items || [];
+    const low = (v) => String(v == null ? '' : v).trim();
+    const norm = (v) => low(v).toLowerCase().replace(/\([^)]*\)/g, '').replace(/[^a-z0-9]/g, '');
+    const lat = (v) => low(v).toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean);
+    let wb = null, sheet = '', rows = [], head = 0, map = [], plan = [];
+    /* what each column holds: 'skip', 'id', 'name', 'w5' (attendance of week 5) or a grade item key */
+    const guess = (h) => {
+      const t = low(h), n = norm(h);
+      if (!t) return 'skip';
+      if (/^(student\s*)?(id|code|no\.?)$|^الرقم|^كود|^رقم/i.test(t) || n === 'studentid' || n === 'id') return 'id';
+      if (/name|الاسم|^اسم/i.test(t) && !/^ta\b/i.test(t)) return 'name';
+      const w = t.match(/^(?:week|w)\s*(\d{1,2})$/i); if (w && Number(w[1]) >= 1 && Number(w[1]) <= 14) return 'w' + Number(w[1]);
+      const it = items.find(x => norm(x.item) === n) || items.find(x => n && norm(x.item) && (n.indexOf(norm(x.item)) === 0 || norm(x.item).indexOf(n) === 0) && n.length >= 3);
+      return it ? it.key : 'skip';
+    };
+    const opts = (v) => '<option value="skip">Skip</option><option value="id"' + (v === 'id' ? ' selected' : '') + '>Student ID</option><option value="name"' + (v === 'name' ? ' selected' : '') + '>Name</option>' +
+      '<optgroup label="Grade items">' + items.map(it => '<option value="' + esc(it.key) + '"' + (v === it.key ? ' selected' : '') + '>' + esc(it.item) + ' (' + (it.check ? 'done / not done' : 'out of ' + it.max) + ')</option>').join('') + '</optgroup>' +
+      '<optgroup label="Attendance (P or E)">' + Array.from({ length: 14 }, (_, i) => '<option value="w' + (i + 1) + '"' + (v === 'w' + (i + 1) ? ' selected' : '') + '>Week ' + (i + 1) + '</option>').join('') + '</optgroup>';
+    dialog('<span class="pill">' + esc(course) + '</span><h1 style="font-size:26px;margin-top:12px">Import from Excel</h1>' +
+      '<p class="sub">Marks and attendance from any sheet. You see every line before anything is saved, and everything is saved in your name.</p>' +
+      '<div id="imb"><label class="f" style="margin-top:16px">Excel file<input class="in" id="imf" type="file" accept=".xlsx,.xlsm,.xls,.csv"></label><div class="err" id="ime"></div></div>' +
+      '<div class="row" style="margin-top:16px"><button class="btn" id="imgo" type="button" hidden>Check the lines</button><button class="btn" id="imsave" type="button" hidden>Save</button><button class="btn ghost" data-close type="button">Close</button></div>',
+      (o, close) => {
+        o.querySelector('.panel').classList.add('wide');
+        const box = o.querySelector('#imb'), err = (t) => { const e = o.querySelector('#ime'); if (e) e.textContent = t; };
+        /* step 2: the columns */
+        const showCols = () => {
+          rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { header: 1, raw: true, defval: '' });
+          head = Math.max(0, rows.slice(0, 20).findIndex(r => r.some(c => guess(c) === 'id')));
+          const hr = rows[head] || [];
+          map = hr.map(guess);
+          const sample = rows.slice(head + 1).filter(r => r.some(c => low(c) !== '')).slice(0, 2);
+          box.innerHTML = (wb.SheetNames.length > 1 ? '<label class="f" style="margin-top:14px">Sheet<select class="in" id="ims">' + wb.SheetNames.map(n => '<option' + (n === sheet ? ' selected' : '') + '>' + esc(n) + '</option>').join('') + '</select></label>' : '') +
+            '<p class="note" style="margin:14px 0 8px">What is in each column? They are guessed from the first row; change any that is wrong. Total, Notes, Group and TA are left out.</p>' +
+            '<div class="table-wrap im-cols"><table><thead><tr><th>Column in the sheet</th><th>Example</th><th>Goes to</th></tr></thead><tbody>' +
+            hr.map((h, i) => '<tr><td><b>' + esc(low(h) || 'Column ' + (i + 1)) + '</b></td><td class="mono" style="color:var(--muted)">' + sample.map(r => esc(low(r[i]))).filter(Boolean).join(', ') + '</td><td><select class="in im-map" data-c="' + i + '">' + opts(map[i]) + '</select></td></tr>').join('') +
+            '</tbody></table></div><div class="err" id="ime"></div>';
+          if (o.querySelector('#ims')) o.querySelector('#ims').onchange = (e) => { sheet = e.target.value; showCols(); };
+          box.querySelectorAll('.im-map').forEach(sl => sl.onchange = () => { map[Number(sl.dataset.c)] = sl.value; });
+          o.querySelector('#imgo').hidden = false; o.querySelector('#imsave').hidden = true;
+        };
+        o.querySelector('#imf').onchange = async (e) => {
+          const f = e.target.files[0]; if (!f) return;
+          try { await loadXlsx(); wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); sheet = wb.SheetNames[0]; showCols(); }
+          catch (x) { err(errMsg(x)); }
+        };
+        /* step 3: every line matched to a student, with what will change */
+        o.querySelector('#imgo').onclick = () => {
+          const ci = map.indexOf('id'), ni = map.indexOf('name');
+          if (ci < 0 && ni < 0) { err('Choose the column with the student ID (or at least the name).'); return; }
+          const lines = rows.slice(head + 1).filter(r => r.some(c => low(c) !== ''));
+          const ids = lines.map(r => ci >= 0 ? low(r[ci]).replace(/\D/g, '') : '').filter(Boolean);
+          plan = lines.map((r, li) => {
+            const id = ci >= 0 ? low(r[ci]).replace(/\D/g, '') : '', name = ni >= 0 ? low(r[ni]) : '', w = lat(name);
+            let st = null, how = '';
+            const byId = id ? CC.rows.find(x => x.id === id) : null;
+            if (byId && (!w.length || (lat(byId.name)[0] || '').slice(0, 2) === w[0].slice(0, 2))) { st = byId; how = 'id'; }
+            else if (w.length) {
+              const c = CC.rows.filter(x => { const v = lat(x.name); return (v[0] || '').slice(0, 3) === w[0].slice(0, 3) && (!w[1] || (v[1] || '').slice(0, 3) === w[1].slice(0, 3)) && (x.id === id || ids.indexOf(x.id) < 0); });
+              if (c.length === 1) { st = c[0]; how = 'name'; } else how = c.length > 1 ? 'many' : 'none';
+            } else how = 'none';
+            const ch = [], bad = [];
+            map.forEach((m, i) => {
+              const v = low(r[i]); if (m === 'skip' || m === 'id' || m === 'name' || v === '') return;
+              if (m[0] === 'w' && /^w\d+$/.test(m)) {
+                const wk = Number(m.slice(1)), up = v.toUpperCase();
+                const sv = /^(P|PRESENT|1|✓|✔|Y|YES|X|حاضر)$/.test(up) ? 'P' : /^(E|EXCUSED|عذر)$/.test(up) ? 'E' : null;
+                if (!sv) return;   /* absent or anything else: left as it is, never written */
+                const was = st ? (st.weeks || [])[wk - 1] || '' : '';
+                if (was !== sv) ch.push({ k: 'w', wk: wk, v: sv, was: was, label: 'Week ' + wk });
+                return;
+              }
+              const it = items.find(x => x.key === m); if (!it) return;
+              let num = it.check ? (/^(done|yes|y|✓|✔|x|true)$/i.test(v) ? Number(it.max) : Number(v.replace(',', '.'))) : Number(v.replace(',', '.'));
+              if (isNaN(num)) { bad.push(it.item + ' "' + v + '"'); return; }
+              if (it.check && num > 0) num = Number(it.max);
+              if (num < 0 || num > Number(it.max)) { bad.push(it.item + ' ' + v + ' (out of ' + it.max + ')'); return; }
+              const was = st && st.scores[it.key] != null ? Number(st.scores[it.key]) : null;
+              if (was !== num) ch.push({ k: 'm', key: it.key, v: num, was: was, label: it.item });
+            });
+            return { li: li, id: id, name: name, st: st, how: how, ch: ch, bad: bad, on: !!st && ch.length > 0 && (how === 'id' || how === 'name') };
+          });
+          const nOk = plan.filter(p => p.on).length, nNo = plan.filter(p => !p.st).length, nSame = plan.filter(p => p.st && !p.ch.length).length, nName = plan.filter(p => p.how === 'name').length;
+          const nChanges = plan.reduce((t, p) => t + (p.on ? p.ch.length : 0), 0);
+          const hows = { id: '', name: '<span class="im-tag warn">found by name</span>', many: '<span class="im-tag bad">several students have this name</span>', none: '<span class="im-tag bad">not in the course</span>' };
+          box.innerHTML = '<div class="im-sum"><span><b>' + nOk + '</b> students, <b>' + nChanges + '</b> changes to save</span>' + (nName ? '<span class="warn"><b>' + nName + '</b> found by name: check them</span>' : '') + (nNo ? '<span class="bad"><b>' + nNo + '</b> not found</span>' : '') + (nSame ? '<span><b>' + nSame + '</b> already the same</span>' : '') + '</div>' +
+            '<div class="table-wrap im-prev"><table><thead><tr><th></th><th>In the sheet</th><th>Student</th><th>What changes</th></tr></thead><tbody>' +
+            plan.slice().sort((a, b) => (a.st ? 1 : 0) - (b.st ? 1 : 0) || (a.how === 'name' ? 0 : 1) - (b.how === 'name' ? 0 : 1) || a.li - b.li).map(p =>
+              '<tr class="' + (p.st ? (p.ch.length ? '' : 'im-same') : 'im-no') + '"><td><input type="checkbox" class="im-on" data-l="' + p.li + '"' + (p.on ? ' checked' : '') + (p.st && p.ch.length ? '' : ' disabled') + '></td>' +
+              '<td>' + esc(p.name || '') + '<small class="gb-id">' + esc(p.id || '') + '</small></td>' +
+              '<td>' + (p.st ? '<b>' + esc(p.st.name) + '</b><small class="gb-id">' + esc(p.st.id) + ' &middot; group ' + esc(p.st.group) + '</small>' : '') + hows[p.how] + '</td>' +
+              '<td>' + (p.ch.length ? p.ch.map(c => '<span class="im-ch">' + esc(c.label) + ': ' + (c.k === 'w' ? '<b>' + (c.v === 'P' ? 'present' : 'excused') + '</b>' : (c.was == null ? '' : '<s>' + c.was + '</s> ') + '<b>' + c.v + '</b>') + '</span>').join('') : (p.st ? '<span class="note">nothing new</span>' : '')) +
+                (p.bad.length ? '<div class="err" style="margin:4px 0 0">Left out: ' + p.bad.map(esc).join(', ') + '</div>' : '') + '</td></tr>').join('') +
+            '</tbody></table></div>';
+          box.querySelectorAll('.im-on').forEach(cb => cb.onchange = () => { plan.find(p => p.li === Number(cb.dataset.l)).on = cb.checked; });
+          o.querySelector('#imgo').hidden = true; o.querySelector('#imsave').hidden = !nOk;
+        };
+        /* step 4: save, group by group */
+        o.querySelector('#imsave').onclick = async () => {
+          const b = o.querySelector('#imsave'); b.disabled = true;
+          /* a student written twice in the sheet: the lower line wins, and nothing is sent twice */
+          const last = {};
+          plan.filter(p => p.on && p.st).forEach(p => p.ch.forEach(c => { last[p.st.group + '|' + p.st.id + '|' + (c.k === 'm' ? c.key : 'w' + c.wk)] = { st: p.st, c: c }; }));
+          const by = {};
+          Object.values(last).forEach(({ st, c }) => { const g = by[st.group] || (by[st.group] = { marks: [], P: [], E: [] });
+            if (c.k === 'm') g.marks.push({ id: st.id, key: c.key, score: String(c.v) }); else g[c.v].push({ id: st.id, weeks: [c.wk] }); });
+          let done = 0; const failed = [];
+          for (const g of Object.keys(by)) {
+            b.textContent = 'Saving group ' + g;
+            try {
+              if (by[g].marks.length) await api('saveScores', PIN, course, g, by[g].marks);
+              for (const sv of ['P', 'E']) if (by[g][sv].length) await api('markWeeks', PIN, course, g, by[g][sv], sv);
+              done += by[g].marks.length + by[g].P.length + by[g].E.length;
+            } catch (x) { failed.push(g + ': ' + errMsg(x)); }
+          }
+          close();
+          toast(done + (done === 1 ? ' change' : ' changes') + ' saved' + (failed.length ? '. Not saved: ' + failed.join('; ') : '.'));
+          if (onDone) onDone();
+        };
+      });
+  }
   function courseFromFile(name) {
     return name.replace(/\.(xlsx|xlsm|xls|csv)$/i, '')
       .replace(/__([A-Za-z]{2,5}\d{3,5})_?$/, ' ($1)')
@@ -5047,7 +5176,7 @@ const BOOT = null;
         '<div class="mk-row"><span class="mk-lbl">Columns</span><div class="mk-chips">' + itemsHtml() + (hidden ? '<button type="button" class="mk-all" id="mkallc">Show all ' + CC.items.length + '</button>' : '') + (isAdmin ? '<button type="button" class="mk-all" id="mkitems2">Edit grade items</button>' : '') + '</div></div>' +
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
-          '<button class="btn ghost" id="mkpaste" type="button">Paste from Excel</button>' +
+          '<button class="btn ghost" id="mkimp" type="button">Import from Excel</button><button class="btn ghost" id="mkpaste" type="button">Paste</button>' +
           '<details class="gb-menu"><summary class="btn ghost">Copy for Excel</summary><div class="gb-mlist"><button type="button" id="cpsec"><b>Section attendance</b><small>W1 to W12: 1 for present or excused, empty otherwise</small></button><button type="button" id="cpgr"><b>Marks</b><small>the mark columns shown, no names</small></button><button type="button" id="cpall"><b>Whole table</b><small>names, IDs, groups, attendance, marks and total</small></button></div></details>' +
           '<button class="btn ghost" id="mkhist" type="button">History</button></div>' +
         '<p class="mk-stat"><b>' + rows.length + '</b> students &middot; average total <b id="gbavg">' + avg + '</b> of ' + mx + (hidden ? ' &middot; ' + hidden + (hidden === 1 ? ' column' : ' columns') + ' hidden' : '') + '</p>' +
@@ -5142,6 +5271,7 @@ const BOOT = null;
         cs.forEach(x => { if (x.checked !== on) { x.checked = on; x.oninput(); } });
       });
       box.querySelectorAll('.gb-mlist button').forEach(x => x.addEventListener('click', () => { const d = x.closest('details'); if (d) d.open = false; }));
+      $('mkimp').onclick = () => importMarksDialog(C(), async () => { try { data = await api('askData', PIN); const nc = data.courses.find(x => x.course === course); if (nc) Object.assign(C(), nc); SEARCH_AT = 0; } catch (e) {} if ($('mk')) draw(); });
       $('mkhist').onclick = () => historyDialog(course, picked.length === 1 ? picked[0] : null);
       const IT = its();
       $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy from Excel the student ID and then ' + (IT.length > 1 ? 'one column for each of <b>' + IT.map(x => esc(x.item)).join('</b>, <b>') + '</b>, in this order' : 'the mark of <b>' + esc(IT[0].item) + '</b>') + ', and paste them here. One student on each line. An empty cell is left as it is.</p>' +
