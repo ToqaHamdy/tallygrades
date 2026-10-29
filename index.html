@@ -4063,7 +4063,19 @@ const BOOT = null;
     if ($('gkf')) {
       const show = (r) => { $('gks').textContent = r.set ? 'A key is saved (' + r.hint + ').' : 'No key yet.'; $('gkx').hidden = !r.set; };
       api('geminiKey', PIN).then(show).catch(() => {});
-      $('gkf').onsubmit = async (e) => { e.preventDefault(); $('gke').textContent = ''; try { show(await api('setGeminiKey', PIN, $('gk').value)); $('gk').value = ''; toast('Saved. Every TA can now use Attendance from a photo.'); } catch (x) { $('gke').textContent = errMsg(x); } };
+      $('gkf').onsubmit = async (e) => {
+        e.preventDefault(); $('gke').textContent = '';
+        /* spaces, line breaks and quotes that came with the copy are taken away, then Google is asked if the key works */
+        const k = $('gk').value.replace(/[\s"'`]/g, ''), bt = $('gkf').querySelector('button[type=submit]');
+        if (!k) { $('gke').textContent = 'Paste the key first.'; return; }
+        bt.disabled = true; bt.textContent = 'Checking the key with Google...';
+        try {
+          const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(k));
+          if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error('Google did not accept this key' + (j.error && j.error.message ? ': ' + j.error.message : '.') + ' Copy it again from aistudio.google.com/api-keys.'); }
+          show(await api('setGeminiKey', PIN, k)); $('gk').value = ''; toast('Saved. Every TA can now use Attendance from a photo.');
+        } catch (x) { $('gke').textContent = /fetch/i.test(String(x.message)) ? 'Could not reach Google to check the key. Check your internet.' : errMsg(x); }
+        finally { bt.disabled = false; bt.textContent = 'Save the key'; }
+      };
       $('gkx').onclick = async () => { if (!confirm('Remove the Gemini key? Attendance from a photo stops working until a new key is saved.')) return; try { show(await api('setGeminiKey', PIN, '')); toast('Removed.'); } catch (x) { $('gke').textContent = errMsg(x); } };
     }
     $('ph').onchange = async () => {
