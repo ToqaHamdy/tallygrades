@@ -460,7 +460,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .sd-dot { position: absolute; right: 12px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--accent); }
   .sd-dot.live { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: lp 1.6s infinite; }
   .sd-foot { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 10px; }
-  .side-btn[hidden], .gs-btn[hidden] { display: none; }
+  .side-btn[hidden] { display: none; }
   .side-scrim { display: none; }
   @media (min-width: 901px) { .side-btn { display: none !important; } }
   @media (max-width: 900px) {
@@ -960,16 +960,25 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .cal-ev.now { box-shadow: 0 0 0 2px var(--accent); } .cal-ev.past { opacity: .6; }
   .cal-ev.off { border-left-color: var(--muted); background: var(--card2); } .cal-ev.off:hover { background: var(--card2); }
   .tapick { position: relative; min-width: 300px; }
-  .overlay.gs-o { place-items: start center; padding-top: 12vh; } .overlay.gs-o .panel { width: min(640px, 100%); padding: 0; overflow: hidden; }
-  .gs-box { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); color: var(--muted); }
-  .gs-in { flex: 1; border: 0; outline: none; background: none; font: inherit; font-size: 18px; color: var(--text); }
-  .gs-res { max-height: 60vh; overflow-y: auto; padding: 8px; } .gs-hint { color: var(--muted); padding: 14px 12px; margin: 0; }
+  .gs-wrap { position: relative; display: flex; align-items: center; }
+  .gs-wrap[hidden] { display: none; }
+  .gs-in { width: 0; opacity: 0; padding: 0; border: 1px solid transparent; background: var(--card2); color: var(--text); font: inherit; font-size: 14.5px; height: 40px; border-radius: 999px; outline: none; transition: width .22s ease, opacity .18s ease, padding .22s ease, margin .22s ease; }
+  /* the open box slides over the bar to the left of the button, so nothing in the bar moves */
+  .gs-in { position: absolute; right: 48px; top: 50%; transform: translateY(-50%); z-index: 3; box-shadow: 0 10px 30px -12px rgba(0,0,0,.5); }
+  .gs-wrap.open .gs-in { width: min(360px, 42vw); opacity: 1; padding: 0 16px; border-color: var(--line); background: var(--card); } .gs-wrap.open .gs-in:focus { border-color: var(--accent); }
+  .gs-wrap.open .gs-btn { color: var(--ink); }
+  .gs-drop { position: absolute; top: calc(100% + 10px); right: 0; width: min(520px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; padding: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 60px -16px rgba(0,0,0,.55); z-index: 40; animation: fadein .15s ease-out; }
+  .gs-drop[hidden] { display: none; }
+  .gs-hint { color: var(--muted); padding: 12px; margin: 0; line-height: 1.8; } .gs-leg { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; } .gs-leg .gs-av { width: 26px; height: 26px; margin-left: 6px; }
   .gs-h { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 10px 12px 6px; }
   .gs-it { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 9px 12px; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; cursor: pointer; }
   .gs-it:hover, .gs-it.on { background: var(--card2); } .gs-it.on { box-shadow: inset 3px 0 0 var(--accent); }
-  .gs-av { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--card2); border: 1px solid var(--line); font-weight: 800; font-size: 12px; } .gs-av.ta { background: var(--soft); color: var(--ink); border-color: transparent; }
+  /* a student: a round grey badge with a cap; a TA: a square red badge with a board */
+  .gs-av { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--card2); border: 1px solid var(--line); color: var(--muted); font-style: normal; }
+  .gs-av.ta { border-radius: 10px; background: var(--accent); border-color: transparent; color: var(--on-accent); }
   .gs-tx { flex: 1; min-width: 0; } .gs-tx b { display: block; } .gs-tx small { display: block; color: var(--muted); font-size: 12.5px; white-space: normal; } .gs-tx small b { display: inline; color: var(--text); font-weight: 600; }
-  .gs-kind { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; }
+  .gs-kind { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; } .gs-kind.ta { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--soft); }
+  @media (max-width: 900px) { .gs-wrap { position: static; } .gs-wrap.open .gs-in { left: 12px; right: 112px; width: auto; transform: translateY(-50%); } .gs-drop { left: 12px; right: 12px; width: auto; } }
   .ms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
   .ms-card { position: relative; display: block; padding: 14px 16px; border-radius: 14px; background: var(--card2); border: 1px solid var(--line); border-left: 3px solid var(--accent); color: var(--text); text-decoration: none; }
   a.ms-card:hover { border-color: var(--accent); } .ms-card.now { box-shadow: 0 0 0 2px var(--accent); } .ms-card.off { border-left-color: var(--muted); }
@@ -3376,18 +3385,20 @@ const BOOT = null;
     const box = document.createElement('div'); box.id = 'acct'; box.className = 'acct hide-proj';
     box.innerHTML = '<a class="tn-brand" id="tnBrand" href="#" hidden><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a><nav class="tn" id="topnav" aria-label="Main" hidden></nav>' +
       '<button class="theme-btn side-btn" id="sideOpen" type="button" hidden aria-label="Menu" aria-expanded="false" aria-controls="side"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>' +
-      '<button class="theme-btn gs-btn" id="gsBtn" type="button" hidden title="Search a student or a TA (Ctrl K)" aria-label="Search a student or a TA"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>' +
+      '<div class="gs-wrap" id="gsWrap" hidden><input class="gs-in" id="gsQ" type="search" placeholder="Search a student (name or ID) or a TA" autocomplete="off" spellcheck="false" tabindex="-1">' +
+      '<button class="theme-btn gs-btn" id="gsBtn" type="button" title="Search a student or a TA (Ctrl K)" aria-label="Search a student or a TA" aria-expanded="false"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>' +
+      '<div class="gs-drop" id="gsR" hidden></div></div>' +
       '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
     const side = document.createElement('aside'); side.id = 'side'; side.className = 'side hide-proj'; side.hidden = true; side.setAttribute('aria-label', 'Menu');
     const scrim = document.createElement('div'); scrim.id = 'sideScrim'; scrim.className = 'side-scrim';
     document.body.appendChild(side); document.body.appendChild(scrim);
     document.body.appendChild(box);
     paintTheme();
-    $('gsBtn').onclick = () => searchDialog();
+    bindSearch();
     document.addEventListener('keydown', (e) => {
-      if (!(PIN && D) || $('gsQ')) return;
+      if (!(PIN && D) || document.activeElement === $('gsQ')) return;
       const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
-      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) { e.preventDefault(); searchDialog(); }
+      if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) { e.preventDefault(); openSearch(); }
     });
     $('themeBtn').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(!isLight(), r.left + r.width / 2, r.top + r.height / 2); };
   })();
@@ -3847,7 +3858,7 @@ const BOOT = null;
   function sideNav() {
     const on = !!(PIN && D), side = $('side');
     document.body.classList.toggle('has-side', on);
-    side.hidden = !on; $('sideOpen').hidden = !on; $('gsBtn').hidden = !on;
+    side.hidden = !on; $('sideOpen').hidden = !on; $('gsWrap').hidden = !on; if (!on) closeSearch();
     if (!on) { side.innerHTML = ''; $('topnav').innerHTML = ''; $('topnav').hidden = true; $('tnBrand').hidden = true; document.body.classList.remove('side-open'); return; }
     const h = location.hash, c = navCourse(), isAdmin = D.me.role === 'Admin', me = D.me.name;
     const svg = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + TB_ICONS[n] + '</svg>';
@@ -4544,52 +4555,67 @@ const BOOT = null;
   }
   /* a student's name that opens their profile */
   document.addEventListener('click', (e) => { const b = e.target.closest && e.target.closest('[data-spi]'); if (!b) return; e.preventDefault(); e.stopPropagation(); studentDialog(b.dataset.spc, b.dataset.spi); }, true);
-  /* search a student (name or ID) or a TA (name): a student opens their profile, a TA their schedule and sections */
-  let SEARCH_ROWS = null, SEARCH_AT = 0;
-  function searchDialog() {
-    dialog('<div class="gs-box"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>' +
-      '<input class="gs-in" id="gsQ" type="search" placeholder="Type a student name or ID, or a TA name" autocomplete="off" spellcheck="false"></div><div class="gs-res" id="gsR"><p class="gs-hint">Search every student and TA of your courses.</p></div>',
-      async (o, close) => {
-        o.classList.add('gs-o');
-        const q = o.querySelector('#gsQ'), res = o.querySelector('#gsR'); q.focus();
-        /* the TAs: from the schedule and from the groups, with what they teach */
-        const teach = {};
-        const add = (ta, c, g) => { if (!ta) return; const t = teach[ta] || (teach[ta] = {}); (t[c] = t[c] || new Set()).add(g); };
-        (D.schedule || []).forEach(x => add(x.ta, x.course, x.group));
-        D.groups.forEach(g => { if (g.ta && !Object.keys(teach).some(t => t !== g.ta && sameTa(t, g.ta) && teach[t][g.course] && teach[t][g.course].has(g.group))) add(g.ta, g.course, g.group); });
-        (D.staff || []).forEach(x => { if (x.status !== 'pending' && !teach[x.name] && !Object.keys(teach).some(t => sameTa(t, x.name))) teach[x.name] = {}; });
-        const words = (v) => v.toLowerCase().split(/\s+/).filter(Boolean);
-        const hit = (text, ws) => { const t = text.toLowerCase(); return ws.every(w => t.indexOf(w) >= 0); };
-        let sel = 0, items = [];
-        const paint = () => {
-          const v = q.value.trim(), ws = words(v), digits = /^\d{3,}$/.test(v);
-          if (!v) { res.innerHTML = '<p class="gs-hint">Search every student and TA of your courses. A student opens their profile; a TA opens their schedule and sections.</p>'; items = []; return; }
-          const studs = !SEARCH_ROWS ? [] : SEARCH_ROWS.filter(r => digits ? r.id.indexOf(v) >= 0 : hit(r.name, ws)).slice(0, 40);
-          const tas = digits ? [] : Object.keys(teach).filter(t => hit(t, ws)).sort().slice(0, 12);
-          items = tas.map(t => ({ k: 't', t: t })).concat(studs.map(r => ({ k: 's', r: r })));   /* the same order as on screen: TAs, then students */
-          if (sel >= items.length) sel = 0;
-          let html = '', i = 0;
-          if (tas.length) html += '<h3 class="gs-h">TAs</h3>' + tas.map(t => { const c = teach[t], line = Object.keys(c).sort().map(x => esc(x) + ' <b>' + esc([...c[x]].sort(numeric).join(', ')) + '</b>').join(' &middot; ');
-            return '<button type="button" class="gs-it' + (sel === tas.indexOf(t) ? ' on' : '') + '" data-n="' + tas.indexOf(t) + '"><span class="gs-av ta">' + esc(initials(t)) + '</span><span class="gs-tx"><b>' + esc(t) + '</b><small>' + (line || 'No groups yet') + '</small></span><span class="gs-kind">TA</span></button>'; }).join('');
-          if (studs.length) html += '<h3 class="gs-h">Students' + (studs.length === 40 ? ' (first 40)' : '') + '</h3>' + studs.map((r, n) => '<button type="button" class="gs-it' + (sel === tas.length + n ? ' on' : '') + '" data-n="' + (tas.length + n) + '"><span class="gs-av">' + esc(initials(r.name)) + '</span><span class="gs-tx"><b>' + esc(r.name) + '</b><small><span class="mono">' + esc(r.id) + '</span> &middot; ' + esc(r.course) + ' &middot; group ' + esc(r.group) + '</small></span><span class="gs-kind">Student</span></button>').join('');
-          res.innerHTML = html || '<p class="gs-hint">' + (SEARCH_ROWS ? 'Nobody matches &ldquo;' + esc(v) + '&rdquo;.' : 'Loading the students') + '</p>';
-          res.querySelectorAll('[data-n]').forEach(b => b.onclick = () => open(items[Number(b.dataset.n)]));
-        };
-        const open = (it) => { if (!it) return; close(); if (it.k === 's') studentDialog(it.r.course, it.r.id); else go('#calendar/' + encodeURIComponent(it.t)); };
-        q.oninput = () => { sel = 0; paint(); };
-        q.onkeydown = (e) => {
-          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!items.length) return; sel = (sel + (e.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length; paint(); const b = res.querySelector('.gs-it.on'); if (b) b.scrollIntoView({ block: 'nearest' }); }
-          if (e.key === 'Enter') { e.preventDefault(); open(items[sel]); }
-          if (e.key === 'Escape') close();
-        };
-        /* the students of every course of this user, loaded once and kept for 3 minutes */
-        if (!SEARCH_ROWS || Date.now() - SEARCH_AT > 180000) {
-          try { const d = await api('askData', PIN); SEARCH_ROWS = []; const seen = {};
-            d.courses.forEach(c => c.rows.forEach(r => { const k = c.course + '|' + r.id; if (seen[k]) return; seen[k] = 1; SEARCH_ROWS.push({ course: c.course, id: r.id, name: r.name, group: r.group }); }));
-            SEARCH_AT = Date.now(); if (document.body.contains(q)) paint();
-          } catch (e) { if (document.body.contains(res)) res.innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; }
-        }
-      });
+  /* search a student (name or ID) or a TA (name), in the top bar: the box opens beside the button and the results drop under it.
+     A student opens their profile, a TA their schedule and sections. */
+  let SEARCH_ROWS = null, SEARCH_AT = 0, searchSel = 0, searchItems = [], searchTeach = null;
+  const ICON_TA = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4M7 9l3 2-3 2"/></svg>';
+  const ICON_STU = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg>';
+  function closeSearch() {
+    const w = $('gsWrap'); if (!w) return;
+    w.classList.remove('open'); $('gsR').hidden = true; $('gsBtn').setAttribute('aria-expanded', 'false'); $('gsQ').tabIndex = -1;
+  }
+  async function openSearch() {
+    const w = $('gsWrap'); if (!w || w.hidden) return;
+    w.classList.add('open'); $('gsBtn').setAttribute('aria-expanded', 'true'); $('gsQ').tabIndex = 0;
+    $('gsQ').focus(); $('gsQ').select();
+    /* the TAs: from the schedule and from the groups, with what they teach */
+    const teach = {};
+    const add = (ta, c, g) => { if (!ta) return; const t = teach[ta] || (teach[ta] = {}); (t[c] = t[c] || new Set()).add(g); };
+    (D.schedule || []).forEach(x => add(x.ta, x.course, x.group));
+    D.groups.forEach(g => { if (g.ta && !Object.keys(teach).some(t => t !== g.ta && sameTa(t, g.ta) && teach[t][g.course] && teach[t][g.course].has(g.group))) add(g.ta, g.course, g.group); });
+    (D.staff || []).forEach(x => { if (x.status !== 'pending' && !teach[x.name] && !Object.keys(teach).some(t => sameTa(t, x.name))) teach[x.name] = {}; });
+    searchTeach = teach; paintSearch();
+    /* the students of every course of this user, loaded once and kept for 3 minutes */
+    if (!SEARCH_ROWS || Date.now() - SEARCH_AT > 180000) {
+      try { const d = await api('askData', PIN); SEARCH_ROWS = []; const seen = {};
+        d.courses.forEach(c => c.rows.forEach(r => { const k = c.course + '|' + r.id; if (seen[k]) return; seen[k] = 1; SEARCH_ROWS.push({ course: c.course, id: r.id, name: r.name, group: r.group }); }));
+        SEARCH_AT = Date.now(); paintSearch();
+      } catch (e) { $('gsR').hidden = false; $('gsR').innerHTML = '<p class="err" style="padding:12px">' + esc(errMsg(e)) + '</p>'; }
+    }
+  }
+  function paintSearch() {
+    const q = $('gsQ'), res = $('gsR'); if (!q || !$('gsWrap').classList.contains('open')) return;
+    const v = q.value.trim(), ws = v.toLowerCase().split(/\s+/).filter(Boolean), digits = /^\d{3,}$/.test(v), teach = searchTeach || {};
+    const hit = (text) => { const t = text.toLowerCase(); return ws.every(w => t.indexOf(w) >= 0); };
+    res.hidden = false;
+    if (!v) { searchItems = []; res.innerHTML = '<p class="gs-hint">Type a student name or ID, or a TA name.<br><span class="gs-leg"><i class="gs-av ta">' + ICON_TA + '</i>TA <i class="gs-av">' + ICON_STU + '</i>Student</span></p>'; return; }
+    const studs = !SEARCH_ROWS ? [] : SEARCH_ROWS.filter(r => digits ? r.id.indexOf(v) >= 0 : hit(r.name)).slice(0, 40);
+    const tas = digits ? [] : Object.keys(teach).filter(t => hit(t)).sort().slice(0, 12);
+    searchItems = tas.map(t => ({ k: 't', t: t })).concat(studs.map(r => ({ k: 's', r: r })));   /* the same order as on screen: TAs, then students */
+    if (searchSel >= searchItems.length) searchSel = 0;
+    let html = '';
+    if (tas.length) html += '<h3 class="gs-h">TAs</h3>' + tas.map((t, n) => { const c = teach[t], line = Object.keys(c).sort().map(x => esc(x) + ' <b>' + esc([...c[x]].sort(numeric).join(', ')) + '</b>').join(' &middot; ');
+      return '<button type="button" class="gs-it' + (searchSel === n ? ' on' : '') + '" data-n="' + n + '"><span class="gs-av ta">' + ICON_TA + '</span><span class="gs-tx"><b>' + esc(t) + '</b><small>' + (line || 'No groups yet') + '</small></span><span class="gs-kind ta">TA</span></button>'; }).join('');
+    if (studs.length) html += '<h3 class="gs-h">Students' + (studs.length === 40 ? ' (first 40)' : '') + '</h3>' + studs.map((r, n) => '<button type="button" class="gs-it' + (searchSel === tas.length + n ? ' on' : '') + '" data-n="' + (tas.length + n) + '"><span class="gs-av">' + ICON_STU + '</span><span class="gs-tx"><b>' + esc(r.name) + '</b><small><span class="mono">' + esc(r.id) + '</span> &middot; ' + esc(r.course) + ' &middot; group ' + esc(r.group) + '</small></span><span class="gs-kind">Student</span></button>').join('');
+    res.innerHTML = html || '<p class="gs-hint">' + (SEARCH_ROWS ? 'Nobody matches &ldquo;' + esc(v) + '&rdquo;.' : 'Loading the students') + '</p>';
+    res.querySelectorAll('[data-n]').forEach(b => b.onclick = () => pickSearch(searchItems[Number(b.dataset.n)]));
+  }
+  function pickSearch(it) {
+    if (!it) return;
+    closeSearch(); $('gsQ').value = ''; $('gsQ').blur();
+    if (it.k === 's') studentDialog(it.r.course, it.r.id); else go('#calendar/' + encodeURIComponent(it.t));
+  }
+  function bindSearch() {
+    const q = $('gsQ');
+    $('gsBtn').onclick = () => $('gsWrap').classList.contains('open') && !q.value.trim() ? closeSearch() : openSearch();
+    q.oninput = () => { searchSel = 0; paintSearch(); };
+    q.onfocus = () => { if (!$('gsWrap').classList.contains('open')) openSearch(); };
+    q.onkeydown = (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!searchItems.length) return; searchSel = (searchSel + (e.key === 'ArrowDown' ? 1 : searchItems.length - 1)) % searchItems.length; paintSearch(); const b = $('gsR').querySelector('.gs-it.on'); if (b) b.scrollIntoView({ block: 'nearest' }); }
+      if (e.key === 'Enter') { e.preventDefault(); pickSearch(searchItems[searchSel]); }
+      if (e.key === 'Escape') { closeSearch(); q.blur(); }
+    };
+    document.addEventListener('mousedown', (e) => { const w = $('gsWrap'); if (w && w.classList.contains('open') && !w.contains(e.target)) closeSearch(); });
   }
   /* who changed what: every change of a group (or a whole course), newest first */
   function historyDialog(course, group) {
