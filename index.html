@@ -946,7 +946,9 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .q-ic { width: 48px; height: 48px; flex: none; display: grid; place-items: center; border-radius: 14px; color: #fff; background: linear-gradient(135deg, var(--grad2), var(--accent)); box-shadow: 0 10px 22px -12px var(--accent); }
   .q-headline h2 { margin: 0; } .q-date { display: block; color: var(--muted); font-size: 14px; font-weight: 600; margin-top: 2px; }
   .q-lead { margin: 14px 0 10px; color: var(--text); font-size: 15px; }
-  .h-sec { display: flex; align-items: center; gap: 10px; font-size: 20px; margin: 30px 0 12px; } .h-sec svg { color: var(--accent); }
+  .h-sec { display: flex; align-items: center; gap: 12px; font-size: 20px; margin: 30px 0 12px; }
+  /* section icons: a white line icon on a small red tile with a soft glow */
+  .h-sec > svg { flex: 0 0 auto; width: 34px; height: 34px; padding: 8px; border-radius: 11px; color: #fff; background: linear-gradient(135deg, var(--grad2), var(--accent)); box-shadow: 0 8px 20px -8px var(--accent); }
   .h-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
   .h-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
   .h-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 16px; } .h-card h3 svg { color: var(--accent); }
@@ -1030,9 +1032,39 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
     .ag-row { display: grid; grid-template-columns: 62px 1fr; gap: 10px; align-items: start; margin-top: 6px; }
     .ag-row .cal-time { font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 700; } .ag-row .cal-time small { display: block; font-weight: 500; }
   }
-  .h-glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
-  .h-glance div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; } .h-glance b { display: block; font-family: var(--display); font-size: 24px; } .h-glance span { color: var(--muted); font-size: 12.5px; }
+  .h-glance { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 22px; }
+  .h-glance .hg { background: color-mix(in srgb, var(--card) 70%, transparent); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(8px); transition: transform .2s, border-color .2s; }
+  .h-glance .hg:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .h-glance b { display: block; font-family: var(--display); font-size: 30px; font-variant-numeric: tabular-nums; letter-spacing: -.02em; } .h-glance span { color: var(--muted); font-size: 12.5px; }
   .h-glance .ok b { color: var(--ok); }
+  /* home hero: soft moving colour behind the greeting */
+  .hero { position: relative; overflow: hidden; border-radius: 26px; border: 1px solid var(--line); background: var(--card); padding: 30px 32px 26px; margin-bottom: 22px; isolation: isolate; }
+  .hero .hb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: .55; z-index: -1; animation: blob 16s ease-in-out infinite alternate; }
+  .hero .hb1 { width: 380px; height: 380px; background: var(--accent); top: -180px; right: -80px; }
+  .hero .hb2 { width: 300px; height: 300px; background: var(--grad2); bottom: -170px; left: 10%; animation-duration: 20s; animation-delay: -6s; opacity: .4; }
+  .hero .hb3 { width: 220px; height: 220px; background: #F59E0B; top: 20%; left: 55%; opacity: .18; animation-duration: 24s; animation-delay: -12s; }
+  @keyframes blob { 0% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-40px, 30px) scale(1.12); } 100% { transform: translate(30px, -20px) scale(.95); } }
+  .hero-date { margin: 0 0 6px; color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+  .hero-h { font-size: clamp(34px, 5vw, 56px); margin: 0; }
+  .hero-name { background: linear-gradient(90deg, var(--accent), var(--grad2), #F59E0B, var(--accent)); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 7s linear infinite; }
+  @keyframes shine { to { background-position: 300% 0; } }
+  .hero-sub { margin: 10px 0 0; color: var(--muted); font-size: 16px; } .hero-sub b { color: var(--text); }
+  /* things rise into place one after the other when the page opens */
+  .rise { animation: rise .6s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--d, 0ms); }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .no-rise .rise { animation: none; }
+  @media (prefers-reduced-motion: reduce) { .rise, .hero .hb, .hero-name { animation: none !important; } }
+  @media (max-width: 640px) { .hero { padding: 22px 18px 18px; border-radius: 20px; } .hero-sub { font-size: 14.5px; } }
+  /* today's sections */
+  .td-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .td-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); color: var(--text); text-decoration: none; transition: transform .2s, border-color .2s, box-shadow .2s; }
+  a.td-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 14px 30px -18px var(--accent); }
+  .td-time { display: flex; flex-direction: column; align-items: center; min-width: 58px; padding: 6px 8px; border-radius: 10px; background: var(--card2); } .td-time b { font-family: var(--display); font-size: 18px; } .td-time small { color: var(--muted); font-size: 11.5px; }
+  .td-body { flex: 1; min-width: 0; } .td-body b { display: block; font-size: 17px; } .td-body small { color: var(--muted); font-size: 12.5px; }
+  .td-st { font-style: normal; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--card2); color: var(--muted); }
+  .td-now { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); } .td-now .td-st { background: var(--accent); color: var(--on-accent); }
+  .td-live .td-st { background: var(--ok-bg); color: var(--ok); } .td-live { border-color: var(--ok); }
+  .td-done { opacity: .6; } .td-next .td-st { color: var(--text); }
   @media (max-width: 700px) { .h-glance { grid-template-columns: 1fr 1fr; } }
   /* calmer home, account menu */
   .acct-menu { display: grid; gap: 2px; margin-top: 10px; }
@@ -3890,9 +3922,8 @@ const BOOT = null;
     const btn = (k, icon, label) => '<button class="sd-item" type="button" data-sd="' + k + '">' + svg(icon) + '<span>' + label + '</span></button>';
     const courses = [...new Set((isAdmin ? (D.allCourses || []) : []).concat(D.groups.map(g => g.course)))].sort();
     side.innerHTML = '<a class="sd-brand" href="#"><span class="nb-mark" aria-hidden="true"><i></i><i></i><i></i></span><b>Tally Grades</b></a>' +
-      '<nav class="sd-nav">' + item('#', 'home', 'Home', h === '' || h === '#') + item('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) + btn('take', 'qr', 'Take attendance') +
-        item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) +
-        item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + btn('ask', 'spark', 'Ask the assistant') +
+      '<nav class="sd-nav">' + item('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + item('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) + btn('take', 'qr', 'Take attendance') +
+        item('#marks' + (c ? '/' + encodeURIComponent(c) : ''), 'pen', 'Enter marks', h.indexOf('#marks') === 0) + btn('ask', 'spark', 'Ask the assistant') +
         (courses.length ? '<div class="sd-sec">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x)).replace('class="sd-item', 'class="sd-item sd-course')).join('') : '') +
         '<div class="sd-sec">Tools</div>' + btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') +
         (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '') + '</nav>' +
@@ -3901,10 +3932,9 @@ const BOOT = null;
     const dd = (key, icon, label, body, active) => '<div class="tn-dd"><button type="button" title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" data-dd="' + key + '" aria-haspopup="true" aria-expanded="false">' + svg(icon) + '<span>' + label + '</span><svg class="tn-car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button><div class="tn-menu" hidden>' + body + '</div></div>';
     const tnItem = (href, icon, label, active) => '<a title="' + label + '" class="tn-a' + (active ? ' on' : '') + '" href="' + href + '"' + (active ? ' aria-current="page"' : '') + '>' + svg(icon) + '<span>' + label + '</span></a>';
     const toolsBody = btn('impatt', 'upload', 'Import attendance') + btn('final', 'download', 'Download final sheet') + btn('regqr', 'qr', 'Registration QR') + (isAdmin ? btn('term', 'calendar', 'Term start') + btn('backup', 'archive', 'Download backup') : '');
-    /* a calm bar: three pages in words, everything else under More, then the two jobs as big buttons: Enter marks and Take attendance */
+    /* a calm bar: the logo goes home, two pages in words, everything else under More, then the two jobs as big buttons: Enter marks and Take attendance */
     const moreBody = (courses.length ? '<div class="tn-h">Courses</div>' + courses.map(x => item(courseHash(x), 'book', esc(x), h === courseHash(x))).join('') : '') + '<div class="tn-h">Tools</div>' + toolsBody;
-    $('topnav').innerHTML = tnItem('#', 'home', 'Home', h === '' || h === '#') + tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) +
-      tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) +
+    $('topnav').innerHTML = tnItem('#insights' + (c ? '/' + encodeURIComponent(c) : ''), 'chart', 'Dashboard', h.indexOf('#insights') === 0) + tnItem('#calendar', 'calendar', 'My schedule', h.indexOf('#calendar') === 0) +
       dd('more', 'archive', 'More', moreBody, courses.some(x => h === courseHash(x))) +
       '<a class="tn-take alt' + (h.indexOf('#marks') === 0 ? ' on' : '') + '" title="Type quiz, assignment and exam marks" href="#marks' + (c ? '/' + encodeURIComponent(c) : '') + '">' + svg('pen') + '<span>Enter marks</span></a>' +
       '<button type="button" class="tn-take" title="Open a check-in with a QR code" data-sd="take">' + svg('qr') + '<span>Take attendance</span></button>';
@@ -4110,6 +4140,18 @@ const BOOT = null;
 
   /* ----- dashboard ----- */
   /* home: what is on today, the numbers at a glance, and what each tool does */
+  let homeShownAt = 0, lastHomeHash = null;
+  /* numbers that count up from 0 when they appear (not when the person asked for less motion) */
+  function countUp(root) {
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    root.querySelectorAll('[data-count]').forEach((el, i) => {
+      const to = Number(el.dataset.count), suf = el.dataset.suf || '', t0 = performance.now() + 250 + i * 90, dur = 900;
+      if (!to) return;
+      el.textContent = '0' + suf;
+      const step = (t) => { const k = Math.min(1, Math.max(0, (t - t0) / dur)), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(to * e) + suf; if (k < 1 && document.body.contains(el)) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+  }
   const homeIcon = (n) => '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
     (n === 'users' ? '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c2.6 0 4.6 1.6 5.4 4.5"/>' : TB_ICONS[n]) + '</svg>';
   /* the week of one TA from the schedule: days across, sections down; today is marked, each of today's sections says Done, Now, Live or Next */
@@ -4151,14 +4193,27 @@ const BOOT = null;
     return secs.length + (secs.length === 1 ? ' section' : ' sections') + ' today, ' + done + ' done' + (now ? ' &middot; now: <b>' + esc(now.gs.sort(numeric).join(' + ')) + '</b> in ' + esc(now.room || '') : '') +
       (next ? ' &middot; next: <b>' + esc(next.gs.sort(numeric).join(' + ')) + '</b> at ' + t12(next.start) + (next.room ? ' in ' + esc(next.room) : '') : (now ? '' : ' &middot; no more sections today'));
   }
-  function homeExtras(mine) {
-    const pool = mine.length ? mine : D.groups, me = D.me.name;
+  /* the four numbers of the day, counted up when the page opens */
+  function homeGlance(mine) {
+    const pool = mine.length ? mine : D.groups;
     const studs = pool.reduce((t, g) => t + g.count, 0), reg = pool.reduce((t, g) => t + (g.registered || 0), 0), liveN = pool.filter(g => g.live).length;
-    const glance = '<div class="h-glance"><div><b>' + pool.length + '</b><span>' + (mine.length ? 'my groups' : 'groups') + '</span></div><div><b>' + studs + '</b><span>students</span></div>' +
-      '<div><b>' + (studs ? Math.round(100 * reg / studs) : 0) + '%</b><span>phones registered</span></div><div' + (liveN ? ' class="ok"' : '') + '><b>' + liveN + '</b><span>check-ins live now</span></div></div>';
-    const hasSched = (D.schedule || []).some(x => isTaRow(x, me));
-    return '<h2 class="h-sec">' + homeIcon('calendar') + 'My schedule <span class="h-date">' + todayLong() + '</span><a class="link h-more" href="#calendar">Open my schedule &rarr;</a></h2>' +
-      (hasSched ? '<p class="h-todayline">' + todayLine(me) + '</p>' + calendarHtml(me, true) : '<p class="note">Your sections are not in the schedule yet.</p>') + glance;
+    const box = (n, l, cls, suf) => '<div class="hg' + (cls ? ' ' + cls : '') + '"><b data-count="' + n + '"' + (suf ? ' data-suf="' + suf + '"' : '') + '>' + n + (suf || '') + '</b><span>' + l + '</span></div>';
+    return '<div class="h-glance">' + box(pool.length, mine.length ? 'my groups' : 'groups') + box(studs, 'students') + box(studs ? Math.round(100 * reg / studs) : 0, 'phones registered', '', '%') + box(liveN, 'check-ins live now', liveN ? 'ok' : '') + '</div>';
+  }
+  /* today only: one card for each section, in the order of the day (the whole week is on My schedule) */
+  function homeExtras(mine) {
+    const me = D.me.name, n = new Date(), d = n.getDay(), m = n.getHours() * 60 + n.getMinutes(), secs = [];
+    (D.schedule || []).filter(x => isTaRow(x, me) && x.day === d).forEach(x => { const k = x.course + '|' + x.start; let sc = secs.find(y => y.k === k); if (!sc) { sc = { k: k, course: x.course, start: x.start, end: x.end, room: x.room, gs: [] }; secs.push(sc); } sc.gs.push(x.group); });
+    secs.sort((a, b) => toMin(a.start) - toMin(b.start));
+    const card = (sc, i) => {
+      const g = D.groups.find(x => x.course === sc.course && sc.gs.indexOf(x.group) >= 0), live = sc.gs.some(gr => (D.groups.find(x => x.course === sc.course && x.group === gr) || {}).live);
+      const st = live ? ['live', 'Live'] : m > toMin(sc.end) ? ['done', 'Done'] : m >= toMin(sc.start) - 20 ? ['now', 'Now'] : ['next', 'Next'];
+      const tag = g ? 'a' : 'div';
+      return '<' + tag + ' class="td-card td-' + st[0] + ' rise" style="--d:' + (i * 70 + 240) + 'ms"' + (g ? ' href="' + pageHash('group', g) + '"' : '') + '><span class="td-time"><b>' + t12(sc.start) + '</b><small>' + t12(sc.end) + '</small></span>' +
+        '<span class="td-body"><b>' + esc(sc.gs.sort(numeric).join(' + ')) + '</b><small>' + esc(sc.course) + (sc.room ? ' &middot; Room ' + esc(sc.room) : '') + '</small></span><i class="td-st">' + st[1] + '</i></' + tag + '>';
+    };
+    return '<h2 class="h-sec rise" style="--d:200ms">' + homeIcon('calendar') + 'Today <a class="link h-more" href="#calendar">My whole week &rarr;</a></h2>' +
+      (secs.length ? '<div class="td-list">' + secs.map(card).join('') + '</div>' : '<p class="note rise" style="--d:240ms">' + ((D.schedule || []).some(x => isTaRow(x, me)) ? 'No sections today.' : 'Your sections are not in the schedule yet.') + '</p>');
   }
   /* the sections of a TA in the order they come this week: groups taught together at the same time are one section */
   function sectionsHtml(ta) {
@@ -4366,13 +4421,21 @@ const BOOT = null;
       /* home: a button for each course, then the tabs */
       const cs = [...new Set(groups.map(g => g.course))].sort();
       const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-      head = '<div class="top home-top"><div><h1>' + greet + ', ' + esc(D.me.name.split(' ')[0]) + '</h1><p class="sub">Here is your day: take attendance, see today\'s sections, and open any tool.' +
-          (isAdmin && waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' &rarr;</button>' : '') + '</p></div></div>' +
-        quickHtml(null) + homeExtras(mine) +
-        '<h2 class="h-sec">' + homeIcon('users') + 'Groups</h2>' +
+      head = '<section class="hero"><i class="hb hb1"></i><i class="hb hb2"></i><i class="hb hb3"></i><div class="hero-in">' +
+          '<p class="hero-date rise" style="--d:0ms">' + todayLong() + (D.currentWeek ? ' &middot; ' + esc(D.weeks[D.currentWeek - 1][1].split(',')[0]) : '') + '</p>' +
+          '<h1 class="hero-h rise" style="--d:60ms">' + greet + ', <span class="hero-name">' + esc(D.me.name.split(' ')[0]) + '</span></h1>' +
+          '<p class="hero-sub rise" style="--d:120ms">' + todayLine(D.me.name) +
+          (isAdmin && waiting.length && tab !== 'staff' ? ' <button class="link" id="seeReq" type="button">' + waiting.length + ' new TA ' + (waiting.length > 1 ? 'requests' : 'request') + ' &rarr;</button>' : '') + '</p>' +
+          '<div class="rise" style="--d:180ms">' + homeGlance(mine) + '</div></div></section>' +
+        '<div class="rise" style="--d:160ms">' + quickHtml(null) + '</div>' + homeExtras(mine) +
+        '<h2 class="h-sec rise" style="--d:300ms">' + homeIcon('users') + 'Groups</h2>' +
         '<div class="tabs" role="tablist">' + tabs.map(([k, l]) => '<button class="tab" role="tab" type="button" data-tab="' + k + '" aria-selected="' + (tab === k) + '">' + esc(l) + '</button>').join('') + '</div>';
     }
-    app.innerHTML = '<div class="wrap">' + head + body + '</div>';
+    /* the opening animation plays when the home page is opened, not again when a tab is switched */
+    const fresh = !C && (!homeShownAt || Date.now() - homeShownAt > 60000 || lastHomeHash !== location.hash);
+    app.innerHTML = '<div class="wrap' + (fresh ? '' : ' no-rise') + '">' + head + body + '</div>';
+    if (fresh) countUp(app);
+    if (!C) { homeShownAt = Date.now(); lastHomeHash = location.hash; }
     const on = (sel, fn) => app.querySelectorAll(sel).forEach(b => { b.onclick = () => fn(b); });
     on('[data-tab]', b => { tab = b.dataset.tab; swap(dashboard); });
     on('[data-ta]', b => changeTaDialog(list[b.dataset.ta]));
