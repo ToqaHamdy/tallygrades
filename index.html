@@ -40,7 +40,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
 try {
   if (localStorage.getItem('tg_lang') === 'ar') {
     document.documentElement.lang = 'ar'; document.documentElement.dir = 'rtl';
-    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=1"><\/script>');
+    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=2"><\/script>');
   }
 } catch (e) {}
 </script>
@@ -268,6 +268,8 @@ try {
   .ckcell input:active + span { transform: scale(.9); }
   .ckall { display: block; margin: 4px auto 0; border: 1px solid var(--line); background: var(--card2); color: var(--muted); border-radius: 999px; padding: 1px 9px; font: inherit; font-size: 11px; cursor: pointer; text-transform: none; letter-spacing: 0; }
   .ckall:hover { color: var(--text); border-color: var(--ok); }
+  .mk-chips .mk-aw { flex: 0 0 auto; width: auto; min-width: 150px; max-width: 260px; padding-top: 8px; padding-bottom: 8px; } .mk-awn { margin: 0; font-size: 13px; flex: 1 1 220px; }
+  .gb th.gb-att, .gb td.gb-att { background: color-mix(in srgb, var(--ok) 6%, transparent); }
   .ckit-l { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
   .tbar { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .tb { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text);
@@ -5612,6 +5614,8 @@ const BOOT = null;
     const restored = saver.restore();
     if (restored) { toast(restored + (restored > 1 ? ' marks' : ' mark') + ' from last time were not saved. Saving them now.'); setTimeout(() => saver.kick(300), 500); }
     if (!$('mk')) return;
+    /* the week of the attendance checkbox column ('' = no column); it starts on this week and is remembered on this device */
+    let attW = store.get('tg_gb_attw'); if (attW == null) attW = String(data.currentWeek || D.currentWeek || '');
     /* every course is listed, ready: one without grade items or students yet says what to add */
     const courses = data.courses.slice();
     (D.allCourses || []).forEach(c => { if (!courses.some(x => x.course === c)) courses.push({ course: c, rows: [], items: [], attendanceMax: 0 }); });
@@ -5690,6 +5694,9 @@ const BOOT = null;
       const tots = rows.map(totalOf), avg = tots.length ? Math.round(tots.reduce((a, b) => a + b, 0) / tots.length * 10) / 10 : 0;
       const pickedTxt = picked.length === gs.length ? 'All ' + gs.length + ' groups' : picked.length <= 6 ? picked.slice().sort(numeric).join(', ') : picked.length + ' of ' + gs.length + ' groups';
       const lv = (f) => f === '' || f == null ? '' : f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
+      const AW = Number(attW) || 0, wl = (w) => ((D.weeks || []).find(x => x[0] === w) || [w, 'Week ' + w])[1];
+      const attCell = (r) => { const v = (r.weeks || [])[AW - 1] || '';
+        return '<td class="num gb-att"><label class="ckcell" title="' + (v === 'E' ? 'Excused' : v === 'P' ? 'Present' : 'Not present') + '"><input type="checkbox" class="att-ck" data-ai="' + CC.rows.indexOf(r) + '"' + (v === 'P' || v === 'E' ? ' checked' : '') + ' aria-label="' + esc(wl(AW) + ', ' + r.name) + '"><span aria-hidden="true"></span></label>' + (v === 'E' ? '<small class="by">Excused</small>' : '') + '</td>'; };
       $('mkb').innerHTML =
         courseRow +
         '<div class="mk-row"><span class="mk-lbl">Groups</span><div class="mk-chips">' +
@@ -5697,20 +5704,24 @@ const BOOT = null;
           '<button type="button" class="mk-all" data-mg="*all">All (' + gs.length + ')</button>' + (mine.length && mine.length !== gs.length ? '<button type="button" class="mk-all" data-mg="*mine">My groups (' + mine.length + ')</button>' : '') +
           (gOpen ? '<button type="button" class="mk-all" data-mg="*none">Clear</button><div class="mk-letters">' + lettersHtml(gs) + '</div>' : '') + '</div></div>' +
         '<div class="mk-row"><span class="mk-lbl">Columns</span><div class="mk-chips">' + itemsHtml() + (hidden ? '<button type="button" class="mk-all" id="mkallc">Show all ' + CC.items.length + '</button>' : '') + (isAdmin ? '<button type="button" class="mk-all" id="mkitems2">Edit grade items</button>' : '') + '</div></div>' +
+        '<div class="mk-row"><span class="mk-lbl">Attendance</span><div class="mk-chips"><select class="in mk-aw" id="mkaw" aria-label="Attendance checkbox week"><option value="">No checkbox</option>' +
+          (D.weeks || []).map(x => '<option value="' + x[0] + '"' + (x[0] === AW ? ' selected' : '') + '>' + esc(x[1]) + '</option>').join('') + '</select>' +
+          '<span class="note mk-awn">' + (AW ? 'Tick a student to mark them present in ' + esc(wl(AW)) + ', untick to remove it.' : 'Choose a week to tick attendance from here.') + '</span></div></div>' +
         '<div class="mk-tools"><input class="in" id="mkid" inputmode="numeric" placeholder="Type a student ID (or its last digits), then Enter" autocomplete="off">' +
           '<input class="in" id="mksr" type="search" placeholder="Search a name" value="' + esc(q) + '">' +
           '<button class="btn ghost" id="mkimp" type="button">Import from Excel</button><button class="btn ghost" id="mkpaste" type="button">Paste</button>' +
           '<details class="gb-menu"><summary class="btn ghost">Copy for Excel</summary><div class="gb-mlist"><button type="button" id="cpsec"><b>Section attendance</b><small>W1 to W12: 1 for present or excused, empty otherwise</small></button><button type="button" id="cpgr"><b>Marks</b><small>the mark columns shown, no names</small></button><button type="button" id="cpall"><b>Whole table</b><small>names, IDs, groups, attendance, marks and total</small></button><button type="button" id="cpuni"><b>Fill the university sheet</b><small>upload their Excel file, get it back filled</small></button></div></details>' +
           '<button class="btn ghost" id="mkhist" type="button">History</button></div>' +
         '<p class="mk-stat"><b>' + rows.length + '</b> students &middot; average total <b id="gbavg">' + avg + '</b> of ' + mx + (hidden ? ' &middot; ' + hidden + (hidden === 1 ? ' column' : ' columns') + ' hidden' : '') + '</p>' +
-        '<div class="table-wrap gb-wrap"><table class="mk-table gb"><thead><tr><th>#</th><th class="gb-name">Student</th><th>Group</th><th class="num">Attendance</th>' + (CC.attendanceMax ? '<th class="num">Att.<small>out of ' + CC.attendanceMax + '</small></th>' : '') +
+        '<div class="table-wrap gb-wrap"><table class="mk-table gb"><thead><tr><th>#</th><th class="gb-name">Student</th><th>Group</th><th class="num">Attendance</th>' +
+          (AW ? '<th class="num gb-att">' + esc(wl(AW)) + '<small>present</small><button type="button" class="ckall" id="awall" title="Tick or untick everyone shown">all</button></th>' : '') + (CC.attendanceMax ? '<th class="num">Att.<small>out of ' + CC.attendanceMax + '</small></th>' : '') +
           IT.map(it => itemHead(it)).join('') + '<th class="num gb-tot">Total<small>out of ' + mx + '</small></th></tr></thead><tbody>' +
           (rows.length ? rows.map((r, i) => '<tr data-q="' + esc((r.name + ' ' + r.id).toLowerCase()) + '" data-id="' + esc(r.id) + '"' + (q && (r.name + ' ' + r.id).toLowerCase().indexOf(q) < 0 ? ' hidden' : '') + '><td>' + (i + 1) + '</td>' +
             '<td class="gb-name">' + stuLink(course, r.id, r.name) + '<small class="gb-id">' + esc(r.id) + '</small></td><td>' + esc(r.group) + '</td>' +
-            '<td class="num"><span class="gb-pct ' + lv(r.pct) + '">' + (r.pct === '' || r.pct == null ? '&ndash;' : Math.round(r.pct * 100) + '%') + '</span></td>' + (CC.attendanceMax ? '<td class="num gb-ro">' + (r.attGrade === '' || r.attGrade == null ? '&ndash;' : esc(String(r.attGrade))) + '</td>' : '') +
+            '<td class="num"><span class="gb-pct ' + lv(r.pct) + '" data-pct="' + CC.rows.indexOf(r) + '">' + (r.pct === '' || r.pct == null ? '&ndash;' : Math.round(r.pct * 100) + '%') + '</span></td>' + (AW ? attCell(r) : '') + (CC.attendanceMax ? '<td class="num gb-ro" data-att="' + CC.rows.indexOf(r) + '">' + (r.attGrade === '' || r.attGrade == null ? '&ndash;' : esc(String(r.attGrade))) + '</td>' : '') +
             IT.map(it => '<td class="num">' + markCell(it, (course + '|' + r.id + '|' + r.group + '|' + it.key) in dirty ? 'dirty' : '', val(r, it.key), 'data-i="' + CC.rows.indexOf(r) + '" data-k="' + esc(it.key) + '" aria-label="' + esc(it.item + ', ' + r.name) + '"') + byTag(r, it.key) + '</td>').join('') +
             '<td class="num gb-tot"><b data-tot="' + CC.rows.indexOf(r) + '">' + tots[i] + '</b></td></tr>').join('')
-            : '<tr><td colspan="' + (6 + IT.length) + '" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
+            : '<tr><td colspan="' + (6 + IT.length + (AW ? 1 : 0)) + '" style="color:var(--muted);padding:20px">Pick at least one group.</td></tr>') + '</tbody></table></div>' +
         '<div class="savebar" id="sbar"><span id="st"></span><button class="btn" id="save" type="button" disabled>Save</button></div>';
       bind(); status();
     }
@@ -5719,6 +5730,32 @@ const BOOT = null;
       $('save').disabled = !n || bad; $('sbar').classList.toggle('dirty', n > 0);
       window.onbeforeunload = n ? () => { saver.flush(); } : null;
       $('st').textContent = saver.text(n, bad);
+    }
+    async function markAtt(boxes) {
+      const w = Number(attW), on = boxes[0].checked, CC = C(), byG = {};
+      boxes.forEach(x => { const r = CC.rows[x.dataset.ai]; (byG[r.group] = byG[r.group] || []).push({ r: r, x: x }); x.disabled = true; });
+      for (const g of Object.keys(byG)) {
+        try {
+          await api('markWeeks', PIN, course, g, byG[g].map(o => ({ id: o.r.id, weeks: [w] })), on ? 'P' : 'A');
+          byG[g].forEach(o => { o.r.weeks = (o.r.weeks || []).slice(); o.r.weeks[w - 1] = on ? 'P' : 'A'; const sm = o.x.closest('td').querySelector('.by'); if (sm) sm.remove(); });
+        } catch (e) { byG[g].forEach(o => { o.x.checked = !on; }); toast(errMsg(e)); }
+        byG[g].forEach(o => { o.x.disabled = false; });
+      }
+      clearTimeout(markAtt.t); markAtt.t = setTimeout(attFresh, 900);
+    }
+    /* the attendance %, the attendance mark and the total follow the new ticks */
+    async function attFresh() {
+      let fresh; try { fresh = await api('askData', PIN); } catch (e) { return; }
+      const nc = fresh.courses.find(x => x.course === course), CC = C(); if (!nc || !$('mk')) return;
+      const lv = (f) => f === '' || f == null ? '' : f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
+      CC.rows.forEach((r, i) => {
+        const f = nc.rows.find(x => x.id === r.id && x.group === r.group); if (!f) return;
+        Object.assign(r, { weeks: f.weeks, pct: f.pct, attGrade: f.attGrade, section: f.section, p: f.p, a: f.a, e: f.e, missed: f.missed });
+        const sp = $('mkb').querySelector('[data-pct="' + i + '"]'); if (sp) { sp.className = 'gb-pct ' + lv(r.pct); sp.textContent = r.pct === '' || r.pct == null ? '–' : Math.round(r.pct * 100) + '%'; }
+        const at = $('mkb').querySelector('[data-att="' + i + '"]'); if (at) at.textContent = r.attGrade === '' || r.attGrade == null ? '–' : String(r.attGrade);
+        const tb = $('mkb').querySelector('[data-tot="' + i + '"]'); if (tb) tb.textContent = totalOf(r);
+      });
+      const ts = shown().map(totalOf); if ($('gbavg')) $('gbavg').textContent = ts.length ? Math.round(ts.reduce((a, b) => a + b, 0) / ts.length * 10) / 10 : 0;
     }
     function setMark(inp, raw) {
       const key = inp.dataset.k, it = C().items.find(x => x.key === key), r = C().rows[inp.dataset.i], k = course + '|' + r.id + '|' + r.group + '|' + key, orig = r.scores[key] == null ? '' : String(r.scores[key]);
@@ -5797,6 +5834,13 @@ const BOOT = null;
       box.querySelectorAll('.gb-mlist button').forEach(x => x.addEventListener('click', () => { const d = x.closest('details'); if (d) d.open = false; }));
       $('mkimp').onclick = () => importMarksDialog(C(), async () => { try { data = await api('askData', PIN); const nc = data.courses.find(x => x.course === course); if (nc) Object.assign(C(), nc); SEARCH_AT = 0; } catch (e) {} if ($('mk')) draw(); });
       $('mkhist').onclick = () => historyDialog(course, picked.length === 1 ? picked[0] : null);
+      /* attendance checkboxes: a tick marks the student present in that week, untick removes it (in their own group, in the name of whoever ticks) */
+      $('mkaw').onchange = () => { attW = $('mkaw').value; store.set('tg_gb_attw', attW); draw(); };
+      box.querySelectorAll('.att-ck').forEach(x => x.onchange = () => markAtt([x]));
+      if ($('awall')) $('awall').onclick = () => {
+        const cs = [...box.querySelectorAll('.mk-table tr:not([hidden]) .att-ck')], on = !cs.every(x => x.checked);
+        const ch = cs.filter(x => x.checked !== on); ch.forEach(x => { x.checked = on; }); if (ch.length) markAtt(ch);
+      };
       const IT = its();
       $('mkpaste').onclick = () => dialog('<h1 style="font-size:24px">Paste from Excel</h1><p class="sub">Copy from Excel the student ID and then ' + (IT.length > 1 ? 'one column for each of <b>' + IT.map(x => esc(x.item)).join('</b>, <b>') + '</b>, in this order' : 'the mark of <b>' + esc(IT[0].item) + '</b>') + ', and paste them here. One student on each line. An empty cell is left as it is.</p>' +
         '<textarea class="in" id="pt" rows="10" style="width:100%;margin-top:12px;font-family:var(--mono)" placeholder="692601451&#9;14' + (IT.length > 1 ? '&#9;5' : '') + '&#10;692601452&#9;17' + (IT.length > 1 ? '&#9;4' : '') + '"></textarea><div class="err" id="pe"></div>' +
