@@ -589,6 +589,37 @@ begin
   return tg.dash(me) || jsonb_build_object('imported', jsonb_build_object('groups', ng, 'students', total, 'skipped', skipped));
 end $$;
 
+-- one student into a group, or out of it. The TA of the group (or any TA of the course) and the admin can do it.
+-- A removed student's attendance and marks stay in the history.
+create or replace function public.add_student(p_pin text, p_course text, p_group text, p_name text, p_id text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); n text := tg.clean(p_name); v text := tg.norm_id(p_id); other text;
+begin
+  perform tg.can_manage(me, p_course, p_group);
+  if n = '' or v = '' then raise exception 'Write the student name and ID.'; end if;
+  if length(v) < 5 then raise exception 'The ID looks too short.'; end if;
+  if exists (select 1 from tg.students where course = p_course and grp = p_group and sid = v) then
+    raise exception '% is already in group %.', (select name from tg.students where course = p_course and grp = p_group and sid = v limit 1), p_group;
+  end if;
+  select grp into other from tg.students where course = p_course and sid = v order by ord limit 1;
+  if other is not null then raise exception 'This ID is already in group % of this course. Remove the student from there first.', other; end if;
+  insert into tg.students (course, grp, name, sid, ta) values (p_course, p_group, n, v, tg.group_ta(p_course, p_group));
+  perform tg.note(p_course, p_group, 'Added the student ' || n || ' (' || v || ')', me.name);
+  return tg.dash(me);
+end $$;
+create or replace function public.remove_student(p_pin text, p_course text, p_group text, p_id text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare me tg.staff := tg.who(p_pin); st tg.students;
+begin
+  perform tg.can_manage(me, p_course, p_group);
+  select * into st from tg.students where course = p_course and grp = p_group and sid = tg.norm_id(p_id);
+  if not found then raise exception 'Student not found.'; end if;
+  delete from tg.students where course = p_course and grp = p_group and sid = st.sid;
+  if not exists (select 1 from tg.students where course = p_course and sid = st.sid) then
+    delete from tg.team_members where course = p_course and sid = st.sid;
+  end if;
+  perform tg.note(p_course, p_group, 'Removed the student ' || st.name || ' (' || st.sid || ')', me.name);
+  return tg.dash(me);
+end $$;
+
 create or replace function public.claim_group(p_pin text, p_course text, p_group text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
 declare me tg.staff := tg.who(p_pin); owner text;
 begin
@@ -1037,7 +1068,7 @@ begin
     'open_session(text,text,text,int,int,boolean,boolean,jsonb)', 'live_status(text,text)', 'extend_session(text,text,int)', 'close_session(text,text)',
     'random_check(text,text,int)', 'session_mark(text,text,text)', 'group_state(text,text,text,int)', 'week_view(text,text,text,int)', 'group_summary(text,text,text)',
     'mark(text,text,text,int,text,text)', 'mark_all(text,text,text,int)', 'mark_weeks(text,text,text,jsonb,text)', 'add_guest(text,text,text,int,text)', 'grades_view(text,text,text)', 'ask_data(text)',
-    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)', 'ta_activity(text,text)'] loop
+    'save_items(text,text,numeric,jsonb)', 'import_attendance(text,text,jsonb)', 'team_view(text,text,int)', 'save_team_scores(text,text,int,jsonb)', 'save_scores(text,text,text,jsonb)', 'final_export(text)', 'export_all(text)', 'change_history(text,text,text)', 'student_profile(text,text,text)', 'ta_activity(text,text)', 'add_student(text,text,text,text,text)', 'remove_student(text,text,text,text)'] loop
     execute 'revoke all on function public.' || f || ' from public';
     execute 'grant execute on function public.' || f || ' to anon, authenticated';
   end loop;
