@@ -687,9 +687,11 @@ end $$;
 -- the Gemini key (free, from aistudio.google.com) that reads photos of paper attendance sheets.
 -- Only the admin sets it; any TA who is logged in gets it to send a photo; it is never in the page itself.
 create or replace function public.set_gemini_key(p_pin text, p_key text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
-declare me tg.staff := tg.admin(p_pin); v text := btrim(coalesce(p_key, ''));
+declare me tg.staff := tg.admin(p_pin);
+  -- spaces, line breaks and quotes that come with a copy are taken away; the page checks the key with Google before it is saved
+  v text := regexp_replace(coalesce(p_key, ''), '[\s"''`]', '', 'g');
 begin
-  if v <> '' and v !~ '^[A-Za-z0-9_\-]{20,80}$' then raise exception 'This does not look like a Gemini key. Copy it again from aistudio.google.com.'; end if;
+  if v <> '' and (length(v) < 20 or length(v) > 300) then raise exception 'This does not look like a Gemini key. Copy it again from aistudio.google.com.'; end if;
   if v = '' then delete from tg.settings where key = 'Gemini key';
   else insert into tg.settings (key, value) values ('Gemini key', v) on conflict (key) do update set value = excluded.value; end if;
   perform tg.note('', '', case when v = '' then 'Removed the Gemini key' else 'Saved a Gemini key' end, me.name);
