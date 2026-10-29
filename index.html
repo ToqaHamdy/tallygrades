@@ -14,7 +14,7 @@
    then moves the visitor there with what this device remembers (student ID, phone ID, login, theme), keeping the same link.
    If the check fails, the old address simply keeps working. */
 (function () {
-  var PRIMARY = 'https://tallygrades.vercel.app', KEYS = ['att_id', 'att_name', 'att_groups', 'att_device', 'tg_token', 'tg_theme', 'tg_qmin', 'tg_qstrict'];
+  var PRIMARY = 'https://tallygrades.vercel.app', KEYS = ['att_id', 'att_name', 'att_groups', 'att_device', 'tg_token', 'tg_theme', 'tg_lang', 'tg_qmin', 'tg_qstrict'];
   try {
     var m = location.hash.match(/^#tgmove=([^&]*)(?:&to=(.*))?$/);
     if (m) {
@@ -36,6 +36,13 @@
     }).catch(function () {});
 })();
 try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+/* Arabic is chosen with the ع button at the top (or in Settings) and saved on this device. ar.js swaps the English for Arabic. */
+try {
+  if (localStorage.getItem('tg_lang') === 'ar') {
+    document.documentElement.lang = 'ar'; document.documentElement.dir = 'rtl';
+    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=1"><\/script>');
+  }
+} catch (e) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1105,6 +1112,154 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
   .q-g.on { background: var(--accent); box-shadow: none; }
   .q-tick { display: none; }
   .q-opts { border-top: 0; padding-top: 4px; }
+
+  /* ===== Arabic (right to left). The [dir="rtl"] lines below mirror every rule above that uses left or right; they were made with rtlcss,
+     leaving out what must not be mirrored (ticks, the logo, centred boxes, rows of numbers). Make them again when such a rule changes. ===== */
+  .lang-btn { font-family: "IBM Plex Sans Arabic", var(--font); font-weight: 700; font-size: 15px; line-height: 1; }
+  .lang-btn:lang(en) { font-family: var(--mono); font-size: 12.5px; letter-spacing: .04em; }
+  :root[lang="ar"] {
+    --font: "Inter", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, Arial, sans-serif;
+    --display: "Bricolage Grotesque", "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+    --mono: "JetBrains Mono", "IBM Plex Sans Arabic", Consolas, monospace;
+  }
+  /* Arabic letters are joined: spacing between letters breaks them, and capitals do not exist */
+  :root[lang="ar"] body, :root[lang="ar"] body * { letter-spacing: 0 !important; }
+  :root[lang="ar"] h1, :root[lang="ar"] h2, :root[lang="ar"] h3, :root[lang="ar"] .door-t, :root[lang="ar"] .hero-t, :root[lang="ar"] .card h3 { line-height: 1.35; }
+  :root[lang="ar"] .pill, :root[lang="ar"] .tab, :root[lang="ar"] .eyebrow { line-height: 1.5; }
+  [dir="rtl"] .overlay.drawer .panel { animation-name: slidein-rtl; }
+  [dir="rtl"] .signin { animation-name: fromleft; }
+  @keyframes slidein-rtl { from { transform: translateX(-40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes fromleft { from { opacity: 0; transform: translateX(-24px); } }
+  /* IDs, marks, times and codes typed by people keep their own direction inside Arabic lines */
+  [dir="rtl"] input[type="number"], [dir="rtl"] input[type="tel"], [dir="rtl"] input[inputmode="numeric"] { unicode-bidi: plaintext; }
+  /* rtl:begin (made by rtlcss) */
+  [dir="rtl"] .gta-src { margin-right: 8px; margin-left: initial; }
+  [dir="rtl"] .pill.sched { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .pill.green { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .pill.green::before { margin-left: 6px; margin-right: initial; }
+  [dir="rtl"] .door { text-align: right; }
+  [dir="rtl"] .door:hover { padding-right: 16px; padding-left: initial; }
+  [dir="rtl"] .door:hover .door-go { transform: translateX(-8px); }
+  [dir="rtl"] .dist-foot b { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .together > span { margin-left: 4px; margin-right: initial; }
+  [dir="rtl"] .obar > span { margin-left: 4px; margin-right: initial; }
+  [dir="rtl"] .ochip { padding: 6px 12px 6px 8px; }
+  [dir="rtl"] .ochip.on { padding-left: 12px; padding-right: initial; }
+  [dir="rtl"] .tmchip { margin-right: 8px; margin-left: initial; }
+  [dir="rtl"] .lead { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .pw-wrap .in { padding-left: 50px; padding-right: initial; }
+  [dir="rtl"] .pw-eye { left: 6px; right: initial; }
+  [dir="rtl"] .bot-fab { left: 22px; right: initial; }
+  [dir="rtl"] .bot-fab .bf-x { transform: rotate(90deg) scale(.5); }
+  [dir="rtl"] .bot-fab.open .bf-chat { transform: rotate(-90deg) scale(.5); }
+  [dir="rtl"] .bf-spark { left: 11px; right: initial; }
+  [dir="rtl"] .bot-panel { left: 22px; transform-origin: bottom left; right: initial; }
+  [dir="rtl"] .bot-head { padding: 14px 18px 14px 14px; }
+  [dir="rtl"] .bmsg.me { border-bottom-left-radius: 6px; border-bottom-right-radius: initial; }
+  [dir="rtl"] .bmsg.bot { border-bottom-right-radius: 6px; border-bottom-left-radius: initial; }
+  @media (max-width: 640px) { [dir="rtl"] .bot-fab { left: 16px; right: initial; } }
+  [dir="rtl"] .cview button + button { border-right: 1px solid var(--line); border-left: initial; }
+  [dir="rtl"] .ccard .go { margin-right: auto; margin-left: initial; }
+  [dir="rtl"] .ccard:hover .go { transform: translateX(-4px); }
+  [dir="rtl"] .acct { left: 16px; right: initial; }
+  [dir="rtl"] .side { right: 0; border-left: 1px solid var(--line); left: initial; border-right: initial; }
+  [dir="rtl"] .tn-brand { margin-left: 14px; margin-right: initial; }
+  [dir="rtl"] .tn { margin-left: 8px; margin-right: initial; }
+  [dir="rtl"] .tn-take { margin-right: auto; margin-left: initial; }
+  [dir="rtl"] .tn-take + .tn-take { margin-right: 8px; margin-left: initial; }
+  [dir="rtl"] .stl { text-align: right; }
+  [dir="rtl"] .my-hist summary span { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .hist-feed { padding-left: 4px; padding-right: initial; }
+  [dir="rtl"] .tn-a[aria-expanded="true"] .tn-car { transform: rotate(-180deg); }
+  [dir="rtl"] .tn-menu { right: 0; left: initial; }
+  [dir="rtl"] .sd-item { text-align: right; }
+  [dir="rtl"] .sd-item.on::before { right: -12px; border-radius: 3px 0 0 3px; left: initial; }
+  [dir="rtl"] .sd-sec-item { padding: 8px 14px 8px 12px; }
+  [dir="rtl"] .sd-dot { left: 12px; right: initial; }
+  @media (max-width: 900px) { [dir="rtl"] .tn-brand { margin-left: auto; margin-right: initial; } }
+  @media (max-width: 900px) { [dir="rtl"] .side { transform: translateX(105%); box-shadow: -24px 0 60px -20px rgba(0,0,0,.6); } }
+  [dir="rtl"] .theme-btn:hover svg { transform: rotate(25deg); }
+  [dir="rtl"] .acct-panel { left: 0; transform-origin: top left; right: initial; }
+  [dir="rtl"] .stu-btn { text-align: right; }
+  [dir="rtl"] .acct-set { margin-right: auto; margin-left: initial; }
+  [dir="rtl"] .st-av { left: 18px; right: initial; }
+  [dir="rtl"] .back { padding: 5px 5px 5px 16px; }
+  [dir="rtl"] .back .bk-ic::before { right: 11px; border-width: 0 2.5px 2.5px 0; transform: rotate(-45deg); left: initial; }
+  [dir="rtl"] .back:hover .bk-ic { transform: translateX(3px); }
+  [dir="rtl"] .overlay.drawer .panel { border-radius: 0 18px 18px 0; box-shadow: 30px 0 60px -20px rgba(0,0,0,.6); }
+  [dir="rtl"] .q-g { padding: 10px 14px 10px 16px; }
+  [dir="rtl"] .q-tick { left: -7px; right: initial; }
+  [dir="rtl"] .q-mins button { margin-right: -1px; margin-left: initial; }
+  [dir="rtl"] .q-mins button:nth-of-type(1) { border-radius: 0 999px 999px 0; }
+  [dir="rtl"] .q-mins button:last-child { border-radius: 999px 0 0 999px; }
+  [dir="rtl"] .q-sw::after { right: 3px; left: initial; }
+  [dir="rtl"] .q-strict input:checked + .q-sw::after { transform: translateX(-18px); }
+  [dir="rtl"] .nchoose small { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .stats b { margin-left: 6px; margin-right: initial; }
+  [dir="rtl"] th, [dir="rtl"] td { text-align: right; }
+  [dir="rtl"] tr.gsec b { margin-left: 12px; margin-right: initial; }
+  [dir="rtl"] tr.gsec span { margin-left: 12px; margin-right: initial; }
+  [dir="rtl"] .gstat b small { margin-right: 2px; margin-left: initial; }
+  [dir="rtl"] .seg button { border-right: 1px solid var(--line); border-left: initial; }
+  [dir="rtl"] .gtable .sx { right: 0; left: initial; }
+  [dir="rtl"] .gtable .sn { right: 48px; box-shadow: -1px 0 0 var(--line); left: initial; }
+  [dir="rtl"] .gtable th.tot, [dir="rtl"] .gtable td.tot { box-shadow: inset -1px 0 0 var(--line); }
+  [dir="rtl"] .wklegend i { margin-right: 8px; margin-left: initial; }
+  [dir="rtl"] .wklegend i:first-child { margin-right: 0; margin-left: initial; }
+  [dir="rtl"] .savebar { padding: 12px 18px 12px 12px; }
+  [dir="rtl"] .msg { border-right: 4px solid currentColor; border-left: initial; }
+  @media (max-width: 700px) { [dir="rtl"] .seg button { border-right: 0; border-left: initial; } }
+  @media (max-width: 700px) { [dir="rtl"] .seg button + button { border-right: 1px solid var(--line); border-left: initial; } }
+  [dir="rtl"] .btn::after { transform: translateX(120%); }
+  [dir="rtl"] .btn:hover:not(:disabled)::after { transform: translateX(-120%); }
+  [dir="rtl"] .tab[aria-selected="true"]::after { transform-origin: right; }
+  [dir="rtl"] .feats li:hover .fi { transform: translateY(-3px) rotate(8deg); }
+  [dir="rtl"] .ccard:hover .cbadge { transform: rotate(6deg) scale(1.06); }
+  [dir="rtl"] .gbar i, [dir="rtl"] .dbar i, [dir="rtl"] .mbar i { transform-origin: right; }
+  [dir="rtl"] .mk-fam { padding: 5px 12px 5px 6px; }
+  [dir="rtl"] .mk-fam-l { margin-left: 6px; margin-right: initial; }
+  [dir="rtl"] .mk-multi { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .mk-multi .sw::after { right: 3px; left: initial; }
+  [dir="rtl"] .mk-multi input:checked + .sw::after { transform: translateX(-14px); }
+  [dir="rtl"] .mk-st1 { margin-left: 16px; margin-right: initial; }
+  [dir="rtl"] .gb-gsum.open svg { transform: rotate(-180deg); }
+  [dir="rtl"] .gb .gb-name { right: 0; box-shadow: inset 1px 0 0 var(--line); left: initial; }
+  [dir="rtl"] .gb .gb-tot { left: 0; box-shadow: inset -1px 0 0 var(--line); right: initial; }
+  [dir="rtl"] .gb-mlist { left: 0; right: initial; }
+  [dir="rtl"] .gb-mlist button { text-align: right; }
+  [dir="rtl"] .im-tag:not(.warn):not(.bad) { margin-right: 4px; margin-left: initial; }
+  [dir="rtl"] .im-ch { margin: 0 0 4px 6px; }
+  [dir="rtl"] .mk-cnt { margin-right: 4px; margin-left: initial; }
+  [dir="rtl"] .lcard[open] .lcar { transform: rotate(-180deg); }
+  [dir="rtl"] .h-tool { text-align: right; }
+  [dir="rtl"] .h-more { margin-right: auto; margin-left: initial; }
+  [dir="rtl"] .h-date { margin-right: 4px; margin-left: initial; }
+  [dir="rtl"] .cal th, [dir="rtl"] .cal td { border-left: 1px solid var(--line); text-align: right; border-right: initial; }
+  [dir="rtl"] .cal tr > :last-child { border-left: 0; border-right: initial; }
+  [dir="rtl"] .cal-ev { border-right: 3px solid var(--accent); border-left: initial; }
+  [dir="rtl"] .cal-ev b { padding-left: 46px; padding-right: initial; }
+  [dir="rtl"] .cal-ev .h-st { left: 6px; right: initial; }
+  [dir="rtl"] .cal-ev.off { border-right-color: var(--muted); border-left-color: initial; }
+  [dir="rtl"] .gs-in { left: 48px; right: initial; }
+  [dir="rtl"] .gs-drop { left: 0; right: initial; }
+  [dir="rtl"] .gs-leg .gs-av { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .gs-it { text-align: right; }
+  [dir="rtl"] .gs-it.on { box-shadow: inset -3px 0 0 var(--accent); }
+  @media (max-width: 900px) { [dir="rtl"] .gs-wrap.open .gs-in { right: 12px; left: 112px; } }
+  [dir="rtl"] .ms-card { border-right: 3px solid var(--accent); border-left: initial; }
+  [dir="rtl"] .ms-card.off { border-right-color: var(--muted); border-left-color: initial; }
+  [dir="rtl"] .ms-card b { padding-left: 50px; padding-right: initial; }
+  [dir="rtl"] .ms-card .h-st { left: 12px; right: initial; }
+  [dir="rtl"] .tp-btn, [dir="rtl"] .tp-it { text-align: right; }
+  [dir="rtl"] .tp-txt em { margin-right: 6px; margin-left: initial; }
+  [dir="rtl"] .tp-chev { border-left: 2px solid var(--muted); transform: rotate(-45deg); margin: -4px 0 0 4px; border-right: initial; }
+  [dir="rtl"] .tp-pop { left: 0; right: initial; }
+  @media (max-width: 640px) { [dir="rtl"] .tp-pop { right: 0; left: auto; } }
+  [dir="rtl"] .hero .hb1 { left: -80px; right: initial; }
+  [dir="rtl"] .hero .hb2 { right: 10%; left: initial; }
+  [dir="rtl"] .hero .hb3 { right: 55%; left: initial; }
+  [dir="rtl"] .acct-item { text-align: right; }
+  /* rtl:end */
 </style>
 </head>
 <body>
@@ -3430,6 +3585,9 @@ const BOOT = null;
   const SUN = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
   const MOON = '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
   const isLight = () => document.documentElement.dataset.theme === 'light';
+  /* Arabic or English for the whole site, saved on this device; the page opens again in the new language */
+  const AR = document.documentElement.lang === 'ar';
+  const setLang = (ar) => { try { localStorage.setItem('tg_lang', ar ? 'ar' : 'en'); } catch (e) {} location.reload(); };
   function paintTheme() {
     const b = $('themeBtn'); if (!b) return;
     b.innerHTML = isLight() ? MOON : SUN;
@@ -3457,7 +3615,7 @@ const BOOT = null;
       '<div class="gs-wrap" id="gsWrap" hidden><input class="gs-in" id="gsQ" type="search" placeholder="Search a student (name or ID) or a TA" autocomplete="off" spellcheck="false" tabindex="-1">' +
       '<button class="theme-btn gs-btn" id="gsBtn" type="button" title="Search a student or a TA (Ctrl K)" aria-label="Search a student or a TA" aria-expanded="false"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>' +
       '<div class="gs-drop" id="gsR" hidden></div></div>' +
-      '<button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
+      '<button class="theme-btn lang-btn" id="langBtn" type="button" data-notr></button><button class="theme-btn" id="themeBtn" type="button"></button><div class="acct-slot" id="acctSlot"></div>';
     const side = document.createElement('aside'); side.id = 'side'; side.className = 'side hide-proj'; side.hidden = true; side.setAttribute('aria-label', 'Menu');
     const scrim = document.createElement('div'); scrim.id = 'sideScrim'; scrim.className = 'side-scrim';
     document.body.appendChild(side); document.body.appendChild(scrim);
@@ -3470,6 +3628,8 @@ const BOOT = null;
       if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) { e.preventDefault(); openSearch(); }
     });
     $('themeBtn').onclick = (e) => { const r = e.currentTarget.getBoundingClientRect(); setTheme(!isLight(), r.left + r.width / 2, r.top + r.height / 2); };
+    const lb = $('langBtn'); lb.textContent = AR ? 'EN' : 'ع'; lb.title = AR ? 'English' : 'العربية'; lb.setAttribute('aria-label', lb.title); lb.lang = AR ? 'en' : 'ar';
+    lb.onclick = () => setLang(!AR);
   })();
   /* page changes cross-fade where the browser can do it */
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -3623,18 +3783,19 @@ const BOOT = null;
   /* shared by the student pages and the staff pages, so they are ready before the student pages start */
   const initials = (t) => String(t || '').replace(/\(.*?\)/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
   const H_ST = { P: 'present', E: 'excused' };
-  const hAmpm = (hm) => { const [h, m] = hm.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? ' AM' : ' PM'); };
+  const hAmpm = (hm) => { const [h, m] = hm.split(':').map(Number); return (h % 12 || 12) + ':' + String(m).padStart(2, '0') + (h < 12 ? (AR ? ' ص' : ' AM') : (AR ? ' م' : ' PM')); };
   const hDay = (t) => {
     const d = new Date(t.slice(0, 10) + 'T00:00:00'), today = new Date(); today.setHours(0, 0, 0, 0);
     const n = Math.round((today - d) / 864e5);
-    return n === 0 ? 'Today' : n === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    return n === 0 ? (AR ? 'اليوم' : 'Today') : n === 1 ? (AR ? 'أمس' : 'Yesterday') : d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' });
   };
-  const hWhen = (t) => t ? hDay(t) + ', ' + hAmpm(t.slice(11)) : '';
+  const hWhen = (t) => t ? hDay(t) + (AR ? '، ' : ', ') + hAmpm(t.slice(11)) : '';
   const stuLink = (course, id, name) => course && id ? '<button type="button" class="stl" data-spc="' + esc(course) + '" data-spi="' + esc(id) + '" title="Open ' + esc(name) + '">' + esc(name) + '</button>' : '<b>' + esc(name) + '</b>';
-  const DAY3 = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const LOC = AR ? 'ar-EG-u-nu-latn' : 'en-GB';
+  const DAY3 = AR ? ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const toMin = (hm) => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
   const t12 = (hm) => { const [h, m] = String(hm).split(':').map(Number); return ((h + 11) % 12 + 1) + ':' + String(m).padStart(2, '0'); };
-  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const DAYS = AR ? DAY3 : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   /* =============== STUDENT =============== */
   if (B.s) { student(); return; }
   if (B.r) { registration(); return; }
@@ -4056,6 +4217,7 @@ const BOOT = null;
         '<form class="form" id="gkf"><label class="f">Gemini API key<input class="in" type="password" id="gk" autocomplete="off" spellcheck="false" placeholder="Paste the key"></label><p class="note" id="gks" style="margin:-4px 0 6px"></p><div class="err" id="gke"></div>' +
         '<div class="row"><button class="btn" type="submit">Save the key</button><button class="link danger" id="gkx" type="button" hidden>Remove the key</button></div></form></section>' : '') +
       '<section class="panel set"><h2>Appearance</h2><div class="cview" style="margin-top:6px"><button type="button" data-th="dark">Dark</button><button type="button" data-th="light">Light</button></div>' +
+        '<h2 style="margin-top:22px">Language</h2><div class="cview" style="margin-top:6px"><button type="button" data-lg="en" data-notr>English</button><button type="button" data-lg="ar" data-notr>العربية</button></div>' +
         '<p class="note" style="margin-top:12px">Saved on this device only.</p></section>' +
       '</div></div>';
     draw();
@@ -4112,6 +4274,7 @@ const BOOT = null;
       paint();
     });
     paint();
+    app.querySelectorAll('[data-lg]').forEach(b => { b.setAttribute('aria-selected', String((b.dataset.lg === 'ar') === AR)); b.onclick = () => { if ((b.dataset.lg === 'ar') !== AR) setLang(!AR); }; });
   }
   function signedIn(r) { D = r.dash; PIN = r.token; store.set('tg_token', PIN); tab = 'mine'; route(true); }
   function loggedOut() { PIN = ''; D = null; store.set('tg_token', ''); stopTimers(); document.querySelectorAll('.overlay').forEach(o => o.remove()); landingView(); toast('Please log in again.'); }
@@ -4199,7 +4362,7 @@ const BOOT = null;
     const slots = [...new Set(rows.map(x => x.start + '|' + x.end))].sort((a, b) => toMin(a.split('|')[0]) - toMin(b.split('|')[0]));
     const days = [...new Set([0, 1, 2, 3, 4, today].concat(rows.map(x => x.day)))].sort((a, b) => a - b);
     const sunday = new Date(n); sunday.setHours(0, 0, 0, 0); sunday.setDate(n.getDate() - today);
-    const dateOf = (d) => { const x = new Date(sunday); x.setDate(sunday.getDate() + d); return x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+    const dateOf = (d) => { const x = new Date(sunday); x.setDate(sunday.getDate() + d); return x.toLocaleDateString(LOC, { day: 'numeric', month: 'short' }); };
     const cell = (d, slot) => {
       const [st, en] = slot.split('|'), here = rows.filter(x => x.day === d && x.start === st);
       if (!here.length) return '<td class="cal-free"></td>';
@@ -4565,7 +4728,7 @@ const BOOT = null;
     if ($('addStaff')) $('addStaff').onclick = addStaffDialog;
     if ($('home')) $('home').onclick = () => go('');
     if (C && isAdmin) courseSettings(C, 0);
-    if (C) countUp();
+    if (C) countUp(app);
     bindQuick();
     /* the group dialogs start on this course */
     if (C) {
@@ -4708,7 +4871,7 @@ const BOOT = null;
     rows.forEach(x => {
       const d = hDay(x.t);
       if (d !== day) { day = d; html += '<h3 class="hist-day">' + esc(d) + '</h3>'; }
-      const self = x.how === 'Self', other = x.kind === 'Other', who = self ? (opt.me ? 'You' : opt.student ? 'The student' : x.name) : (x.by || 'Unknown');
+      const self = x.how === 'Self', other = x.kind === 'Other', who = self ? (opt.me && !AR ? 'You' : opt.student && !opt.me ? 'The student' : x.name) : (x.by || 'Unknown');
       html += '<div class="hist-it"><span class="hist-av' + (self ? ' st' : other ? ' ot' : '') + '">' + esc(initials(who)) + '</span><div class="hist-tx"><p><b>' + esc(who) + '</b> ' + say(x) +
         (self || other || opt.student ? '' : ' for ' + stuLink(x.course || opt.course, x.id, x.name)) + '</p>' +
         (opt.student ? '' : other ? (x.course && opt.ta ? '<small>' + esc(x.course) + '</small>' : '') : '<small>' + (opt.ta && x.course ? esc(x.course) + ' &middot; ' : '') + 'Group ' + esc(x.group) + ' &middot; ID ' + esc(x.id) + (self ? ' &middot; by the student' : '') + '</small>') + '</div><time>' + hAmpm(x.t.slice(11)) + '</time></div>';
@@ -6224,7 +6387,7 @@ const BOOT = null;
   }
   let quickMins = Number(store.get('tg_qmin')) || 15;
   const isAdminView = () => quickAll || !D.groups.some(g => g.ta === D.me.name);
-  const todayLong = () => new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const todayLong = () => new Date().toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   function quickHtml(C) {
     const pool = quickPool(C);
     if (!pool.length) return '';
