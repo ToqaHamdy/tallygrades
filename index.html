@@ -3485,7 +3485,7 @@ const BOOT = null;
     markAll: ['mark_all', ['p_pin', 'p_course', 'p_group', 'p_week']], markWeeks: ['mark_weeks', ['p_pin', 'p_course', 'p_group', 'p_items', 'p_status']], addGuest: ['add_guest', ['p_pin', 'p_course', 'p_group', 'p_week', 'p_id']],
     gradesView: ['grades_view', ['p_pin', 'p_course', 'p_group']], saveItems: ['save_items', ['p_pin', 'p_course', 'p_att_max', 'p_items']],
     saveScores: ['save_scores', ['p_pin', 'p_course', 'p_group', 'p_changes']], finalExport: ['final_export', ['p_pin']], importAttendance: ['import_attendance', ['p_pin', 'p_course', 'p_rows']],
-    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']], studentProfile: ['student_profile', ['p_pin', 'p_course', 'p_id']], taActivity: ['ta_activity', ['p_pin', 'p_ta']]
+    teamView: ['team_view', ['p_pin', 'p_course', 'p_num']], saveTeamScores: ['save_team_scores', ['p_pin', 'p_course', 'p_num', 'p_changes']], exportAll: ['export_all', ['p_pin']], changeHistory: ['change_history', ['p_pin', 'p_course', 'p_group']], studentProfile: ['student_profile', ['p_pin', 'p_course', 'p_id']], taActivity: ['ta_activity', ['p_pin', 'p_ta']], addStudent: ['add_student', ['p_pin', 'p_course', 'p_group', 'p_name', 'p_id']], removeStudent: ['remove_student', ['p_pin', 'p_course', 'p_group', 'p_id']]
   };
   async function api(fn, ...args) {
     const [name, params] = RPC[fn];
@@ -4616,7 +4616,7 @@ const BOOT = null;
   /* everything about one student: the brief, every mark with who wrote it, every week with who marked it, and their history */
   function studentDialog(course, id) {
     document.querySelectorAll('.overlay.stu-o').forEach(x => x.remove());
-    dialog('<div id="spb"><p class="note">Loading</p></div><div class="row" style="margin-top:18px"><button class="btn ghost" data-close type="button">Close</button></div>', async (o) => {
+    dialog('<div id="spb"><p class="note">Loading</p></div><div class="row" style="margin-top:18px"><button class="btn ghost" data-close type="button">Close</button><button class="btn danger" id="sprm" type="button" hidden style="margin-left:auto">Remove from the group</button></div>', async (o, close) => {
       o.classList.add('stu-o'); o.querySelector('.panel').classList.add('wide');
       let S;
       try { S = await api('studentProfile', PIN, course, id); } catch (e) { o.querySelector('#spb').innerHTML = '<p class="err">' + esc(errMsg(e)) + '</p>'; return; }
@@ -4646,6 +4646,13 @@ const BOOT = null;
         '<h2 class="sp-h">Marks</h2>' + (items.length ? '<div class="sp-marks">' + items.map(markRow).join('') + '</div>' : '<p class="note">This course has no grade items yet.</p>') +
         '<h2 class="sp-h">Attendance by week</h2><div class="sp-weeks">' + (S.weekLog || []).map(wk).join('') + '</div>' +
         '<h2 class="sp-h">History <span class="sp-sub">' + (S.history || []).length + ' changes</span></h2><div class="hist-feed sp-feed">' + (histFeed(S.history || [], { course: course, student: true }) || '<p class="note">No changes yet.</p>') + '</div>';
+      const rm = o.querySelector('#sprm'); rm.hidden = false; rm.textContent = 'Remove from group ' + S.group;
+      rm.onclick = async () => {
+        if (!confirm('Remove ' + S.name + ' (' + S.id + ') from group ' + S.group + ' of ' + S.course + '?\n\nTheir attendance and marks stay in the history.')) return;
+        rm.disabled = true;
+        try { D = await api('removeStudent', PIN, S.course, S.group, S.id); close(); toast(S.name + ' is removed from group ' + S.group + '.'); acct(); route(true); }
+        catch (e) { toast(errMsg(e)); rm.disabled = false; }
+      };
     });
   }
   function parseList(text) {
@@ -5694,7 +5701,7 @@ const BOOT = null;
       '<div id="startbox" class="row" style="align-items:flex-end;flex:1 1 380px"></div></div></div>' +
       '<div id="livebox"></div>' +
       '<div id="listbox" class="hide-proj"><div class="row" style="align-items:center;margin:22px 0 10px"><div class="stats" id="stt" style="margin:0;flex:1 1 auto"></div>' +
-      '<input class="in" id="sr" type="search" placeholder="Search a name or ID" style="max-width:260px"><button class="btn ghost" id="guest" type="button">+ Add a guest</button><button class="btn ghost" id="all" type="button">Mark everyone present</button></div>' +
+      '<input class="in" id="sr" type="search" placeholder="Search a name or ID" style="max-width:260px"><button class="btn ghost" id="guest" type="button">+ Add a guest</button><button class="btn ghost" id="addst" type="button">+ Add a student</button><button class="btn ghost" id="all" type="button">Mark everyone present</button></div>' +
       '<div class="table-wrap"><table><thead id="th"></thead><tbody id="rows"></tbody></table></div>' +
       '<h2 style="font-size:18px;margin:26px 0 8px">Flags this week</h2><ul id="fl" class="note"></ul></div></div>';
 
@@ -5723,6 +5730,19 @@ const BOOT = null;
           };
         });
     };
+    $('addst').onclick = () => dialog('<span class="pill">' + esc(g.course) + ' &middot; group ' + esc(g.group) + '</span><h1 style="font-size:26px;margin-top:12px">Add a student</h1>' +
+      '<p class="sub">A new student of group ' + esc(g.group) + '. To move a student from another group, remove them from there first (press their name, then Remove).</p>' +
+      '<form class="form" id="asf" style="margin-top:18px"><label class="f">Full name<input class="in" id="asn" autocomplete="off"></label><label class="f">Student ID<input class="in" id="asi" inputmode="numeric" maxlength="12" autocomplete="off"></label>' +
+      '<div class="err" id="ase"></div><div class="row"><button class="btn" type="submit">Add</button><button class="btn ghost" data-close type="button">Close</button></div></form>',
+      (o, close) => {
+        const ni = o.querySelector('#asn'), ii = o.querySelector('#asi'); ni.focus();
+        ii.oninput = () => { ii.value = ii.value.replace(/\D/g, ''); };
+        o.querySelector('#asf').onsubmit = async (e) => {
+          e.preventDefault(); o.querySelector('#ase').textContent = '';
+          try { D = await api('addStudent', PIN, g.course, g.group, ni.value, ii.value); toast(ni.value.trim() + ' is added to group ' + g.group + '.'); close(); acct(); load(); }
+          catch (err) { o.querySelector('#ase').textContent = errMsg(err); }
+        };
+      });
     $('all').onclick = async () => {
       const gs = [W].concat(X).filter(Boolean).map(v => v.group).filter(x => !only || x === only);
       if (!W || !confirm('Mark everyone in group' + (gs.length > 1 ? 's ' + gs.join(' + ') : ' ' + gs[0]) + ' present for ' + W.weekLabel + '? Excused students stay excused.')) return;
