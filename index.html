@@ -40,7 +40,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
 try {
   if (localStorage.getItem('tg_lang') === 'ar') {
     document.documentElement.lang = 'ar'; document.documentElement.dir = 'rtl';
-    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=4"><\/script>');
+    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=5"><\/script>');
   }
 } catch (e) {}
 </script>
@@ -430,6 +430,8 @@ try {
   .tas-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; } .tas-h .pill { margin: 0; }
   .tas-slot { display: grid; grid-template-columns: 92px 108px 1fr auto; gap: 6px; font-size: 13.5px; padding: 4px 8px; border-radius: 8px; color: var(--muted); }
   .tas-slot.today { color: var(--text); } .tas-slot.mine { background: var(--soft); color: var(--text); font-weight: 600; }
+  .tas-find { margin: 6px 0 22px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card2); } .tas-find h2 { margin: 0 0 10px; font-size: 20px; }
+  .tas-c { display: block; font-size: 11.5px; color: var(--muted); font-weight: 500; }
   .tas-day { font-weight: 700; } .tas-g { font-family: var(--mono); font-size: 12px; text-align: end; }
   @media (max-width: 480px) { .tas-slot { grid-template-columns: 80px 1fr auto; } .tas-slot > span:nth-child(3) { grid-column: 2; grid-row: 2; } .tas-g { grid-row: 1 / span 2; grid-column: 3; align-self: center; } } .my-hist .hist-it time { font-size: 11.5px; }
   .hist-sum { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; } .hist-sum b { color: var(--text); }
@@ -3715,7 +3717,7 @@ const BOOT = null;
   }
   /* Every action is a database function in Supabase. The page sends named values; the database checks the PIN and the rules. */
   const RPC = {
-    studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']], studentStatus: ['student_status', ['p']],
+    studentInfo: ['student_info', ['p_session']], checkIn: ['check_in', ['p']], registerPhone: ['register_phone', ['p']], studentStatus: ['student_status', ['p']], taSchedules: ['ta_schedules', ['p']],
     appState: ['app_state', []], setupAdmin: ['setup_admin', ['p_name', 'p_user', 'p_pass']], login: ['login', ['p_user', 'p_pass']],
     whoami: ['whoami', ['p_pin']], askData: ['ask_data', ['p_pin']], logout: ['logout', ['p_pin']],
     setMyPhoto: ['set_my_photo', ['p_pin', 'p_photo']], changeMyPassword: ['change_my_password', ['p_pin', 'p_old', 'p_new', 'p_user']], courseList: ['course_list', []],
@@ -3870,7 +3872,7 @@ const BOOT = null;
     if (!r.ok) { box.innerHTML = '<p class="note" style="text-align:center;margin-top:18px">Your attendance shows here after your first check-in from this phone.</p>'; return; }
     const lv = (f) => f === '' ? '' : f >= .75 ? 'hi' : f >= .5 ? 'mid' : 'lo';
     const word = { P: 'Present', A: 'Absent', E: 'Excused' };
-    box.innerHTML = '<div class="mystat"><h2>My attendance</h2>' + r.courses.map(c =>
+    box.innerHTML = '<div class="mystat">' + taFinder(r) + '<h2>My attendance</h2>' + r.courses.map(c =>
       '<div class="mycourse"><div class="my-top"><div><b>' + esc(c.course) + '</b><span>Group ' + esc(c.group) + '</span></div>' +
         '<div class="my-pct ' + lv(c.pct) + '">' + (c.pct === '' ? '&ndash;' : Math.round(c.pct * 100) + '%') + '</div></div>' +
       (c.team ? '<div class="my-team" style="--tc:' + teamColor(c.team.num) + '"><span class="tmchip" style="margin:0">T' + esc(c.team.num) + '</span><div><b>' + esc(c.team.name) + '</b>' +
@@ -3880,38 +3882,60 @@ const BOOT = null;
       '<p class="note">' + c.p + ' present, ' + c.e + ' excused' + (c.a ? ', ' + c.a + ' missed' : '') + '</p>' +
       ((c.schedule || []).length || c.ta ? '<div class="my-sec"><b>My section</b>' + (c.schedule || []).map(x => '<div class="my-slot"><span>' + DAYS[x.day] + ' ' + t12(x.start) + '&ndash;' + t12(x.end) + '</span>' + (x.room ? '<span>Room ' + esc(x.room) + '</span>' : '') + '<span>TA ' + esc(x.ta || c.ta || '') + '</span></div>').join('') +
         (!(c.schedule || []).length && c.ta ? '<div class="my-slot"><span>TA ' + esc(c.ta) + '</span></div>' : '') + '</div>' : '') +
-      myCompare(c) + myGrade(c.grade) + taSchedules(c) +
+      myCompare(c) + myGrade(c.grade) +
       ((c.history || []).length ? '<details class="my-hist"><summary>My history <span>' + c.history.length + (c.history.length === 100 ? '+' : '') + ' changes</span></summary><div class="hist-feed">' + histFeed(c.history, { student: true, me: true, course: c.course }) + '</div></details>' : '') + '</div>').join('') +
       '<p class="note" style="text-align:center">P present, E excused, empty: no check-in that week. Open this page any time to see it again.</p></div>';
-    box.querySelectorAll('.tas-q').forEach(q => q.oninput = () => {
-      const t = q.closest('.my-tas'), v = q.value.trim().toLowerCase(); let n = 0;
-      t.querySelectorAll('.tas-ta').forEach(d => { d.hidden = !!v && d.dataset.q.indexOf(v) < 0; if (!d.hidden) n++; });
-      t.querySelector('.tas-none').hidden = n > 0;
-    });
+    bindTaFinder(r);
   }
-  /* the schedule of every TA of the course: day, time, room and groups; the student's own group is marked, and a search box filters */
-  function taSchedules(c) {
+  /* "Find a TA": a search box for every TA of every course, with day, time, room, course and groups.
+     Empty, it shows the student's own TA(s); typing searches everyone (the full list loads on the first search). */
+  function taCards(rows, mine) {
     const by = {};
-    (c.tas || []).forEach(x => {
-      const ta = x.ta || 'No TA yet', k = x.day + '|' + x.start + '|' + x.end + '|' + x.room;
+    rows.forEach(x => {
+      const ta = x.ta || 'No TA yet', k = x.day + '|' + x.start + '|' + x.end + '|' + x.room + '|' + x.course;
       const t = by[ta] = by[ta] || {}; (t[k] = t[k] || Object.assign({}, x, { groups: [] })).groups.push(x.group);
     });
-    const names = Object.keys(by).sort((a, b) => (b === c.ta) - (a === c.ta) || a.localeCompare(b));
-    if (!names.length) return '';
+    const isMine = (x) => x.groups.some(g => mine.has(x.course + '|' + g));
     const today = new Date().getDay();
-    return '<details class="my-hist my-tas"><summary>TA schedules <span>' + names.length + (names.length === 1 ? ' TA' : ' TAs') + '</span></summary>' +
-      '<input class="in tas-q" type="search" placeholder="Search a TA, group, day or room" autocomplete="off">' +
-      names.map(n => {
-        const slots = Object.values(by[n]).sort((a, b) => a.day - b.day || a.start.localeCompare(b.start));
-        const mine = slots.some(x => x.groups.indexOf(c.group) >= 0);
-        return '<div class="tas-ta' + (mine ? ' mine' : '') + '" data-q="' + esc((n + ' ' + slots.map(x => DAYS[x.day] + ' ' + x.room + ' ' + x.groups.join(' ')).join(' ')).toLowerCase()) + '">' +
-          '<div class="tas-h"><b>' + esc(n) + '</b>' + (mine ? '<span class="pill green">Your TA</span>' : '') + '</div>' +
-          slots.map(x => '<div class="tas-slot' + (x.groups.indexOf(c.group) >= 0 ? ' mine' : '') + (x.day === today ? ' today' : '') + '">' +
-            '<span class="tas-day">' + DAYS[x.day] + '</span><span class="tas-time">' + t12(x.start) + '&ndash;' + t12(x.end) + '</span>' +
-            '<span>' + (x.room ? 'Room ' + esc(x.room) : '') + '</span><span class="tas-g">' + esc(x.groups.slice().sort(numeric).join(' + ')) + '</span></div>').join('') + '</div>';
-      }).join('') + '<p class="note tas-none" hidden>Nothing matches.</p></details>';
+    return Object.keys(by).map(n => ({ n: n, slots: Object.values(by[n]).sort((a, b) => a.day - b.day || a.start.localeCompare(b.start)) }))
+      .sort((a, b) => b.slots.some(isMine) - a.slots.some(isMine) || a.n.localeCompare(b.n))
+      .map(({ n, slots }) => '<div class="tas-ta' + (slots.some(isMine) ? ' mine' : '') + '"><div class="tas-h"><b>' + esc(n) + '</b>' + (slots.some(isMine) ? '<span class="pill green">Your TA</span>' : '') + '</div>' +
+        slots.map(x => '<div class="tas-slot' + (isMine(x) ? ' mine' : '') + (x.day === today ? ' today' : '') + '">' +
+          '<span class="tas-day">' + DAYS[x.day] + '</span><span class="tas-time">' + t12(x.start) + '&ndash;' + t12(x.end) + '</span>' +
+          '<span>' + (x.room ? 'Room ' + esc(x.room) : '') + '<small class="tas-c">' + esc(x.course) + '</small></span><span class="tas-g">' + esc(x.groups.slice().sort(numeric).join(' + ')) + '</span></div>').join('') + '</div>').join('');
   }
-
+  function taFinder(r) {
+    return '<section class="tas-find my-tas"><h2>Find a TA</h2><input class="in tas-q" id="tasQ" type="search" placeholder="Type a TA name, a course, a group or a room" autocomplete="off">' +
+      '<div id="tasR"></div><p class="note" id="tasN" hidden></p></section>';
+  }
+  function bindTaFinder(r) {
+    const q = $('tasQ'); if (!q) return;
+    const mine = new Set(r.courses.map(c => c.course + '|' + c.group));
+    /* the student's own TA(s): the TA of their group, with that TA's whole schedule in the course */
+    const own = [].concat(...r.courses.map(c => {
+      const names = new Set((c.tas || []).filter(x => x.group === c.group && x.ta).map(x => x.ta).concat(c.ta ? [c.ta] : []));
+      return (c.tas || []).filter(x => names.has(x.ta)).map(x => Object.assign({ course: c.course }, x));
+    }));
+    const show = () => {
+      const v = q.value.trim().toLowerCase(), note = $('tasN');
+      if (!v) { $('tasR').innerHTML = own.length ? taCards(own, mine) : ''; note.hidden = !!own.length; note.textContent = 'Type a name to see any TA\'s schedule.'; return; }
+      if (!bindTaFinder.all) { $('tasR').innerHTML = ''; note.hidden = false; note.textContent = 'Loading'; return; }
+      /* a TA's name shows all of their schedule; a course, group, room or day shows the sections that match */
+      const words = v.split(/\s+/), has = (t) => words.every(w => t.toLowerCase().indexOf(w) >= 0);
+      const byName = new Set(bindTaFinder.all.filter(x => has(x.ta || '')).map(x => x.ta));
+      const rows = bindTaFinder.all.filter(x => byName.has(x.ta) || has((x.ta || '') + ' ' + x.course + ' ' + x.group + ' ' + x.room + ' ' + DAYS[x.day] + ' ' + ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][x.day]));
+      $('tasR').innerHTML = taCards(rows, mine);
+      note.hidden = rows.length > 0; note.textContent = 'Nothing matches.';
+    };
+    q.oninput = async () => {
+      if (!bindTaFinder.all && q.value.trim()) {
+        show();
+        try { const d = await api('taSchedules', { id: store.get('att_id'), device: phoneId() }); bindTaFinder.all = d.ok ? d.rows : []; } catch (e) { bindTaFinder.all = null; $('tasN').textContent = 'Could not reach the server'; return; }
+      }
+      show();
+    };
+    show();
+  }
   function registration(fromLanding) {
     const device = phoneId();
     const shell = (inner, withStatus) => {

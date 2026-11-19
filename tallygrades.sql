@@ -444,6 +444,18 @@ begin
   return jsonb_build_object('ok', true, 'id', v_id, 'courses', v_out, 'currentWeek', tg.current_week());
 end $$;
 
+-- every TA's schedule, all courses, for a registered student (same phone check as student_status)
+create or replace function public.ta_schedules(p jsonb) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
+declare v_id text := tg.norm_id(p->>'id'); v_dev text := left(regexp_replace(coalesce(p->>'device', ''), '[^\w-]', '', 'g'), 80);
+begin
+  if v_id = '' or v_dev = '' or not (exists (select 1 from tg.devices where device = v_dev and sid = v_id)
+                                     or exists (select 1 from tg.log where device = v_dev and sid = v_id and status = 'P')) then
+    return jsonb_build_object('ok', false);
+  end if;
+  return jsonb_build_object('ok', true, 'rows', coalesce((select jsonb_agg(jsonb_build_object('ta', sc.ta, 'course', sc.course, 'group', sc.grp, 'day', sc.day,
+      'start', to_char(sc.starts, 'HH24:MI'), 'end', to_char(sc.ends, 'HH24:MI'), 'room', sc.room) order by sc.ta, sc.day, sc.starts, sc.course, sc.grp) from tg.schedule sc), '[]'));
+end $$;
+
 -- ---------------------------------------------------------------- staff API
 -- every student this staff member can see, with attendance and grades: the page answers questions from it
 create or replace function public.ask_data(p_pin text) returns jsonb language plpgsql security definer set search_path = tg, public, extensions as $$
@@ -1082,7 +1094,7 @@ end $$;
 do $$
 declare f text;
 begin
-  foreach f in array array['student_info(text)', 'check_in(jsonb)', 'register_phone(jsonb)', 'student_status(jsonb)', 'app_state()', 'setup_admin(text,text,text)', 'login(text,text)',
+  foreach f in array array['student_info(text)', 'check_in(jsonb)', 'register_phone(jsonb)', 'student_status(jsonb)', 'ta_schedules(jsonb)', 'app_state()', 'setup_admin(text,text,text)', 'login(text,text)',
     'whoami(text)', 'logout(text)', 'set_my_photo(text,text)', 'change_my_password(text,text,text,text)', 'course_list()', 'register_ta(text,text,text,jsonb)', 'approve_ta(text,text,jsonb)', 'reject_ta(text,text)', 'set_staff_login(text,text,text,text)',
     'add_group(text,text,text,text,jsonb)', 'import_groups(text,text,jsonb)', 'claim_group(text,text,text)', 'assign_group(text,text,text,text)',
     'remove_group(text,text,text)', 'add_staff(text,text,text,text,jsonb)', 'set_staff_courses(text,text,jsonb)', 'remove_staff(text,text)', 'set_term_start(text,text)',
