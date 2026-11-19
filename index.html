@@ -40,7 +40,7 @@ try { if (localStorage.getItem('tg_theme') === 'light') document.documentElement
 try {
   if (localStorage.getItem('tg_lang') === 'ar') {
     document.documentElement.lang = 'ar'; document.documentElement.dir = 'rtl';
-    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=3"><\/script>');
+    document.write('<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet"><script src="ar.js?v=4"><\/script>');
   }
 } catch (e) {}
 </script>
@@ -425,7 +425,13 @@ try {
   .my-sec { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card2); } .my-sec > b { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
   .my-slot { display: flex; flex-wrap: wrap; gap: 4px 14px; font-weight: 600; padding: 3px 0; } .my-slot span + span { color: var(--muted); font-weight: 500; }
   .my-hist { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px; } .my-hist summary { cursor: pointer; font-weight: 700; padding: 8px 0; } .my-hist summary span { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 6px; }
-  .my-hist .hist-feed { max-height: 60vh; } .my-hist .hist-it time { font-size: 11.5px; }
+  .my-hist .hist-feed { max-height: 60vh; }
+  .my-tas .tas-q { margin: 2px 0 10px; } .tas-ta { padding: 8px 0 10px; border-top: 1px solid var(--line); } .tas-ta.mine .tas-h b { color: var(--ink); }
+  .tas-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; } .tas-h .pill { margin: 0; }
+  .tas-slot { display: grid; grid-template-columns: 92px 108px 1fr auto; gap: 6px; font-size: 13.5px; padding: 4px 8px; border-radius: 8px; color: var(--muted); }
+  .tas-slot.today { color: var(--text); } .tas-slot.mine { background: var(--soft); color: var(--text); font-weight: 600; }
+  .tas-day { font-weight: 700; } .tas-g { font-family: var(--mono); font-size: 12px; text-align: end; }
+  @media (max-width: 480px) { .tas-slot { grid-template-columns: 80px 1fr auto; } .tas-slot > span:nth-child(3) { grid-column: 2; grid-row: 2; } .tas-g { grid-row: 1 / span 2; grid-column: 3; align-self: center; } } .my-hist .hist-it time { font-size: 11.5px; }
   .hist-sum { margin: 0 0 6px; color: var(--muted); font-size: 13.5px; } .hist-sum b { color: var(--text); }
   .hist-feed { max-height: 56vh; overflow-y: auto; padding-right: 4px; }
   .hist-day { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
@@ -3874,10 +3880,38 @@ const BOOT = null;
       '<p class="note">' + c.p + ' present, ' + c.e + ' excused' + (c.a ? ', ' + c.a + ' missed' : '') + '</p>' +
       ((c.schedule || []).length || c.ta ? '<div class="my-sec"><b>My section</b>' + (c.schedule || []).map(x => '<div class="my-slot"><span>' + DAYS[x.day] + ' ' + t12(x.start) + '&ndash;' + t12(x.end) + '</span>' + (x.room ? '<span>Room ' + esc(x.room) + '</span>' : '') + '<span>TA ' + esc(x.ta || c.ta || '') + '</span></div>').join('') +
         (!(c.schedule || []).length && c.ta ? '<div class="my-slot"><span>TA ' + esc(c.ta) + '</span></div>' : '') + '</div>' : '') +
-      myCompare(c) + myGrade(c.grade) +
+      myCompare(c) + myGrade(c.grade) + taSchedules(c) +
       ((c.history || []).length ? '<details class="my-hist"><summary>My history <span>' + c.history.length + (c.history.length === 100 ? '+' : '') + ' changes</span></summary><div class="hist-feed">' + histFeed(c.history, { student: true, me: true, course: c.course }) + '</div></details>' : '') + '</div>').join('') +
       '<p class="note" style="text-align:center">P present, E excused, empty: no check-in that week. Open this page any time to see it again.</p></div>';
+    box.querySelectorAll('.tas-q').forEach(q => q.oninput = () => {
+      const t = q.closest('.my-tas'), v = q.value.trim().toLowerCase(); let n = 0;
+      t.querySelectorAll('.tas-ta').forEach(d => { d.hidden = !!v && d.dataset.q.indexOf(v) < 0; if (!d.hidden) n++; });
+      t.querySelector('.tas-none').hidden = n > 0;
+    });
   }
+  /* the schedule of every TA of the course: day, time, room and groups; the student's own group is marked, and a search box filters */
+  function taSchedules(c) {
+    const by = {};
+    (c.tas || []).forEach(x => {
+      const ta = x.ta || 'No TA yet', k = x.day + '|' + x.start + '|' + x.end + '|' + x.room;
+      const t = by[ta] = by[ta] || {}; (t[k] = t[k] || Object.assign({}, x, { groups: [] })).groups.push(x.group);
+    });
+    const names = Object.keys(by).sort((a, b) => (b === c.ta) - (a === c.ta) || a.localeCompare(b));
+    if (!names.length) return '';
+    const today = new Date().getDay();
+    return '<details class="my-hist my-tas"><summary>TA schedules <span>' + names.length + (names.length === 1 ? ' TA' : ' TAs') + '</span></summary>' +
+      '<input class="in tas-q" type="search" placeholder="Search a TA, group, day or room" autocomplete="off">' +
+      names.map(n => {
+        const slots = Object.values(by[n]).sort((a, b) => a.day - b.day || a.start.localeCompare(b.start));
+        const mine = slots.some(x => x.groups.indexOf(c.group) >= 0);
+        return '<div class="tas-ta' + (mine ? ' mine' : '') + '" data-q="' + esc((n + ' ' + slots.map(x => DAYS[x.day] + ' ' + x.room + ' ' + x.groups.join(' ')).join(' ')).toLowerCase()) + '">' +
+          '<div class="tas-h"><b>' + esc(n) + '</b>' + (mine ? '<span class="pill green">Your TA</span>' : '') + '</div>' +
+          slots.map(x => '<div class="tas-slot' + (x.groups.indexOf(c.group) >= 0 ? ' mine' : '') + (x.day === today ? ' today' : '') + '">' +
+            '<span class="tas-day">' + DAYS[x.day] + '</span><span class="tas-time">' + t12(x.start) + '&ndash;' + t12(x.end) + '</span>' +
+            '<span>' + (x.room ? 'Room ' + esc(x.room) : '') + '</span><span class="tas-g">' + esc(x.groups.slice().sort(numeric).join(' + ')) + '</span></div>').join('') + '</div>';
+      }).join('') + '<p class="note tas-none" hidden>Nothing matches.</p></details>';
+  }
+
   function registration(fromLanding) {
     const device = phoneId();
     const shell = (inner, withStatus) => {
