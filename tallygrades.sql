@@ -433,6 +433,8 @@ begin
       'ta', tg.group_ta(st.course, st.grp),
       'schedule', coalesce((select jsonb_agg(jsonb_build_object('day', sc.day, 'start', to_char(sc.starts, 'HH24:MI'), 'end', to_char(sc.ends, 'HH24:MI'), 'room', sc.room, 'ta', sc.ta) order by sc.day, sc.starts)
                    from tg.schedule sc where sc.course = st.course and sc.grp = st.grp), '[]'),
+      'tas', coalesce((select jsonb_agg(jsonb_build_object('ta', sc.ta, 'group', sc.grp, 'day', sc.day, 'start', to_char(sc.starts, 'HH24:MI'), 'end', to_char(sc.ends, 'HH24:MI'), 'room', sc.room)
+                   order by sc.ta, sc.day, sc.starts, sc.grp) from tg.schedule sc where sc.course = st.course), '[]'),
       'history', tg.student_history(st.course, st.sid, 100),
       'groupAvg', (select jsonb_build_object('pct', avg((r->>'pct')::numeric) filter (where r->>'pct' <> ''), 'total', round(avg((r->>'total')::numeric), 2), 'n', count(*))
                    from jsonb_array_elements(tg.grade_rows(st.course, st.grp)) r)) order by st.course, st.grp), '[]')

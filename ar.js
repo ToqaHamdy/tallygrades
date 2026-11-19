@@ -471,6 +471,7 @@
     '{} of {} groups': function (a, b) { return a + ' من ' + pl(b, N.gr); }, '{} of {} students': function (a, b) { return a + ' من ' + pl(b, N.st); },
     ', {} missed': '، {} غياب', '{} missed': '{} غياب', '{} changes': function (n) { return pl(n, N.ch); }, 'changes by': 'تغييرات بواسطة',
     'The student (QR)': 'الطالب (QR)', 'with {}': 'مع {}', 'or': 'أو',
+    'TA schedules': 'جداول المعيدين', 'Search a TA, group, day or room': 'ابحث عن معيد أو مجموعة أو يوم أو قاعة', 'Your TA': 'معيدك',
     'by {}': 'بواسطة {}', '. Come to the next section, and talk to your TA if something is wrong.': '. احضر السكشن القادم، وكلّم معيدك لو فيه مشكلة.',
     'Come to the next section, and talk to your TA if something is wrong.': 'احضر السكشن القادم، وكلّم معيدك لو فيه مشكلة.',
     'No checkbox': 'بدون خانة', 'Not present': 'غير حاضر', 'Attendance checkbox week': 'أسبوع خانة الحضور',
